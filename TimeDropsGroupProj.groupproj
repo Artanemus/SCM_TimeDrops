@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{C4B19143-5370-44DF-B524-649A06D58C89}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="SCM_TimeDrops.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="..\SCM_DolphinTiming\SCM_DolphinTiming.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="SCM_TimeDrops">
+        <MSBuild Projects="SCM_TimeDrops.dproj"/>
+    </Target>
+    <Target Name="SCM_TimeDrops:Clean">
+        <MSBuild Projects="SCM_TimeDrops.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SCM_TimeDrops:Make">
+        <MSBuild Projects="SCM_TimeDrops.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SCM_DolphinTiming">
+        <MSBuild Projects="..\SCM_DolphinTiming\SCM_DolphinTiming.dproj"/>
+    </Target>
+    <Target Name="SCM_DolphinTiming:Clean">
+        <MSBuild Projects="..\SCM_DolphinTiming\SCM_DolphinTiming.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SCM_DolphinTiming:Make">
+        <MSBuild Projects="..\SCM_DolphinTiming\SCM_DolphinTiming.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="SCM_TimeDrops;SCM_DolphinTiming"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="SCM_TimeDrops:Clean;SCM_DolphinTiming:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="SCM_TimeDrops:Make;SCM_DolphinTiming:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
