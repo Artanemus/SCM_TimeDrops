@@ -30,7 +30,7 @@ type
     actnDisconnect: TAction;
     actnTimeDrops: TAction;
     Timer1: TTimer;
-    btnBuildDTData: TButton;
+    btnBuildData: TButton;
     procedure FormDestroy(Sender: TObject);
     procedure actnConnectExecute(Sender: TObject);
     procedure actnConnectUpdate(Sender: TObject);
@@ -38,7 +38,7 @@ type
     procedure actnDisconnectUpdate(Sender: TObject);
     procedure actnTimeDropsExecute(Sender: TObject);
     procedure actnTimeDropsUpdate(Sender: TObject);
-    procedure btnBuildDTDataClick(Sender: TObject);
+    procedure btnBuildDataClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
   private
@@ -179,13 +179,13 @@ begin
     Visible := false;
 
     // C R E A T E   T H E   D T  D A T A M O D U L E .
-    if NOT Assigned(DTData) then
-      DTData := TDTData.Create(Self);
+    if NOT Assigned(TDData) then
+      TDData := TTDData.Create(Self);
 
-    if Assigned(DTData) then
+    if Assigned(TDData) then
     begin
-      DTData.Connection := SCM.scmConnection;
-      DTData.ActivateDataSCM; // ... and cue-to most recent session.
+      TDData.Connection := SCM.scmConnection;
+      TDData.ActivateDataSCM; // ... and cue-to most recent session.
       dlg := TMain.Create(Self);
       { Init connection.}
       dlg.Prepare(SCM.scmConnection);
@@ -197,7 +197,7 @@ begin
     end;
 
     // F R E E   D T   D A T A M O D U L E .
-    FreeAndNil(DTData);
+    FreeAndNil(TDData);
     // de-activate SCM. Kill animation. Save Settings, etc...
     actnDisconnectExecute(Self);
     // Terminate application ....
@@ -221,20 +221,20 @@ begin
   end;
 end;
 
-procedure TLogin.btnBuildDTDataClick(Sender: TObject);
+procedure TLogin.btnBuildDataClick(Sender: TObject);
 begin
     // C R E A T E   T H E   D T  D A T A M O D U L E .
-    if NOT Assigned(DTData) then
-      DTData := TDTData.Create(Self);
+    if NOT Assigned(TDData) then
+      TDData := TTDData.Create(Self);
 
-    if Assigned(DTData) then
+    if Assigned(TDData) then
     begin
-      DTData.Connection := SCM.scmConnection;
-      dtData.BuildDTData;
+      TDData.Connection := SCM.scmConnection;
+      TDData.BuildData;
     end;
 
     // F R E E   D T   D A T A M O D U L E .
-    FreeAndNil(DTData);
+    FreeAndNil(TDData);
 end;
 
 procedure TLogin.FormCreate(Sender: TObject);
@@ -266,9 +266,9 @@ begin
   Status_ConnectionDescription;
 
 {$IFDEF DEBUG}
-  // A button that allows me to run dmDTData.BuildDTData.
+  // A button that allows me to run dmTDData.BuildTDData.
   // The FieldDefs are save out to XML. Load XML data to restore.
-  btnBuildDTData.Visible := true;
+  btnBuildData.Visible := true;
 {$ENDIF}
 
 end;
@@ -374,7 +374,7 @@ end;
 procedure TLogin.MSG_execDolphinTiming(var Msg: TMessage);
 begin
   { Alternative method to run main form - dtfrmExec.pas }
-   actnDolphinTimingExecute(Self);
+   actnTimeDropsExecute(Self);
 end;
 
 procedure TLogin.SaveToSettings;

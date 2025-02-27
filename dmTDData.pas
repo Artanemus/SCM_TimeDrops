@@ -52,7 +52,7 @@ type
 
   end;
 
-  TDTData = class(TDataModule)
+  TTDData = class(TDataModule)
     dsDTEntrant: TDataSource;
     dsDTEvent: TDataSource;
     dsDTHeat: TDataSource;
@@ -163,7 +163,7 @@ type
     function SyncCheckSession(APrecedence: dtPrecedence): boolean;
 
     // .......................................................
-    // FIND MAXIMUM IDENTIFIER VALUE IN DOLPHIN TIMING TABLES.
+    // FIND MAXIMUM IDENTIFIER VALUE IN TIME-DROPS TABLES.
     // These routines are needed as there is no AutoInc on Primary Key.
     // WARNING : DisableDTMasterDetail() before calling MaxID routines.
     // .......................................................
@@ -201,7 +201,7 @@ type
   end;
 
 var
-  DTData: TDTData;
+  TDData: TTDData;
 
 implementation
 
@@ -209,13 +209,13 @@ implementation
 
 {$R *.dfm}
 
-uses System.Variants, System.DateUtils, dtuSetting;
+uses System.Variants, System.DateUtils, tdSetting;
 
 
-procedure TDTData.ActivateDataDT;
+procedure TTDData.ActivateDataDT;
 begin
   fSCMDataIsActive := false;
-  // MAKE LIVE THE DOLPHIN TIMING TABLES
+  // MAKE LIVE THE TIME-DROPS TABLES
   try
     tblDTSession.Open;
     if tblDTSession.Active then
@@ -238,7 +238,7 @@ begin
   end;
 end;
 
-procedure TDTData.ActivateDataSCM;
+procedure TTDData.ActivateDataSCM;
 begin
   if Assigned(fConnection) and fConnection.Connected then
   begin
@@ -289,7 +289,7 @@ begin
   end;
 end;
 
-procedure TDTData.BuildCSVEventData(AFileName: string);
+procedure TTDData.BuildCSVEventData(AFileName: string);
 var
   sl: TStringList;
   s, s2, s3: string;
@@ -332,7 +332,7 @@ heats may be run in any order.
     id := qryEvent.FieldByName('EventID').AsInteger;
     i := GetSCMNumberOfHeats(id);
     s := s + IntToStr(i) + ',';
-    { TODO -oBSA : Implement Splits for Dolphin Timing }
+    { TODO -oBSA : Implement Splits for TIME-DROPS }
     // Number of Splits - NOT AVAILABLE IN THIS VERSION.
     s := s + '0,';
     { Round .... requires db v1.1.5.4.
@@ -353,7 +353,7 @@ heats may be run in any order.
   sl.free;
 end;
 
-procedure TDTData.BuildDTData;
+procedure TTDData.BuildDTData;
 begin
   fSCMDataIsActive := false;
   tblDTSession.Active := false;
@@ -362,7 +362,7 @@ begin
   tblDTEntrant.Active := false;
   tblDTNoodle.Active := false;
 
-  // Create Dolphin Timing DATA TABLES SCHEMA.
+  // Create TIME-DROPS DATA TABLES SCHEMA.
   // ---------------------------------------------
   tblDTSession.FieldDefs.Clear;
   // Primary Key
@@ -371,7 +371,7 @@ begin
   tblDTSession.FieldDefs.Add('SessionNum', ftInteger);
   // Derived from filename : Last three digits of SCM qrySession.SessionID.
   tblDTSession.FieldDefs.Add('fnSessionNum', ftInteger);
-  // file creation date  - produced by Dolphin timing when file was saved.
+  // file creation date  - produced by TIME-DROPS when file was saved.
   tblDTSession.FieldDefs.Add('SessionStart', ftDateTime);
   // TimeStamp - Now.
   tblDTSession.FieldDefs.Add('CreatedOn', ftDateTime);
@@ -379,7 +379,7 @@ begin
   tblDTSession.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTSession.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_DolphinTiming\DTDataSession.xml', sfAuto);
+  tblDTSession.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataSession.xml', sfAuto);
 {$ENDIF}
 
   tblDTEvent.FieldDefs.Clear;
@@ -400,7 +400,7 @@ begin
   tblDTEvent.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTEvent.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_DolphinTiming\DTDataEvent.xml', sfAuto);
+  tblDTEvent.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataEvent.xml', sfAuto);
 {$ENDIF}
 
   tblDTHeat.FieldDefs.Clear;
@@ -409,7 +409,7 @@ begin
   tblDTHeat.FieldDefs.Add('HeatID', ftInteger); // PK.
   tblDTHeat.FieldDefs.Add('EventID', ftInteger); // Master- Detail
   // This timestamp is the moment when the event is brought into the
-  // swimclubmeet dolphin timing application.
+  // swimclubmeet TIME-DROPS application.
   // It's used to assist in 'pooling time' of the DT Meet Bin
   tblDTHeat.FieldDefs.Add('TimeStampDT', ftDateTime);
   // heat number should match
@@ -421,7 +421,7 @@ begin
   tblDTHeat.FieldDefs.Add('fnHeatNum', ftInteger);
   // Auto-created eg. 'Event 1 : #FILENAME#'
   tblDTHeat.FieldDefs.Add('Caption', ftString, 64);
-  // Time stamp of file - created by Dolphin Timing system on write of file.
+  // Time stamp of file - created by TIME-DROPS system on write of file.
   tblDTHeat.FieldDefs.Add('CreatedDT', ftDateTime);
   // Path isn't stotred
   // FileName includes file extension.    (.DO3, .DO4)
@@ -442,11 +442,11 @@ begin
   tblDTHeat.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTHeat.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_DolphinTiming\DTDataHeat.xml');
+  tblDTHeat.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataHeat.xml');
 {$ENDIF}
 
   { NOTE :
-    Dolphin Timing doesn't destinct INDV and TEAM.
+    TIME-DROPS doesn't destinct INDV and TEAM.
     tblEntrant holds both INDV and TEAM data.
   }
 
@@ -456,7 +456,7 @@ begin
   tblDTEntrant.FieldDefs.Add('EntrantID', ftInteger); // PK.
   tblDTEntrant.FieldDefs.Add('HeatID', ftInteger); // Master- Detail
   tblDTEntrant.FieldDefs.Add('Lane', ftInteger); // Lane Number.
-  // Dolphin Timing Specific
+  // TIME-DROPS Specific
   tblDTEntrant.FieldDefs.Add('Caption', ftString, 64); // Summary of status/mode
 
   // If all timekeeper watch times are empty - then true;
@@ -520,7 +520,7 @@ begin
   tblDTEntrant.FieldDefs.Add('TDev1', ftBoolean);
   tblDTEntrant.FieldDefs.Add('TDev2', ftBoolean);
 
-  // Dolphin timing (dtfiletype dtDO4) stores MAX 10 splits.
+  // TIME-DROPS (dtfiletype dtDO4) stores MAX 10 splits.
   tblDTEntrant.FieldDefs.Add('Split1', ftTime); // DO4.
   tblDTEntrant.FieldDefs.Add('Split2', ftTime); // DO4.
   tblDTEntrant.FieldDefs.Add('Split3', ftTime); // DO4.
@@ -535,7 +535,7 @@ begin
   tblDTEntrant.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTEntrant.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_DolphinTiming\DTDataEntrant.xml');
+  tblDTEntrant.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataEntrant.xml');
 {$ENDIF}
 
   tblDTNoodle.FieldDefs.Clear;
@@ -561,12 +561,12 @@ begin
   tblDTNoodle.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTNoodle.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_DolphinTiming\DTDataNoodle.xml');
+  tblDTNoodle.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataNoodle.xml');
 {$ENDIF}
 
 end;
 
-procedure TDTData.CalcRaceTimeA(ADataSet: TDataSet; AcceptedDeviation: double;
+procedure TTDData.CalcRaceTimeA(ADataSet: TDataSet; AcceptedDeviation: double;
     CalcMethod: Integer);
 var
   wt: TWatchtime;
@@ -579,7 +579,7 @@ begin
   wt.free;
 end;
 
-procedure TDTData.CalcRaceTimeM(ADataSet: TDataSet);
+procedure TTDData.CalcRaceTimeM(ADataSet: TDataSet);
 var
   I: Integer;
   s: string;
@@ -616,7 +616,7 @@ begin
   ADataSet.Post;
 end;
 
-procedure TDTData.DataModuleCreate(Sender: TObject);
+procedure TTDData.DataModuleCreate(Sender: TObject);
 begin
   // Init params.
   fDTDataIsActive := false;
@@ -624,19 +624,19 @@ begin
   FConnection := nil;
   fSCMDataIsActive := false; // activated later once FConnection is assigned.
   // Assign all the params to create the Master-Detail relationships
-  // between Dolphin Timing memory tables.
+  // between TIME-DROPS memory tables.
   EnableDTMasterDetail();
-  // Makes 'Active' the Dolphin Timing tables.
+  // Makes 'Active' the TIME-DROPS tables.
   ActivateDataDT;
   msgHandle := 0;
 end;
 
-procedure TDTData.DataModuleDestroy(Sender: TObject);
+procedure TTDData.DataModuleDestroy(Sender: TObject);
 begin
   DeActivateDataSCM;
 end;
 
-procedure TDTData.DeActivateDataSCM;
+procedure TTDData.DeActivateDataSCM;
 begin
   if Assigned(fConnection) and fConnection.Connected then
   begin
@@ -654,7 +654,7 @@ begin
   end;
 end;
 
-procedure TDTData.DisableDTMasterDetail();
+procedure TTDData.DisableDTMasterDetail();
 begin
   // ASSERT Master - Detail
   tblDTSession.IndexFieldNames := 'SessionID';
@@ -693,7 +693,7 @@ begin
   fDTMasterDetailActive := false;
 end;
 
-procedure TDTData.EnableDTMasterDetail();
+procedure TTDData.EnableDTMasterDetail();
 begin
   // Master - index field.
   tblDTSession.IndexFieldNames := 'SessionID';
@@ -718,7 +718,7 @@ begin
   fDTMasterDetailActive := true;
 end;
 
-function TDTData.GetSCMActiveSessionID: integer;
+function TTDData.GetSCMActiveSessionID: integer;
 begin
   result := 0;
   if not fSCMDataIsActive then exit;
@@ -726,7 +726,7 @@ begin
     result := qrySession.FieldByName('SessionID').AsInteger;
 end;
 
-function TDTData.GetSCMNumberOfHeats(AEventID: integer): integer;
+function TTDData.GetSCMNumberOfHeats(AEventID: integer): integer;
 var
 SQL: string;
 v: variant;
@@ -738,7 +738,7 @@ begin
   result := v;
 end;
 
-function TDTData.GetSCMRoundABBREV(AEventID: integer): string;
+function TTDData.GetSCMRoundABBREV(AEventID: integer): string;
 var
 SQL: string;
 v: variant;
@@ -765,7 +765,7 @@ begin
 
 end;
 
-function TDTData.LocateDTEventID(AEventID: integer): boolean;
+function TTDData.LocateDTEventID(AEventID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -778,7 +778,7 @@ begin
     dsdtHeat.DataSet.Refresh;
 end;
 
-function TDTData.LocateDTEventNum(SessionID, AEventNum: integer; APrecedence:
+function TTDData.LocateDTEventNum(SessionID, AEventNum: integer; APrecedence:
   dtPrecedence): boolean;
 var
   indexStr: string;
@@ -803,7 +803,7 @@ begin
   tbldtEvent.IndexFieldNames := indexStr;
 end;
 
-function TDTData.LocateDTHeatID(AHeatID: integer): boolean;
+function TTDData.LocateDTHeatID(AHeatID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -814,7 +814,7 @@ begin
   result := dsdtHeat.DataSet.Locate('HeatID', AHeatID, SearchOptions);
 end;
 
-function TDTData.LocateDTHeatNum(EventID, AHeatNum: integer; Aprecedence:
+function TTDData.LocateDTHeatNum(EventID, AHeatNum: integer; Aprecedence:
     dtPrecedence): boolean;
 var
   indexStr: string;
@@ -839,13 +839,13 @@ begin
   tbldtHeat.IndexFieldNames := indexStr;
 end;
 
-function TDTData.LocateDTLane(ALane: integer): boolean;
+function TTDData.LocateDTLane(ALane: integer): boolean;
 begin
   // IGNORES SYNC STATE...
   result := tbldtEntrant.Locate('Lane', ALane, []);
 end;
 
-function TDTData.LocateDTSessionID(ASessionID: integer): boolean;
+function TTDData.LocateDTSessionID(ASessionID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -861,7 +861,7 @@ begin
   end;
 end;
 
-function TDTData.LocateDTSessionNum(ASessionNum: integer; Aprecedence:
+function TTDData.LocateDTSessionNum(ASessionNum: integer; Aprecedence:
     dtPrecedence): boolean;
 var
   indexStr: string;
@@ -883,7 +883,7 @@ begin
   tbldtSession.IndexFieldNames := indexStr;
 end;
 
-function TDTData.LocateSCMEventID(AEventID: integer): boolean;
+function TTDData.LocateSCMEventID(AEventID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -895,7 +895,7 @@ begin
       result := dsEvent.DataSet.Locate('EventID', aEventID, SearchOptions);
 end;
 
-function TDTData.LocateSCMHeatID(AHeatID: integer): boolean;
+function TTDData.LocateSCMHeatID(AHeatID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -907,7 +907,7 @@ begin
       result := dsHeat.DataSet.Locate('HeatID', AHeatID, SearchOptions);
 end;
 
-function TDTData.LocateSCMLane(ALane: integer; aEventType: scmEventType):
+function TTDData.LocateSCMLane(ALane: integer; aEventType: scmEventType):
     boolean;
 var
 found: boolean;
@@ -925,7 +925,7 @@ begin
   result := found;
 end;
 
-function TDTData.LocateSCMNearestSessionID(aDate: TDateTime): integer;
+function TTDData.LocateSCMNearestSessionID(aDate: TDateTime): integer;
 begin
   result := 0;
   // find the session with 'aDate' or bestfit.
@@ -937,7 +937,7 @@ begin
    result := qryNearestSessionID.FieldByName('SessionID').AsInteger;
 end;
 
-function TDTData.LocateSCMSessionID(ASessionID: integer): boolean;
+function TTDData.LocateSCMSessionID(ASessionID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -949,7 +949,7 @@ begin
       result := dsSession.DataSet.Locate('SessionID', ASessionID, SearchOptions);
 end;
 
-function TDTData.MaxID_Entrant: integer;
+function TTDData.MaxID_Entrant: integer;
 var
 max, id: integer;
 begin
@@ -966,7 +966,7 @@ begin
   result := max;
 end;
 
-function TDTData.MaxID_Event: integer;
+function TTDData.MaxID_Event: integer;
 var
 max, id: integer;
 begin
@@ -983,7 +983,7 @@ begin
   result := max;
 end;
 
-function TDTData.MaxID_Heat: integer;
+function TTDData.MaxID_Heat: integer;
 var
 max, id: integer;
 begin
@@ -1000,7 +1000,7 @@ begin
   result := max;
 end;
 
-function TDTData.MaxID_Session: integer;
+function TTDData.MaxID_Session: integer;
 var
 max, id: integer;
 begin
@@ -1017,7 +1017,7 @@ begin
   result := max;
 end;
 
-procedure TDTData.POST_All;
+procedure TTDData.POST_All;
 var
   AEventType: scmEventType;
   ALaneNum: integer;
@@ -1071,7 +1071,7 @@ begin
 
 end;
 
-procedure TDTData.POST_Lane(ALane: Integer);
+procedure TTDData.POST_Lane(ALane: Integer);
 var
   AEventType: scmEventType;
   b1, b2: boolean;
@@ -1113,7 +1113,7 @@ begin
   qryINDV.EnableControls;
 end;
 
-procedure TDTData.ReadFromBinary(AFilePath:string);
+procedure TTDData.ReadFromBinary(AFilePath:string);
 var
 s: string;
 begin
@@ -1129,7 +1129,7 @@ begin
   tblDTNoodle.LoadFromFile(s + 'DTNoodle.fsBinary');
 end;
 
-procedure TDTData.RefreshSCM;
+procedure TTDData.RefreshSCM;
 var
   ASwimClubID, ASessionID, AEventID, AHeatID: integer;
 begin
@@ -1176,7 +1176,7 @@ begin
 
 end;
 
-procedure TDTData.SetActiveRT(ADataSet: TDataSet; aActiveRT: dtActiveRT);
+procedure TTDData.SetActiveRT(ADataSet: TDataSet; aActiveRT: dtActiveRT);
 var
   RaceTimeField: TField;
   RaceTimeUField: TField;
@@ -1265,7 +1265,7 @@ begin
   end;
 end;
 
-function TDTData.SyncDTtoSCM(APrecedence: dtPrecedence): boolean;
+function TTDData.SyncDTtoSCM(APrecedence: dtPrecedence): boolean;
 var
   found: boolean;
 begin
@@ -1306,7 +1306,7 @@ begin
   tblDTEntrant.EnableControls;
 end;
 
-function TDTData.SyncCheck(APrecedence: dtPrecedence): boolean;
+function TTDData.SyncCheck(APrecedence: dtPrecedence): boolean;
 var
   IsSynced: boolean;
 begin
@@ -1337,7 +1337,7 @@ begin
 
 end;
 
-function TDTData.SyncCheckSession(APrecedence: dtPrecedence): boolean;
+function TTDData.SyncCheckSession(APrecedence: dtPrecedence): boolean;
 var
   sessNum: integer;
 begin
@@ -1351,7 +1351,7 @@ begin
     result := true;
 end;
 
-function TDTData.SyncSCMtoDT(APrecedence: dtPrecedence): boolean;
+function TTDData.SyncSCMtoDT(APrecedence: dtPrecedence): boolean;
 var
   found: boolean;
 begin
@@ -1389,13 +1389,13 @@ begin
 end;
 
 
-procedure TDTData.tblDTHeatAfterScroll(DataSet: TDataSet);
+procedure TTDData.tblDTHeatAfterScroll(DataSet: TDataSet);
 begin
   if (msgHandle <> 0) then
     PostMessage(msgHandle, SCM_UPDATEUI3, 0,0);
 end;
 
-function TDTData.ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0):
+function TTDData.ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0):
 dtActiveRT;
 var
   art: dtActiveRT;
@@ -1434,7 +1434,7 @@ begin
   end;
 end;
 
-function TDTData.ToggleWatchTime(ADataSet: TDataSet; idx: integer; art: dtActiveRT): Boolean;
+function TTDData.ToggleWatchTime(ADataSet: TDataSet; idx: integer; art: dtActiveRT): Boolean;
 var
 s, s2: string;
 b: boolean;
@@ -1462,7 +1462,7 @@ begin
   end;
 end;
 
-function TDTData.ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer;
+function TTDData.ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer;
     art: dtActiveRT): boolean;
 var
   TimeField, EnabledField: TField;
@@ -1505,7 +1505,7 @@ begin
   result := true;
 end;
 
-procedure TDTData.WriteToBinary(AFilePath:string);
+procedure TTDData.WriteToBinary(AFilePath:string);
 var
 s: string;
 begin
@@ -1552,7 +1552,7 @@ I, count: integer;
 begin
 
   {
-  RULES USED BY DOLPHIN TIMING METHOD. (DEFAULT).
+  RULES USED BY 'DOLPHIN TIMING' METHOD. (DEFAULT).
 - A. If there is one watch per lane, that time will also be placed in
   'racetime'.
 
@@ -1602,7 +1602,7 @@ begin
       result := CalcAvgWatchTime;
   3:
     BEGIN
-      // DOLPHIN TIMING RULES - use mid watch-time.
+      // TIMING RULES - use mid watch-time.
       if (fCalcRTMethod = 0) then
       begin
         if IsValid[2] then
@@ -1672,7 +1672,7 @@ begin
 
     3:
     BEGIN
-      { Dolphin Timing doesn't consider check deviation on 3xwatch-times
+      { Timing doesn't consider check deviation on 3xwatch-times
         and instead picks the middle watch time.
       }
       if (fCalcRTMethod = 0) then
@@ -1766,13 +1766,13 @@ procedure TWatchTime.LoadFromSettings;
 begin
   if Settings <> nil then
   begin
-    fAcceptedDeviation := Settings.DolphinAcceptedDeviation;
-    fCalcRTMethod := Settings.DolphinCalcRTMethod;
+    fAcceptedDeviation := Settings.AcceptedDeviation;
+    fCalcRTMethod := Settings.CalcRTMethod;
   end
   else
   begin
     fAcceptedDeviation := 0.3;
-    fCalcRTMethod := 0; // default - Dolphin Timing Method.
+    fCalcRTMethod := 0; // default - Timing Method.
   end;
 end;
 

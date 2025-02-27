@@ -16680,16 +16680,16 @@ object Login: TLogin
     TabOrder = 8
     Visible = False
   end
-  object btnBuildDTData: TButton
+  object btnBuildData: TButton
     Left = 556
     Top = 271
     Width = 94
     Height = 64
-    Caption = 'Build DT Data'
+    Caption = 'Build Data'
     TabOrder = 9
     Visible = False
     WordWrap = True
-    OnClick = btnBuildDTDataClick
+    OnClick = btnBuildDataClick
   end
   object ActionList1: TActionList
     Left = 672

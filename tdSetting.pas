@@ -24,13 +24,14 @@ type
     Password: string;
     OSAuthent: boolean;
     LoginTimeOut: integer;
-    DolphinMeetsFolder: string;
-    DolphinPrgFolder: string;
-    DolphinAppData: string;
-    DolphinReConstruct: string;
-    DolphinPrecedence: dtPrecedence;
-    DolphinAcceptedDeviation: double;
-    DolphinCalcRTMethod: integer;
+    MeetsFolder: string;
+    ProgramFolder: string;
+    AppData: string;
+    ReConstruct: string;
+    Precedence: dtPrecedence;
+    AcceptedDeviation: double;
+    CalcRTMethod: integer;
+    EnableRenameResultFiles: boolean;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -56,14 +57,15 @@ begin
   Password := '';
   OSAuthent := false;
   LoginTimeOut := CONNECTIONTIMEOUT;
-  DolphinMeetsFolder := 'c:\TimeDrops\Meets';
-  DolphinPrgFolder := 'c:\TimeDrops\Meets';
-  DolphinAppData := 'c:\TimeDrops\AppData';
-  DolphinReConstruct := 'c:\TimeDrops\ReConstruct';
-  DolphinPrecedence := dtPrecHeader;
-  DolphinAcceptedDeviation := 0.3;
+  MeetsFolder := 'c:\TimeDrops\Meets';
+  ProgramFolder := 'c:\TimeDrops\Meets';
+  AppData := 'c:\TimeDrops\AppData';
+  ReConstruct := 'c:\TimeDrops\ReConstruct';
+  Precedence := dtPrecHeader;
+  AcceptedDeviation := 0.3;
   // 0 = default DT method : 1 = extended SCM method.
-  DolphinCalcRTMethod := 0;
+  CalcRTMethod := 0;
+  EnableRenameResultFiles := false;
   {
   ForceDirectories creates a new directory as specified in Dir,
   which must be a fully-qualified path name. If the directories given in

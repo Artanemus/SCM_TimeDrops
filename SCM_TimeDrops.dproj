@@ -72,6 +72,9 @@
         <UWP_DelphiLogo150>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_150.png</UWP_DelphiLogo150>
         <SanitizedProjectName>SCM_TimeDrops</SanitizedProjectName>
         <Custom_Styles>&quot;Windows10 SlateGray|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows10SlateGray.vsf&quot;</Custom_Styles>
+        <DCC_UnitSearchPath>C:\Users\Ben\Documents\GitHub\VCL_TMS;C:\Users\Ben\Documents\GitHub\SVGIconImageList\Lib\D12\Win32\Release;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <VerInfo_Locale>3081</VerInfo_Locale>
+        <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
         <DCC_UsePackage>JvNet;vclwinx;DataSnapServer;fmx;vclie;DbxCommonDriver;bindengine;IndyIPCommon;VCLRESTComponents;DBXMSSQLDriver;FireDACCommonODBC;emsclient;AbbreviaD;appanalytics;IndyProtocols;vclx;Skia.Package.RTL;dbxcds;vcledge;fsADO;FmxTeeUI;DBXFirebirdDriver;JvAppFrm;FireDACSqliteDriver;DbxClientDriver;JclVcl;soapmidas;TeeUI;Jcl;dbexpress;JvManagedThreads;inet;TMSXls;vcltouch;JvDB;FireDACDBXDriver;fmxdae;JvCustom;CustomIPTransport;FireDACMSSQLDriver;JvSystem;JvControls;JvCrypt;JvJans;JvMM;IndySystem;JvGlobus;fsIBX;ibxbindings;frxTee;JclContainers;JvPageComps;vclFireDAC;FireDACCommon;DataSnapServerMidas;FireDACODBCDriver;emsserverresource;fsFD;bindcompdbx;rtl;FireDACMySQLDriver;DBXSqliteDriver;frxDBX;VirtualTreesDR;DBXSybaseASEDriver;JvRuntimeDesign;frx;JvXPCtrls;vclimg;DataSnapFireDAC;inetdbxpress;FireDAC;JvDocking;JvDlgs;xmlrtl;ibxpress;dsnap;JvCmp;FireDACDb2Driver;DBXOracleDriver;DBXInformixDriver;vclib;fmxobj;bindcompvclsmp;DataSnapNativeClient;DatasnapConnectorsFreePascal;SVGIconImageList;frxIntIO;emshosting;FireDACCommonDriver;IndyIPClient;frxFD;bindcompvclwinx;TMSWiz;emsedge;bindcompfmx;frxADO;JvBands;inetdb;ibmonitor;FireDACASADriver;Tee;frxIBX;OrpheusDBDR;SVGIconImageListFMX;vclactnband;fmxFireDAC;FireDACInfxDriver;DBXMySQLDriver;VclSmp;DataSnapCommon;JvPascalInterpreter;fmxase;frxcs;JvPluginSystem;frxIntIOIndy;DBXOdbcDriver;JvTimeFramework;dbrtl;FireDACOracleDriver;Skia.Package.FMX;fsTee;TeeDB;FireDACMSAccDriver;AbbreviaVCLD;DataSnapIndy10ServerTransport;JclDeveloperTools;DataSnapConnectors;vcldsnap;DBXInterBaseDriver;fsDB;FireDACMongoDBDriver;JvWizards;OrpheusDR;FireDACTDataDriver;frxOpenFiltersTemp;Skia.Package.VCL;vcldb;TMSEx;JvCore;bindcomp;AbbreviaFMXDDesign;IndyCore;RESTBackendComponents;FireDACADSDriver;RESTComponents;IndyIPServer;vcl;dsnapxml;adortl;dsnapcon;DataSnapClient;DataSnapProviderClient;JvDotNetCtrls;JvHMI;DBXDb2Driver;frxe;emsclientfiredac;FireDACPgDriver;FireDACDSDriver;JvPrintPreview;tethering;TMS;JvStdCtrls;bindcompvcl;fs;CloudService;DBXSybaseASADriver;FMXTee;frxDB;soaprtl;soapserver;FireDACIBDriver;$(DCC_UsePackage)</DCC_UsePackage>
@@ -136,7 +139,7 @@
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <DCCReference Include="dmTDData.pas">
-            <Form>DTData</Form>
+            <Form>TDData</Form>
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
@@ -154,6 +157,10 @@
         <DCCReference Include="DirectoryWatcher.pas"/>
         <DCCReference Include="tdMeetPrg.pas"/>
         <DCCReference Include="tdReConstruct.pas"/>
+        <DCCReference Include="dlgOptions.pas">
+            <Form>Options</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

@@ -4,7 +4,7 @@ uses
   Vcl.Forms,
   tdLogin in 'tdLogin.pas' {Login},
   dmSCM in 'dmSCM.pas' {SCM: TDataModule},
-  dmTDData in 'dmTDData.pas' {DTData: TDataModule},
+  dmTDData in 'dmTDData.pas' {TDData: TDataModule},
   SCMDefines in '..\SCM_SHARED\SCMDefines.pas',
   SCMSimpleConnect in '..\SCM_SHARED\SCMSimpleConnect.pas',
   tdSetting in 'tdSetting.pas',
@@ -17,7 +17,8 @@ uses
   tdMeetPrg in 'tdMeetPrg.pas',
   Vcl.Themes,
   Vcl.Styles,
-  tdReConstruct in 'tdReConstruct.pas';
+  tdReConstruct in 'tdReConstruct.pas',
+  dlgOptions in 'dlgOptions.pas' {Options};
 
 {$R *.res}
 

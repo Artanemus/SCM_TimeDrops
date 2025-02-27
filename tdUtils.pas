@@ -71,7 +71,7 @@ type
     procedure AppendDTData(const AFileName: string);
     // procedure CalculateDeviation(EntrantID: integer; AEventType: scmEventType);
 
-    function DirectoryHasDTFiles(const ADirectory: string): boolean;
+    function DirHasResultFiles(const ADirectory: string): boolean;
     function GetDTFileTypeOfFile(const AFileName: string): dtFileType;
 
     class operator Initialize(out Dest: TdtUtils);
@@ -155,13 +155,14 @@ begin
   Dest.fCalcMode := 0;
 end;
 
-function TdtUtils.DirectoryHasDTFiles(const ADirectory: string): boolean;
+function TdtUtils.DirHasResultFiles(const ADirectory: string): boolean;
 var
   LList: TStringDynArray;
   LSearchOption: TSearchOption;
   fileMask: string;
+  I: Integer;
 begin
-  fileMask := '*.DO?';
+  fileMask := '*.JSON';
   result := false;
   // do not do recursive extract into subfolders
   LSearchOption := TSearchOption.soTopDirectoryOnly;
@@ -174,6 +175,15 @@ begin
       result := true;
       exit;
     end;
+    for I := LOW(LList) to HIGH(LList) do
+    begin
+      if LList[I].Contains('Session') then
+      begin
+        result := true;
+        exit;
+      end;
+    end;
+
   except
     { Catch the possible exceptions }
     MessageBox(0, PChar('Incorrect path or search mask'),
