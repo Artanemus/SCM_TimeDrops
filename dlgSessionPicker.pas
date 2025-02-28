@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, dmDTData,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, dmAppData,
   Vcl.DBCtrls, Data.DB, Vcl.Grids, Vcl.DBGrids;
 
 type
@@ -53,8 +53,8 @@ procedure TSessionPicker.FormCreate(Sender: TObject);
 begin
   fSessionID := 0;
   // ensure data tables are active...
-  if not DTData.qrySessionList.Active then
-    DTData.qrySessionList.Open;
+  if not AppData.qrySessionList.Active then
+    AppData.qrySessionList.Open;
 end;
 
 procedure TSessionPicker.dbgridSessionDblClick(Sender: TObject);
@@ -81,12 +81,12 @@ begin
   if fSessionID <> 0 then
   begin
     SearchOptions := [];
-    if DTData.qrySessionList.Active and not DTData.qrySessionList.IsEmpty then
+    if AppData.qrySessionList.Active and not AppData.qrySessionList.IsEmpty then
     begin
-        success := DTData.qrySessionList.Locate('SessionID', fSessionID, SearchOptions);
+        success := AppData.qrySessionList.Locate('SessionID', fSessionID, SearchOptions);
         if not success then
         begin
-          DTData.qrySessionList.First;
+          AppData.qrySessionList.First;
         end;
     end;
   end;

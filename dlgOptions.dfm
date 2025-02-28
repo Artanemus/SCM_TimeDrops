@@ -8390,7 +8390,7 @@ object Options: TOptions
       ImageCollection = DTData.imgcolDT
       ImageWidth = 0
       ImageHeight = 0
-      ImageIndex = 16
+      ImageIndex = -1
       ImageName = 'SCMTimeDropsICON'
     end
     object lblHeaderTitle: TLabel
@@ -8454,16 +8454,17 @@ object Options: TOptions
         end
         object rgrpMeanTimeMethod: TRadioGroup
           Left = 20
-          Top = 98
+          Top = 89
           Width = 269
-          Height = 119
+          Height = 152
           Caption = 'Calculate race times.'
           Enabled = False
           ItemIndex = 0
           Items.Strings = (
             'Standard behaviour'
             'SCM method'
-            'Use Time Drops '#39'finalTime'#39)
+            'Use Time Drops '#39'finalTime'#39
+            'Use TimeDrops '#39'padTime'#39)
           TabOrder = 1
         end
         object chkbxRenameSession: TCheckBox

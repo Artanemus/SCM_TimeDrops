@@ -102,7 +102,7 @@ object Main: TMain
         Top = 181
         Width = 50
         Height = 50
-        ImageCollection = TDData.imgcolDT
+        ImageCollection = AppData.imgcolDT
         ImageWidth = 0
         ImageHeight = 0
         ImageIndex = 14
@@ -114,7 +114,7 @@ object Main: TMain
         Width = 50
         Height = 50
         Hint = 'Heat status. (Open, raced, closed.)'
-        ImageCollection = TDData.imgcolDT
+        ImageCollection = AppData.imgcolDT
         ImageWidth = 0
         ImageHeight = 0
         ImageIndex = 10
@@ -127,7 +127,7 @@ object Main: TMain
         Top = 125
         Width = 50
         Height = 50
-        ImageCollection = TDData.imgcolDT
+        ImageCollection = AppData.imgcolDT
         ImageWidth = 0
         ImageHeight = 0
         ImageIndex = 13
@@ -138,7 +138,7 @@ object Main: TMain
         Top = 125
         Width = 50
         Height = 50
-        ImageCollection = TDData.imgcolDT
+        ImageCollection = AppData.imgcolDT
         ImageWidth = 0
         ImageHeight = 0
         ImageIndex = 0
@@ -217,7 +217,7 @@ object Main: TMain
           'er.)'
         Action = actnSyncSCM
         Caption = 'SYNC'
-        Images = TDData.vimglistMenu
+        Images = AppData.vimglistMenu
         Layout = blGlyphRight
         ParentShowHint = False
         ShowHint = True
@@ -232,7 +232,7 @@ object Main: TMain
           ' button will re-sync to the SCM database.'
         Action = actnRefresh
         Caption = 'REFRESH'
-        Images = TDData.vimglistMenu
+        Images = AppData.vimglistMenu
         Layout = blGlyphRight
         ParentShowHint = False
         ShowHint = True
@@ -639,7 +639,7 @@ object Main: TMain
             HeaderFont.Height = -16
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
-            Images = TDData.vimglistDTGrid
+            Images = AppData.vimglistDTGrid
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clBlack
@@ -648,7 +648,7 @@ object Main: TMain
             PrintFont.Style = []
             Width = 34
           end>
-        DataSource = TDData.dsINDV
+        DataSource = AppData.dsINDV
         InvalidPicture.Data = {
           055449636F6E0000010001002020200000000000A81000001600000028000000
           2000000040000000010020000000000000100000000000000000000000000000
@@ -809,10 +809,10 @@ object Main: TMain
         Hint = 
           'Tree-View. Quick access and browse for event and heat.'#13#10'Also dis' +
           'plays event and heat status. (Open, raced, closed.)'
-        DisabledImages = TDData.vimglistDTEvent
+        DisabledImages = AppData.vimglistDTEvent
         ImageIndex = 10
         ImageName = 'TreeView_W'
-        Images = TDData.vimglistDTEvent
+        Images = AppData.vimglistDTEvent
         ParentShowHint = False
         ShowHint = True
         TabOrder = 3
@@ -835,7 +835,7 @@ object Main: TMain
         Height = 31
         Alignment = taCenter
         DataField = 'FileName'
-        DataSource = TDData.dsDTHeat
+        DataSource = AppData.dsmHeat
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
         Font.Height = -19
@@ -986,7 +986,7 @@ object Main: TMain
         FixedFont.Name = 'Segoe UI Semibold'
         FixedFont.Style = [fsBold]
         FloatFormat = '%.2f'
-        GridImages = TDData.vimglistDTCell
+        GridImages = AppData.vimglistDTCell
         HoverButtons.Buttons = <>
         HoverButtons.Position = hbLeftFromColumnLeft
         HTMLSettings.ImageFolder = 'images'
@@ -1088,7 +1088,7 @@ object Main: TMain
             HeaderFont.Height = -16
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
-            Images = TDData.vimglistDTGrid
+            Images = AppData.vimglistDTGrid
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
@@ -1231,7 +1231,7 @@ object Main: TMain
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
             HeaderAlignment = taCenter
-            Images = TDData.vimglistDTGrid
+            Images = AppData.vimglistDTGrid
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
@@ -1268,7 +1268,7 @@ object Main: TMain
             PrintFont.Style = []
             Width = 120
           end>
-        DataSource = TDData.dsDTEntrant
+        DataSource = AppData.dsmLane
         InvalidPicture.Data = {
           055449636F6E0000010001002020200000000000A81000001600000028000000
           2000000040000000010020000000000000100000000000000000000000000000
@@ -1438,10 +1438,10 @@ object Main: TMain
         Width = 58
         Height = 50
         Hint = 'Tree-View. Quick access and browse for session, event and heat.'
-        DisabledImages = TDData.vimglistDTEvent
+        DisabledImages = AppData.vimglistDTEvent
         ImageIndex = 10
         ImageName = 'TreeView_W'
-        Images = TDData.vimglistDTEvent
+        Images = AppData.vimglistDTEvent
         ParentShowHint = False
         ShowHint = True
         TabOrder = 4
@@ -1495,7 +1495,7 @@ object Main: TMain
           Hint = 'Syncronize Dolphin Timing to SCM.'
           Action = actnSyncDT
           Caption = 'SYNC'
-          Images = TDData.vimglistMenu
+          Images = AppData.vimglistMenu
           ParentShowHint = False
           ShowHint = True
         end
@@ -1506,7 +1506,7 @@ object Main: TMain
           Height = 41
           Hint = 'Post the DT '#39'Race-Times'#39' to the SCM heat.'
           Action = actnPost
-          Images = TDData.vimglistMenu
+          Images = AppData.vimglistMenu
           ParentShowHint = False
           ShowHint = True
         end
@@ -1519,7 +1519,7 @@ object Main: TMain
           Caption = 'PATCH'
           ImageIndex = 14
           ImageName = 'AutoPatch'
-          Images = TDData.vimglistMenu
+          Images = AppData.vimglistMenu
           Enabled = False
           ParentShowHint = False
           ShowHint = True
@@ -1709,7 +1709,7 @@ object Main: TMain
           end>
         ActionBar = actnMenuBar
       end>
-    Images = TDData.vimglistMenu
+    Images = AppData.vimglistMenu
     Left = 984
     Top = 368
     StyleName = 'Platform Default'

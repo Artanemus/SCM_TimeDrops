@@ -1,4 +1,4 @@
-unit dmTDData;
+unit dmAppData;
 
 interface
 
@@ -52,11 +52,11 @@ type
 
   end;
 
-  TTDData = class(TDataModule)
-    dsDTEntrant: TDataSource;
-    dsDTEvent: TDataSource;
-    dsDTHeat: TDataSource;
-    dsDTSession: TDataSource;
+  TAppData = class(TDataModule)
+    dsmLane: TDataSource;
+    dsmEvent: TDataSource;
+    dsmHeat: TDataSource;
+    dsmSession: TDataSource;
     dsEvent: TDataSource;
     dsHeat: TDataSource;
     dsINDV: TDataSource;
@@ -86,11 +86,11 @@ type
     qryTEAM: TFDQuery;
     qryTEAMEntrant: TFDQuery;
     SVGIconImageCollection1: TSVGIconImageCollection;
-    tblDTEntrant: TFDMemTable;
-    tblDTEvent: TFDMemTable;
-    tblDTHeat: TFDMemTable;
-    tblDTNoodle: TFDMemTable;
-    tblDTSession: TFDMemTable;
+    tblmLane: TFDMemTable;
+    tblmEvent: TFDMemTable;
+    tblmHeat: TFDMemTable;
+    tblmNoodle: TFDMemTable;
+    tblmSession: TFDMemTable;
     vimglistDTCell: TVirtualImageList;
     vimglistDTEvent: TVirtualImageList;
     vimglistDTGrid: TVirtualImageList;
@@ -99,10 +99,10 @@ type
     vimglistTreeView: TVirtualImageList;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
-    procedure tblDTHeatAfterScroll(DataSet: TDataSet);
+    procedure tblmHeatAfterScroll(DataSet: TDataSet);
   private
     FConnection: TFDConnection;
-    fDTDataIsActive: Boolean;
+    fTDDataIsActive: Boolean;
     fDTMasterDetailActive: Boolean;
     fSCMDataIsActive: Boolean;
     msgHandle: HWND;  // TForm.dtfrmExec ...
@@ -113,7 +113,7 @@ type
     procedure ActivateDataDT();
     procedure ActivateDataSCM();
     procedure BuildCSVEventData(AFileName: string);
-    procedure BuildDTData;
+    procedure BuildAppData;
     // --------------------------------------------
     // Routines ONLY for ActiveRT = dtAutomatic
     // on called on loading of DT file ...
@@ -144,7 +144,7 @@ type
     function LocateDTHeatID(AHeatID: integer): boolean;
     function LocateDTHeatNum(EventID, AHeatNum: integer; Aprecedence: dtPrecedence):
         boolean;
-    function LocateDTLane(ALane: integer): boolean;
+    function LocateDTLaneNum(ALaneNum: integer): boolean;
 
     // L O C A T E S   F O R   S W I M C L U B M E E T   D A T A.
     // WARNING : Master-Detail enabled...
@@ -154,7 +154,7 @@ type
     // Uses SessionStart TDateTime...
     function LocateSCMNearestSessionID(aDate: TDateTime): integer;
     function LocateSCMSessionID(ASessionID: integer): boolean;
-    function LocateSCMLane(ALane: integer; aEventType: scmEventType): boolean;
+    function LocateSCMLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean;
     // .......................................................
 
     function SyncDTtoSCM(APrecedence: dtPrecedence): boolean;
@@ -175,7 +175,7 @@ type
     procedure POST_All;
     procedure POST_Lane(ALane: Integer);
 
-    // Read/Write DTData State to file
+    // Read/Write Application Data State to file
     procedure ReadFromBinary(AFilePath:string);
     // If events, heats, etc change within SwimClubMeet then call here to
     // reload and sync to changes.
@@ -189,19 +189,22 @@ type
     // Tests IsEmpty, IsNull, [T1M .. T3M] [T1A .. T3A] STATE.
     function ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer; art:
         dtActiveRT): boolean;
-    // Read/Write DTData State to file
+    // Read/Write Application Data State to file
     procedure WriteToBinary(AFilePath:string);
 
     property ActiveSessionID: integer read GetSCMActiveSessionID;
     property Connection: TFDConnection read FConnection write FConnection;
-    property DTDataIsActive: Boolean read fDTDataIsActive;
+    property TDDataIsActive: Boolean read fTDDataIsActive;
     property DTMasterDetailActive: Boolean read fDTMasterDetailActive;
     property MSG_Handle: HWND read msgHandle write msgHandle;
     property SCMDataIsActive: Boolean read fSCMDataIsActive;
   end;
 
+const
+  XMLDataSubFolder = 'GitHub\SCM_TimeDrops\XML\';
+
 var
-  TDData: TTDData;
+  AppData: TAppData;
 
 implementation
 
@@ -211,24 +214,29 @@ implementation
 
 uses System.Variants, System.DateUtils, tdSetting;
 
+function GetDocumentDir(): string;
+begin
+  result := GetEnvironmentVariable('HOMEPATH');
+  result := IncludeTrailingPathDelimiter(result);
+end;
 
-procedure TTDData.ActivateDataDT;
+procedure TAppData.ActivateDataDT;
 begin
   fSCMDataIsActive := false;
   // MAKE LIVE THE TIME-DROPS TABLES
   try
-    tblDTSession.Open;
-    if tblDTSession.Active then
+    tblmSession.Open;
+    if tblmSession.Active then
     begin
-      tblDTEvent.Open;
-      if tblDTEvent.Active then
+      tblmEvent.Open;
+      if tblmEvent.Active then
       begin
-        tblDTHeat.Open;
-        if tblDTHeat.Active then
+        tblmHeat.Open;
+        if tblmHeat.Active then
         begin
-          tblDTEntrant.Open;
-          tblDTNoodle.Open;
-          if tblDTEntrant.Active and tblDTNoodle.Active then
+          tblmLane.Open;
+          tblmNoodle.Open;
+          if tblmLane.Active and tblmNoodle.Active then
             fSCMDataIsActive := true;
         end;
       end;
@@ -238,7 +246,7 @@ begin
   end;
 end;
 
-procedure TTDData.ActivateDataSCM;
+procedure TAppData.ActivateDataSCM;
 begin
   if Assigned(fConnection) and fConnection.Connected then
   begin
@@ -289,7 +297,7 @@ begin
   end;
 end;
 
-procedure TTDData.BuildCSVEventData(AFileName: string);
+procedure TAppData.BuildCSVEventData(AFileName: string);
 var
   sl: TStringList;
   s, s2, s3: string;
@@ -353,96 +361,101 @@ heats may be run in any order.
   sl.free;
 end;
 
-procedure TTDData.BuildDTData;
+procedure TAppData.BuildAppData;
+var
+fn: TFileName;
 begin
   fSCMDataIsActive := false;
-  tblDTSession.Active := false;
-  tblDTEvent.Active := false;
-  tblDTHeat.Active := false;
-  tblDTEntrant.Active := false;
-  tblDTNoodle.Active := false;
+  tblmSession.Active := false;
+  tblmEvent.Active := false;
+  tblmHeat.Active := false;
+  tblmLane.Active := false;
+  tblmNoodle.Active := false;
 
   // Create TIME-DROPS DATA TABLES SCHEMA.
   // ---------------------------------------------
-  tblDTSession.FieldDefs.Clear;
+  tblmSession.FieldDefs.Clear;
   // Primary Key
-  tblDTSession.FieldDefs.Add('SessionID', ftInteger);
+  tblmSession.FieldDefs.Add('SessionID', ftInteger);
   // Derived from line one 'Header' within file.
-  tblDTSession.FieldDefs.Add('SessionNum', ftInteger);
+  tblmSession.FieldDefs.Add('SessionNum', ftInteger);
   // Derived from filename : Last three digits of SCM qrySession.SessionID.
-  tblDTSession.FieldDefs.Add('fnSessionNum', ftInteger);
+  tblmSession.FieldDefs.Add('fnSessionNum', ftInteger);
   // file creation date  - produced by TIME-DROPS when file was saved.
-  tblDTSession.FieldDefs.Add('SessionStart', ftDateTime);
+  tblmSession.FieldDefs.Add('SessionStart', ftDateTime);
   // TimeStamp - Now.
-  tblDTSession.FieldDefs.Add('CreatedOn', ftDateTime);
-  tblDTSession.FieldDefs.Add('Caption', ftString, 64);
-  tblDTSession.CreateDataSet;
+  tblmSession.FieldDefs.Add('CreatedOn', ftDateTime);
+  tblmSession.FieldDefs.Add('Caption', ftString, 64);
+  tblmSession.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTSession.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataSession.xml', sfAuto);
+  fn := GetDocumentDir() +  XMLDataSubFolder + 'AppDataSession.xml';
+  tblmSession.SaveToFile(fn, sfAuto);
 {$ENDIF}
 
-  tblDTEvent.FieldDefs.Clear;
+  tblmEvent.FieldDefs.Clear;
   // Primary Key.
-  tblDTEvent.FieldDefs.Add('EventID', ftInteger);
-  // FK. Master-detail  (tblDTSession)
-  tblDTEvent.FieldDefs.Add('SessionID', ftInteger);
+  tblmEvent.FieldDefs.Add('EventID', ftInteger);
+  // FK. Master-detail  (tblmSession)
+  tblmEvent.FieldDefs.Add('SessionID', ftInteger);
   // Derived from SplitString Field[1]
   // SYNC with SCM EventNum.
-  tblDTEvent.FieldDefs.Add('EventNum', ftInteger);
+  tblmEvent.FieldDefs.Add('EventNum', ftInteger);
   // Derived from filename : matches SCM qryEvent.EventNum.
-  tblDTEvent.FieldDefs.Add('fnEventNum', ftInteger);
-  tblDTEvent.FieldDefs.Add('Caption', ftString, 64);
-  tblDTEvent.FieldDefs.Add('GenderStr', ftString, 1); // DO4 A=boys, B=girls, X=any.
+  tblmEvent.FieldDefs.Add('fnEventNum', ftInteger);
+  tblmEvent.FieldDefs.Add('Caption', ftString, 64);
+  tblmEvent.FieldDefs.Add('GenderStr', ftString, 1); // DO4 A=boys, B=girls, X=any.
   // Derived from filename
   // Round – “A” for all, “P” for prelim or “F” for final.
-  tblDTEvent.FieldDefs.Add('fnRoundStr', ftString, 1);
-  tblDTEvent.CreateDataSet;
+  tblmEvent.FieldDefs.Add('fnRoundStr', ftString, 1);
+  tblmEvent.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTEvent.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataEvent.xml', sfAuto);
+  fn := GetDocumentDir() +  XMLDataSubFolder + 'AppDataEvent.xml';
+  tblmEvent.SaveToFile(fn, sfAuto);
 {$ENDIF}
 
-  tblDTHeat.FieldDefs.Clear;
-  // Create the HEAT MEM TABLE schema... tblDTHeat.
+  tblmHeat.FieldDefs.Clear;
+  // Create the HEAT MEM TABLE schema... tblmHeat.
   // ---------------------------------------------
-  tblDTHeat.FieldDefs.Add('HeatID', ftInteger); // PK.
-  tblDTHeat.FieldDefs.Add('EventID', ftInteger); // Master- Detail
+  tblmHeat.FieldDefs.Add('HeatID', ftInteger); // PK.
+  tblmHeat.FieldDefs.Add('EventID', ftInteger); // Master- Detail
   // This timestamp is the moment when the event is brought into the
   // swimclubmeet TIME-DROPS application.
   // It's used to assist in 'pooling time' of the DT Meet Bin
-  tblDTHeat.FieldDefs.Add('TimeStampDT', ftDateTime);
+  tblmHeat.FieldDefs.Add('TimeStampDT', ftDateTime);
   // heat number should match
   // - SCM.dsHeat.Dataset.FieldByName('HeatNum)
   // - DT Filename - SplitString Field[2] - only available in D04
   // - Line one of FileName. Referenced as 'Header' - SplitString Field[2]
-  tblDTHeat.FieldDefs.Add('HeatNum', ftInteger);
+  tblmHeat.FieldDefs.Add('HeatNum', ftInteger);
   // the heat number as shown in the DT filename.
-  tblDTHeat.FieldDefs.Add('fnHeatNum', ftInteger);
+  tblmHeat.FieldDefs.Add('fnHeatNum', ftInteger);
   // Auto-created eg. 'Event 1 : #FILENAME#'
-  tblDTHeat.FieldDefs.Add('Caption', ftString, 64);
+  tblmHeat.FieldDefs.Add('Caption', ftString, 64);
   // Time stamp of file - created by TIME-DROPS system on write of file.
-  tblDTHeat.FieldDefs.Add('CreatedDT', ftDateTime);
+  tblmHeat.FieldDefs.Add('CreatedDT', ftDateTime);
   // Path isn't stotred
   // FileName includes file extension.    (.DO3, .DO4)
   // determines dtFileType dtDO3, dtDO4.
-  tblDTHeat.FieldDefs.Add('FileName', ftString, 128);
+  tblmHeat.FieldDefs.Add('FileName', ftString, 128);
   // Last line of file - Referenced as 'Footer'
-  tblDTHeat.FieldDefs.Add('CheckSum', ftString, 16); // footer.
+  tblmHeat.FieldDefs.Add('CheckSum', ftString, 16); // footer.
   // Filename params sess, ev, ht don't match SCM session, event, heat
   // Used to prompt user to rename DT FileName.
-  tblDTHeat.FieldDefs.Add('fnBadFN', ftBoolean);
+  tblmHeat.FieldDefs.Add('fnBadFN', ftBoolean);
   // Derived from FileName.
   // DO3 - SplitString Field[2] hash number (alpha-numerical).
   // DO4 - SplitString Field[3] hash number (numerical - sequence).
-  tblDTHeat.FieldDefs.Add('fnHashStr', ftString, 8);
+  tblmHeat.FieldDefs.Add('fnHashStr', ftString, 8);
   // Derived from FileName.
   // DO4 Hashstr can be converted to RaceID.
-  tblDTHeat.FieldDefs.Add('fnRaceID', ftInteger);
-  tblDTHeat.CreateDataSet;
+  tblmHeat.FieldDefs.Add('fnRaceID', ftInteger);
+  tblmHeat.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTHeat.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataHeat.xml');
+  fn := GetDocumentDir() +  XMLDataSubFolder + 'AppDataHeat.xml';
+  tblmEvent.SaveToFile(fn, sfAuto);
 {$ENDIF}
 
   { NOTE :
@@ -450,28 +463,38 @@ begin
     tblEntrant holds both INDV and TEAM data.
   }
 
-  tblDTEntrant.FieldDefs.Clear;
-  // Create the LANE MEM TABLE schema... tblDTEntrant.
+  tblmLane.FieldDefs.Clear;
+  // Create the LANE MEM TABLE schema... tblmLane.
   // ---------------------------------------------
-  tblDTEntrant.FieldDefs.Add('EntrantID', ftInteger); // PK.
-  tblDTEntrant.FieldDefs.Add('HeatID', ftInteger); // Master- Detail
-  tblDTEntrant.FieldDefs.Add('Lane', ftInteger); // Lane Number.
+  tblmLane.FieldDefs.Add('LaneID', ftInteger); // PK.
+  tblmLane.FieldDefs.Add('HeatID', ftInteger); // Master- Detail
+  tblmLane.FieldDefs.Add('LaneNum', ftInteger); // Lane Number.
   // TIME-DROPS Specific
-  tblDTEntrant.FieldDefs.Add('Caption', ftString, 64); // Summary of status/mode
+  tblmLane.FieldDefs.Add('Caption', ftString, 64); // Summary of status/mode
 
   // If all timekeeper watch times are empty - then true;
   // calculated during load of DT file. Read Only.
-  tblDTEntrant.FieldDefs.Add('LaneIsEmpty', ftBoolean);  //
+  tblmLane.FieldDefs.Add('LaneIsEmpty', ftBoolean);  //
 
   // Race-Time that will be posted to SCM.
   // Value shown here is dependant on ActiveRT.
-  tblDTEntrant.FieldDefs.Add('RaceTime', ftTime);
+  tblmLane.FieldDefs.Add('RaceTime', ftTime);
 
   // A race-time entered manually by the user.
-  tblDTEntrant.FieldDefs.Add('RaceTimeUser', ftTime);
+  tblmLane.FieldDefs.Add('RaceTimeUser', ftTime);
+
+  // A race-time cacluated by Time-Drops. Assigned on load. ReadOnly.
+  // DOCUMENTATION ....
+  // combination of the pad and button times. 
+  tblmLane.FieldDefs.Add('finalTime', ftTime);
+
+  // A race-time cacluated by Time-Drops. Assigned on load. ReadOnly.
+  // DOCUMENTATION ....
+  // only present when using pads
+  tblmLane.FieldDefs.Add('padTime', ftTime);
 
   // dtAutomatic - calc on load. Read-Only.
-  tblDTEntrant.FieldDefs.Add('RaceTimeA', ftTime);
+  tblmLane.FieldDefs.Add('RaceTimeA', ftTime);
 
   // dtActiveRT = (artAutomatic, artManual, artUser, artSplit, artNone);
   // ----------------------------------------------------------------
@@ -487,86 +510,88 @@ begin
   // dtfiletype dtDO4 ONLY. Use the final split-time as race-time.
   // artNone ...
   // The lane is empty or data error.
-  tblDTEntrant.FieldDefs.Add('ActiveRT', ftInteger);
+  tblmLane.FieldDefs.Add('ActiveRT', ftInteger);
 
-  // CELL ICON - PATCH cable . index given in DTData.vimglistDTGrid.
-  tblDTEntrant.FieldDefs.Add('imgPatch', ftInteger);
+  // CELL ICON - PATCH cable .
+  tblmLane.FieldDefs.Add('imgPatch', ftInteger);
 
-  // CELL ICON - ActiveRT.  index given in DTData.vimglistDTGrid.
-  tblDTEntrant.FieldDefs.Add('imgActiveRT', ftInteger);
+  // CELL ICON - ActiveRT.
+  tblmLane.FieldDefs.Add('imgActiveRT', ftInteger);
 
   // TimeKeeper's RACE_TIMES - 1,2, 3  (DT allows for 3 TimeKeepers.)
-  tblDTEntrant.FieldDefs.Add('Time1', ftTime); // timekeeper 1.
-  tblDTEntrant.FieldDefs.Add('Time2', ftTime); // timekeeper 2.
-  tblDTEntrant.FieldDefs.Add('Time3', ftTime);  // timekeeper 3.
+  tblmLane.FieldDefs.Add('Time1', ftTime); // timekeeper 1.
+  tblmLane.FieldDefs.Add('Time2', ftTime); // timekeeper 2.
+  tblmLane.FieldDefs.Add('Time3', ftTime);  // timekeeper 3.
 
   // dtManual - store flip/flop.
   // The watch time is enabled (true) - is disabled (false).
-  tblDTEntrant.FieldDefs.Add('T1M', ftBoolean);
-  tblDTEntrant.FieldDefs.Add('T2M', ftBoolean);
-  tblDTEntrant.FieldDefs.Add('T3M', ftBoolean);
+  tblmLane.FieldDefs.Add('T1M', ftBoolean);
+  tblmLane.FieldDefs.Add('T2M', ftBoolean);
+  tblmLane.FieldDefs.Add('T3M', ftBoolean);
 
   // dtAutomatic - store flip/flop.
   // The watch time is valid  (true).
   // SET on load of DT file (DO3 .. DO4). Read only.
-  tblDTEntrant.FieldDefs.Add('T1A', ftBoolean);
-  tblDTEntrant.FieldDefs.Add('T2A', ftBoolean);
-  tblDTEntrant.FieldDefs.Add('T3A', ftBoolean);
+  tblmLane.FieldDefs.Add('T1A', ftBoolean);
+  tblmLane.FieldDefs.Add('T2A', ftBoolean);
+  tblmLane.FieldDefs.Add('T3A', ftBoolean);
 
   // Deviation - store flip/flop.
   // The watch time is within accepted deviation (true).
   // Only 2xfields Min-Mid, Mid-Max
   // SET on load of DT file (DO3 .. DO4). Read only.
-  tblDTEntrant.FieldDefs.Add('TDev1', ftBoolean);
-  tblDTEntrant.FieldDefs.Add('TDev2', ftBoolean);
+  tblmLane.FieldDefs.Add('TDev1', ftBoolean);
+  tblmLane.FieldDefs.Add('TDev2', ftBoolean);
 
   // TIME-DROPS (dtfiletype dtDO4) stores MAX 10 splits.
-  tblDTEntrant.FieldDefs.Add('Split1', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split2', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split3', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split4', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split5', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split6', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split7', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split8', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split9', ftTime); // DO4.
-  tblDTEntrant.FieldDefs.Add('Split10', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split1', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split2', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split3', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split4', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split5', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split6', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split7', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split8', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split9', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split10', ftTime); // DO4.
 
-  tblDTEntrant.CreateDataSet;
+  tblmLane.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTEntrant.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataEntrant.xml');
+  fn := GetDocumentDir() +  XMLDataSubFolder + 'AppDataLane.xml';
+  tblmEvent.SaveToFile(fn, sfAuto);
 {$ENDIF}
 
-  tblDTNoodle.FieldDefs.Clear;
-  // Create the NOODLE MEM TABLE schema... tblDTNoodle.
+  tblmNoodle.FieldDefs.Clear;
+  // Create the NOODLE MEM TABLE schema... tblmNoodle.
   // ---------------------------------------------
   // Primary Key
-  tblDTNoodle.FieldDefs.Add('NoodleID', ftInteger);
+  tblmNoodle.FieldDefs.Add('NoodleID', ftInteger);
   // dtHeat Master-Detail.
-  tblDTNoodle.FieldDefs.Add('HeatID', ftInteger);
+  tblmNoodle.FieldDefs.Add('HeatID', ftInteger);
   // dtEntrant - Route to lane/timekeepers/splits details
-  tblDTNoodle.FieldDefs.Add('EntrantID', ftInteger);
+  tblmNoodle.FieldDefs.Add('EntrantID', ftInteger);
   // dtEntrant.Lane - Quick lookup. Improve search times?
-  tblDTNoodle.FieldDefs.Add('Lane', ftInteger);
+  tblmNoodle.FieldDefs.Add('Lane', ftInteger);
   // LINK TO SwimClubMeet DATA
   // An entrant may be INDV or TEAM event.
-  tblDTNoodle.FieldDefs.Add('SCM_EventTypeID', ftInteger);
+  tblmNoodle.FieldDefs.Add('SCM_EventTypeID', ftInteger);
   // Route to individual entrant.
-  tblDTNoodle.FieldDefs.Add('SCM_INDVID', ftInteger);
+  tblmNoodle.FieldDefs.Add('SCM_INDVID', ftInteger);
   // Route to team (relay-team) entrant.
-  tblDTNoodle.FieldDefs.Add('SCM_TEAMID', ftInteger);
+  tblmNoodle.FieldDefs.Add('SCM_TEAMID', ftInteger);
   // Quick lookup?
-  tblDTNoodle.FieldDefs.Add('SCM_Lane', ftInteger);
-  tblDTNoodle.CreateDataSet;
+  tblmNoodle.FieldDefs.Add('SCM_Lane', ftInteger);
+  tblmNoodle.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
-  tblDTNoodle.SaveToFile('C:\Users\Ben\Documents\GitHub\SCM_TimeDrops\DTDataNoodle.xml');
+  fn := GetDocumentDir() +  XMLDataSubFolder + 'AppDataNoodle.xml';
+  tblmEvent.SaveToFile(fn, sfAuto);
 {$ENDIF}
 
 end;
 
-procedure TTDData.CalcRaceTimeA(ADataSet: TDataSet; AcceptedDeviation: double;
+procedure TAppData.CalcRaceTimeA(ADataSet: TDataSet; AcceptedDeviation: double;
     CalcMethod: Integer);
 var
   wt: TWatchtime;
@@ -579,7 +604,7 @@ begin
   wt.free;
 end;
 
-procedure TTDData.CalcRaceTimeM(ADataSet: TDataSet);
+procedure TAppData.CalcRaceTimeM(ADataSet: TDataSet);
 var
   I: Integer;
   s: string;
@@ -616,10 +641,10 @@ begin
   ADataSet.Post;
 end;
 
-procedure TTDData.DataModuleCreate(Sender: TObject);
+procedure TAppData.DataModuleCreate(Sender: TObject);
 begin
   // Init params.
-  fDTDataIsActive := false;
+  fTDDataIsActive := false;
   fDTMasterDetailActive := false;
   FConnection := nil;
   fSCMDataIsActive := false; // activated later once FConnection is assigned.
@@ -631,12 +656,12 @@ begin
   msgHandle := 0;
 end;
 
-procedure TTDData.DataModuleDestroy(Sender: TObject);
+procedure TAppData.DataModuleDestroy(Sender: TObject);
 begin
   DeActivateDataSCM;
 end;
 
-procedure TTDData.DeActivateDataSCM;
+procedure TAppData.DeActivateDataSCM;
 begin
   if Assigned(fConnection) and fConnection.Connected then
   begin
@@ -654,71 +679,71 @@ begin
   end;
 end;
 
-procedure TTDData.DisableDTMasterDetail();
+procedure TAppData.DisableDTMasterDetail();
 begin
   // ASSERT Master - Detail
-  tblDTSession.IndexFieldNames := 'SessionID';
-  tblDTEvent.MasterSource := nil;
-  tblDTEvent.MasterFields := '';
-  tblDTEvent.DetailFields := '';
-  tblDTEvent.IndexFieldNames := 'EventID';
-  tblDTHeat.MasterSource := nil;
-  tblDTHeat.MasterFields := '';
-  tblDTHeat.DetailFields := '';
-  tblDTHeat.IndexFieldNames := 'HeatID';
-  tblDTEntrant.MasterSource := nil;
-  tblDTEntrant.MasterFields := '';
-  tblDTEntrant.DetailFields := '';
-  tblDTEntrant.IndexFieldNames := 'EntrantID';
-  tblDTNoodle.MasterSource := nil;
-  tblDTNoodle.MasterFields := '';
-  tblDTNoodle.DetailFields := '';
-  tblDTNoodle.IndexFieldNames := 'NoodleID';
-  tblDTSession.First;
+  tblmSession.IndexFieldNames := 'SessionID';
+  tblmEvent.MasterSource := nil;
+  tblmEvent.MasterFields := '';
+  tblmEvent.DetailFields := '';
+  tblmEvent.IndexFieldNames := 'EventID';
+  tblmHeat.MasterSource := nil;
+  tblmHeat.MasterFields := '';
+  tblmHeat.DetailFields := '';
+  tblmHeat.IndexFieldNames := 'HeatID';
+  tblmLane.MasterSource := nil;
+  tblmLane.MasterFields := '';
+  tblmLane.DetailFields := '';
+  tblmLane.IndexFieldNames := 'EntrantID';
+  tblmNoodle.MasterSource := nil;
+  tblmNoodle.MasterFields := '';
+  tblmNoodle.DetailFields := '';
+  tblmNoodle.IndexFieldNames := 'NoodleID';
+  tblmSession.First;
   {
   Use the ApplyMaster method to synchronize this detail dataset with the
   current master record.  This method is useful, when DisableControls was
   called for the master dataset or when scrolling is disabled by
   MasterLink.DisableScroll.
   }
-  tblDTEvent.ApplyMaster;
-  tblDTEvent.First;
-  tblDTHeat.ApplyMaster;
-  tblDTHeat.First;
-  tblDTEntrant.ApplyMaster;
-  tblDTEntrant.First;
-  tblDTNoodle.ApplyMaster;
-  tblDTNoodle.First;
+  tblmEvent.ApplyMaster;
+  tblmEvent.First;
+  tblmHeat.ApplyMaster;
+  tblmHeat.First;
+  tblmLane.ApplyMaster;
+  tblmLane.First;
+  tblmNoodle.ApplyMaster;
+  tblmNoodle.First;
 
   fDTMasterDetailActive := false;
 end;
 
-procedure TTDData.EnableDTMasterDetail();
+procedure TAppData.EnableDTMasterDetail();
 begin
   // Master - index field.
-  tblDTSession.IndexFieldNames := 'SessionID';
+  tblmSession.IndexFieldNames := 'SessionID';
   // ASSERT Master - Detail
-  tblDTEvent.MasterSource := dsDTSession;
-  tblDTEvent.MasterFields := 'SessionID';
-  tblDTEvent.DetailFields := 'SessionID';
-  tblDTEvent.IndexFieldNames := 'SessionID';
-  tblDTHeat.MasterSource := dsDTEvent;
-  tblDTHeat.MasterFields := 'EventID';
-  tblDTHeat.DetailFields := 'EventID';
-  tblDTHeat.IndexFieldNames := 'EventID';
-  tblDTEntrant.MasterSource := dsDTHeat;
-  tblDTEntrant.MasterFields := 'HeatID';
-  tblDTEntrant.DetailFields := 'HeatID';
-  tblDTEntrant.IndexFieldNames := 'HeatID';
-  tblDTNoodle.MasterSource := dsDTHeat;
-  tblDTNoodle.MasterFields := 'HeatID';
-  tblDTNoodle.DetailFields := 'HeatID';
-  tblDTNoodle.IndexFieldNames := 'HeatID';
-  tblDTSession.First;
+  tblmEvent.MasterSource := dsmSession;
+  tblmEvent.MasterFields := 'SessionID';
+  tblmEvent.DetailFields := 'SessionID';
+  tblmEvent.IndexFieldNames := 'SessionID';
+  tblmHeat.MasterSource := dsmEvent;
+  tblmHeat.MasterFields := 'EventID';
+  tblmHeat.DetailFields := 'EventID';
+  tblmHeat.IndexFieldNames := 'EventID';
+  tblmLane.MasterSource := dsmHeat;
+  tblmLane.MasterFields := 'HeatID';
+  tblmLane.DetailFields := 'HeatID';
+  tblmLane.IndexFieldNames := 'HeatID';
+  tblmNoodle.MasterSource := dsmHeat;
+  tblmNoodle.MasterFields := 'HeatID';
+  tblmNoodle.DetailFields := 'HeatID';
+  tblmNoodle.IndexFieldNames := 'HeatID';
+  tblmSession.First;
   fDTMasterDetailActive := true;
 end;
 
-function TTDData.GetSCMActiveSessionID: integer;
+function TAppData.GetSCMActiveSessionID: integer;
 begin
   result := 0;
   if not fSCMDataIsActive then exit;
@@ -726,19 +751,19 @@ begin
     result := qrySession.FieldByName('SessionID').AsInteger;
 end;
 
-function TTDData.GetSCMNumberOfHeats(AEventID: integer): integer;
+function TAppData.GetSCMNumberOfHeats(AEventID: integer): integer;
 var
 SQL: string;
 v: variant;
 begin
   result := 0;
   SQL := 'SELECT COUNT(HeatID) FROM dbo.HeatIndividual WHERE EventID = :ID;';
-  v := DTData.Connection.ExecSQLScalar(SQL, [AEventID]);
+  v := AppData.Connection.ExecSQLScalar(SQL, [AEventID]);
   if VarIsNull(v) or VarIsEmpty(v) or (v=0)  then exit;
   result := v;
 end;
 
-function TTDData.GetSCMRoundABBREV(AEventID: integer): string;
+function TAppData.GetSCMRoundABBREV(AEventID: integer): string;
 var
 SQL: string;
 v: variant;
@@ -754,31 +779,31 @@ begin
   }
   result := 'P';
   SQL := 'SELECT [RoundID] FROM dbo.Event WHERE EventID = :ID;';
-  v := DTData.Connection.ExecSQLScalar(SQL, [AEventID]);
+  v := AppData.Connection.ExecSQLScalar(SQL, [AEventID]);
   if VarIsNull(v) or VarIsEmpty(v) or (v=0)  then exit;
   ARoundID := v;
 
   SQL := 'SELECT [ABREV] FROM dbo.Round WHERE RoundID = :ID;';
-  v := DTData.Connection.ExecSQLScalar(SQL, [ARoundID]);
+  v := AppData.Connection.ExecSQLScalar(SQL, [ARoundID]);
   if VarIsNull(v) or VarIsEmpty(v) then exit;
   result := v;
 
 end;
 
-function TTDData.LocateDTEventID(AEventID: integer): boolean;
+function TAppData.LocateDTEventID(AEventID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
   result := false;
-  if not tblDTHeat.Active then exit;
+  if not tblmHeat.Active then exit;
   if (AEventID = 0) then exit;
   SearchOptions := [];
-  result := dsdtEvent.DataSet.Locate('EventID', AEventID, SearchOptions);
+  result := dsmEvent.DataSet.Locate('EventID', AEventID, SearchOptions);
   if result then
-    dsdtHeat.DataSet.Refresh;
+    dsmHeat.DataSet.Refresh;
 end;
 
-function TTDData.LocateDTEventNum(SessionID, AEventNum: integer; APrecedence:
+function TAppData.LocateDTEventNum(SessionID, AEventNum: integer; APrecedence:
   dtPrecedence): boolean;
 var
   indexStr: string;
@@ -787,34 +812,34 @@ begin
   // USED ONLY BY TdtUtils.ProcessEvent.
   result := false;
   // Exit if the table is not active or if AEventNum is 0
-  if not tbldtEvent.Active then exit;
+  if not tblmEvent.Active then exit;
   if AEventNum = 0 then exit;
   // Store the original index field names
-  indexStr := tbldtEvent.IndexFieldNames;
-  tbldtEvent.IndexFieldNames := 'EventID';
+  indexStr := tblmEvent.IndexFieldNames;
+  tblmEvent.IndexFieldNames := 'EventID';
   // Set the index based on the precedence
   if APrecedence = dtPrecFileName then
-    result := tbldtEvent.Locate('SessionID;fnEventNum', VarArrayOf([SessionID,
+    result := tblmEvent.Locate('SessionID;fnEventNum', VarArrayOf([SessionID,
       AEventNum]), [])
   else if APrecedence = dtPrecHeader then
-    result := tbldtEvent.Locate('SessionID;EventNum', VarArrayOf([SessionID,
+    result := tblmEvent.Locate('SessionID;EventNum', VarArrayOf([SessionID,
       AEventNum]), []);
   // Restore the original index field names
-  tbldtEvent.IndexFieldNames := indexStr;
+  tblmEvent.IndexFieldNames := indexStr;
 end;
 
-function TTDData.LocateDTHeatID(AHeatID: integer): boolean;
+function TAppData.LocateDTHeatID(AHeatID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
   result := false;
-  if not tblDTHeat.Active then exit;
+  if not tblmHeat.Active then exit;
   if (AHeatID = 0) then exit;
   SearchOptions := [];
-  result := dsdtHeat.DataSet.Locate('HeatID', AHeatID, SearchOptions);
+  result := dsmHeat.DataSet.Locate('HeatID', AHeatID, SearchOptions);
 end;
 
-function TTDData.LocateDTHeatNum(EventID, AHeatNum: integer; Aprecedence:
+function TAppData.LocateDTHeatNum(EventID, AHeatNum: integer; Aprecedence:
     dtPrecedence): boolean;
 var
   indexStr: string;
@@ -823,45 +848,45 @@ begin
   // USED ONLY BY TdtUtils.ProcessHeat.
   result := false;
   // Exit if the table is not active or if AHeatNum is 0
-  if not tbldtHeat.Active then exit;
+  if not tblmHeat.Active then exit;
   if AHeatNum = 0 then exit;
   // Store the original index field names
-  indexStr := tbldtHeat.IndexFieldNames;
-  tbldtHeat.IndexFieldNames := 'HeatID';
+  indexStr := tblmHeat.IndexFieldNames;
+  tblmHeat.IndexFieldNames := 'HeatID';
   // Set the index based on the precedence
   if APrecedence = dtPrecFileName then
-    result := tbldtHeat.Locate('EventID;fnHeatNum', VarArrayOf([EventID,
+    result := tblmHeat.Locate('EventID;fnHeatNum', VarArrayOf([EventID,
       AHeatNum]), [])
   else if APrecedence = dtPrecHeader then
-    result := tbldtHeat.Locate('EventID;HeatNum', VarArrayOf([EventID,
+    result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([EventID,
       AHeatNum]), []);
   // Restore the original index field names
-  tbldtHeat.IndexFieldNames := indexStr;
+  tblmHeat.IndexFieldNames := indexStr;
 end;
 
-function TTDData.LocateDTLane(ALane: integer): boolean;
+function TAppData.LocateDTLaneNum(ALaneNum: integer): boolean;
 begin
   // IGNORES SYNC STATE...
-  result := tbldtEntrant.Locate('Lane', ALane, []);
+  result := tblmLane.Locate('LaneNum', ALaneNum, []);
 end;
 
-function TTDData.LocateDTSessionID(ASessionID: integer): boolean;
+function TAppData.LocateDTSessionID(ASessionID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
   result := false;
-  if not tblDTSession.Active then exit;
+  if not tblmSession.Active then exit;
   if (ASessionID = 0) then exit;
   SearchOptions := [];
-  result := dsdtSession.DataSet.Locate('SessionID', ASessionID, SearchOptions);
+  result := dsmSession.DataSet.Locate('SessionID', ASessionID, SearchOptions);
   if result then
   begin
-    dsdtEvent.DataSet.Refresh;
-    dsdtHeat.DataSet.Refresh;
+    dsmEvent.DataSet.Refresh;
+    dsmHeat.DataSet.Refresh;
   end;
 end;
 
-function TTDData.LocateDTSessionNum(ASessionNum: integer; Aprecedence:
+function TAppData.LocateDTSessionNum(ASessionNum: integer; Aprecedence:
     dtPrecedence): boolean;
 var
   indexStr: string;
@@ -869,21 +894,21 @@ begin
   // WARNING : DisableDTMasterDetail() before calling here.
   // USED ONLY BY TdtUtils.ProcessSession
   result := false;
-  if not tbldtSession.Active then exit;
+  if not tblmSession.Active then exit;
   if ASessionNum = 0 then exit;
   // Store the original index field names
-  indexStr := tbldtSession.IndexFieldNames;
+  indexStr := tblmSession.IndexFieldNames;
   if (ASessionNum = 0) then exit;
-  tbldtSession.IndexFieldNames := 'SessionID';
+  tblmSession.IndexFieldNames := 'SessionID';
   if (Aprecedence = dtPrecFileName) then
-    result := tbldtSession.Locate('fnSessionNum', ASessionNum, [])
+    result := tblmSession.Locate('fnSessionNum', ASessionNum, [])
   else if (Aprecedence = dtPrecHeader) then
-    result := tbldtSession.Locate('SessionNum', ASessionNum, []);
+    result := tblmSession.Locate('SessionNum', ASessionNum, []);
   // Restore the original index field names
-  tbldtSession.IndexFieldNames := indexStr;
+  tblmSession.IndexFieldNames := indexStr;
 end;
 
-function TTDData.LocateSCMEventID(AEventID: integer): boolean;
+function TAppData.LocateSCMEventID(AEventID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -895,7 +920,7 @@ begin
       result := dsEvent.DataSet.Locate('EventID', aEventID, SearchOptions);
 end;
 
-function TTDData.LocateSCMHeatID(AHeatID: integer): boolean;
+function TAppData.LocateSCMHeatID(AHeatID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -907,8 +932,8 @@ begin
       result := dsHeat.DataSet.Locate('HeatID', AHeatID, SearchOptions);
 end;
 
-function TTDData.LocateSCMLane(ALane: integer; aEventType: scmEventType):
-    boolean;
+function TAppData.LocateSCMLaneNum(ALaneNum: integer; aEventType:
+    scmEventType): boolean;
 var
 found: boolean;
 begin
@@ -918,14 +943,14 @@ begin
     etUnknown:
       found := false;
     etINDV:
-      found := qryINDV.Locate('Lane', ALane, []);
+      found := qryINDV.Locate('Lane', ALaneNum, []);
     etTEAM:
-      found := qryTEAM.Locate('Lane', ALane, []);
+      found := qryTEAM.Locate('Lane', ALaneNum, []);
   end;
   result := found;
 end;
 
-function TTDData.LocateSCMNearestSessionID(aDate: TDateTime): integer;
+function TAppData.LocateSCMNearestSessionID(aDate: TDateTime): integer;
 begin
   result := 0;
   // find the session with 'aDate' or bestfit.
@@ -937,7 +962,7 @@ begin
    result := qryNearestSessionID.FieldByName('SessionID').AsInteger;
 end;
 
-function TTDData.LocateSCMSessionID(ASessionID: integer): boolean;
+function TAppData.LocateSCMSessionID(ASessionID: integer): boolean;
 var
   SearchOptions: TLocateOptions;
 begin
@@ -949,91 +974,91 @@ begin
       result := dsSession.DataSet.Locate('SessionID', ASessionID, SearchOptions);
 end;
 
-function TTDData.MaxID_Entrant: integer;
+function TAppData.MaxID_Entrant: integer;
 var
 max, id: integer;
 begin
   // To function correctly disableDTMasterDetail.
   max := 0;
-  tblDTEntrant.First;
-  while not tblDTEntrant.eof do
+  tblmLane.First;
+  while not tblmLane.eof do
   begin
-    id := tblDTEntrant.FieldByName('EntrantID').AsInteger;
+    id := tblmLane.FieldByName('EntrantID').AsInteger;
     if (id > max) then
       max := id;
-    tblDTEntrant.Next;
+    tblmLane.Next;
   end;
   result := max;
 end;
 
-function TTDData.MaxID_Event: integer;
+function TAppData.MaxID_Event: integer;
 var
 max, id: integer;
 begin
   // To function correctly disableDTMasterDetail.
   max := 0;
-  tblDTEvent.First;
-  while not tblDTEvent.eof do
+  tblmEvent.First;
+  while not tblmEvent.eof do
   begin
-    id := tblDTEvent.FieldByName('EventID').AsInteger;
+    id := tblmEvent.FieldByName('EventID').AsInteger;
     if (id > max) then
       max := id;
-    tblDTEvent.Next;
+    tblmEvent.Next;
   end;
   result := max;
 end;
 
-function TTDData.MaxID_Heat: integer;
+function TAppData.MaxID_Heat: integer;
 var
 max, id: integer;
 begin
   // To function correctly disableDTMasterDetail.
   max := 0;
-  tblDTHeat.First;
-  while not tblDTHeat.eof do
+  tblmHeat.First;
+  while not tblmHeat.eof do
   begin
-    id := tblDTHeat.FieldByName('HeatID').AsInteger;
+    id := tblmHeat.FieldByName('HeatID').AsInteger;
     if (id > max) then
       max := id;
-    tblDTHeat.Next;
+    tblmHeat.Next;
   end;
   result := max;
 end;
 
-function TTDData.MaxID_Session: integer;
+function TAppData.MaxID_Session: integer;
 var
 max, id: integer;
 begin
   // To function correctly disableDTMasterDetail.
   max := 0;
-  tblDTSession.First;
-  while not tblDTSession.eof do
+  tblmSession.First;
+  while not tblmSession.eof do
   begin
-    id := tblDTSession.FieldByName('SessionID').AsInteger;
+    id := tblmSession.FieldByName('SessionID').AsInteger;
     if (id > max) then
       max := id;
-    tblDTSession.Next;
+    tblmSession.Next;
   end;
   result := max;
 end;
 
-procedure TTDData.POST_All;
+procedure TAppData.POST_All;
 var
   AEventType: scmEventType;
   ALaneNum: integer;
 begin
   qryINDV.DisableControls;
   qryTEAM.DisableControls;
-  tblDTEntrant.DisableControls;
+  tblmLane.DisableControls;
 
   AEventType := scmEventType(qryDistance.FieldByName('EventTypeID').AsInteger);
 
   // ONE TO ONE SYNC....
-  tblDTEntrant.First;
-  while not (tblDTEntrant.eof or qryINDV.eof) do
+  tblmLane.First;
+  while not (tblmLane.eof or qryINDV.eof) do
   begin
-    ALaneNum := tblDTEntrant.FieldByName('Lane').AsInteger;
-    if LocateSCMLane(ALaneNum, AEventType) then
+    ALaneNum := tblmLane.FieldByName('Lane').AsInteger;
+    if LocateSCMLaneNum(ALaneNum, AEventType) then
     begin
       if AEventType = etINDV then
       begin
@@ -1042,7 +1067,7 @@ begin
         begin
           qryINDV.Edit;
           qryINDV.FieldByName('RaceTime').AsDateTime :=
-          tblDTEntrant.FieldByName('RaceTime').AsDateTime;
+          tblmLane.FieldByName('RaceTime').AsDateTime;
           qryINDV.Post;
         end;
       end
@@ -1053,36 +1078,36 @@ begin
         begin
           qryTEAM.Edit;
           qryTEAM.FieldByName('RaceTime').AsDateTime :=
-          tblDTEntrant.FieldByName('RaceTime').AsDateTime;
+          tblmLane.FieldByName('RaceTime').AsDateTime;
           qryTEAM.Post;
         end;
       end;
     end;
-    tblDTEntrant.Next;
+    tblmLane.Next;
   end;
   if AEventType = etINDV then
     qryINDV.First
   else if AEventType = etTEAM then
     qryTEAM.First;
-  tblDTEntrant.First;
-  tblDTEntrant.EnableControls;
+  tblmLane.First;
+  tblmLane.EnableControls;
   qryTEAM.EnableControls;
   qryINDV.EnableControls;
 
 end;
 
-procedure TTDData.POST_Lane(ALane: Integer);
+procedure TAppData.POST_Lane(ALane: Integer);
 var
   AEventType: scmEventType;
   b1, b2: boolean;
 begin
   qryINDV.DisableControls;
   qryTEAM.DisableControls;
-  tblDTEntrant.DisableControls;
+  tblmLane.DisableControls;
   AEventType := scmEventType(qryDistance.FieldByName('EventTypeID').AsInteger);
   // SYNC to ROW ...
-  b1 := LocateDTLane(ALane);
-  b2 := LocateSCMLane(ALane, AEventType);
+  b1 := LocateDTLaneNum(ALane);
+  b2 := LocateSCMLaneNum(ALane, AEventType);
   if (b1 and b2) then
   begin
       if AEventType = etINDV then
@@ -1092,7 +1117,7 @@ begin
         begin
           qryINDV.Edit;
           qryINDV.FieldByName('RaceTime').AsDateTime :=
-          tblDTEntrant.FieldByName('RaceTime').AsDateTime;
+          tblmLane.FieldByName('RaceTime').AsDateTime;
           qryINDV.Post;
         end;
       end
@@ -1103,17 +1128,17 @@ begin
         begin
           qryTEAM.Edit;
           qryTEAM.FieldByName('RaceTime').AsDateTime :=
-          tblDTEntrant.FieldByName('RaceTime').AsDateTime;
+          tblmLane.FieldByName('RaceTime').AsDateTime;
           qryTEAM.Post;
         end;
       end;
   end;
-  tblDTEntrant.EnableControls;
+  tblmLane.EnableControls;
   qryTEAM.EnableControls;
   qryINDV.EnableControls;
 end;
 
-procedure TTDData.ReadFromBinary(AFilePath:string);
+procedure TAppData.ReadFromBinary(AFilePath:string);
 var
 s: string;
 begin
@@ -1122,14 +1147,14 @@ begin
     s := IncludeTrailingPathDelimiter(AFilePath)
   else
     s := ''; // or handle this case if the path is mandatory
-  tblDTSession.LoadFromFile(s + 'DTMaster.fsBinary');
-  tblDTEvent.LoadFromFile(s + 'DTEvent.fsBinary');
-  tblDTHeat.LoadFromFile(s + 'DTHeat.fsBinary');
-  tblDTEntrant.LoadFromFile(s + 'DTLane.fsBinary');
-  tblDTNoodle.LoadFromFile(s + 'DTNoodle.fsBinary');
+  tblmSession.LoadFromFile(s + 'DTMaster.fsBinary');
+  tblmEvent.LoadFromFile(s + 'DTEvent.fsBinary');
+  tblmHeat.LoadFromFile(s + 'DTHeat.fsBinary');
+  tblmLane.LoadFromFile(s + 'DTLane.fsBinary');
+  tblmNoodle.LoadFromFile(s + 'DTNoodle.fsBinary');
 end;
 
-procedure TTDData.RefreshSCM;
+procedure TAppData.RefreshSCM;
 var
   ASwimClubID, ASessionID, AEventID, AHeatID: integer;
 begin
@@ -1176,7 +1201,7 @@ begin
 
 end;
 
-procedure TTDData.SetActiveRT(ADataSet: TDataSet; aActiveRT: dtActiveRT);
+procedure TAppData.SetActiveRT(ADataSet: TDataSet; aActiveRT: dtActiveRT);
 var
   RaceTimeField: TField;
   RaceTimeUField: TField;
@@ -1265,48 +1290,48 @@ begin
   end;
 end;
 
-function TTDData.SyncDTtoSCM(APrecedence: dtPrecedence): boolean;
+function TAppData.SyncDTtoSCM(APrecedence: dtPrecedence): boolean;
 var
   found: boolean;
 begin
   result := false;
-  tblDTEvent.DisableControls;
-  tblDTHeat.DisableControls;
-  tblDTEntrant.DisableControls;
-  tblDTSession.DisableControls;
+  tblmEvent.DisableControls;
+  tblmHeat.DisableControls;
+  tblmLane.DisableControls;
+  tblmSession.DisableControls;
   // NOTE : SCM Sesssion ID = DT SessionNum.
   found :=
   LocateDTSessionNum(qrySession.FieldByName('SessionID').AsInteger, APrecedence);
-  tblDTEvent.ApplyMaster;
+  tblmEvent.ApplyMaster;
   if found then
   begin
     if APrecedence = dtPrecFileName then
-      found := tbldtEvent.Locate('fnEventNum',
+      found := tblmEvent.Locate('fnEventNum',
         qryEvent.FieldByName('EventNum').AsInteger)
     else if APrecedence = dtPrecHeader then
-      found := tbldtEvent.Locate('EventNum',
+      found := tblmEvent.Locate('EventNum',
         qryEvent.FieldByName('EventNum').AsInteger);
-    tblDTHeat.ApplyMaster;
+    tblmHeat.ApplyMaster;
     if found then
     begin
       if APrecedence = dtPrecFileName then
-        found := tbldtHeat.Locate('fnHeatNum',
+        found := tblmHeat.Locate('fnHeatNum',
           qryHeat.FieldByName('HeatNum').AsInteger)
       else if APrecedence = dtPrecHeader then
-        found := tbldtHeat.Locate('HeatNum',
+        found := tblmHeat.Locate('HeatNum',
           qryHeat.FieldByName('HeatNum').AsInteger);
-      tblDTEntrant.ApplyMaster;
+      tblmLane.ApplyMaster;
       if found then
         result := true;
     end;
   end;
-  tblDTSession.EnableControls;
-  tblDTEvent.EnableControls;
-  tblDTHeat.EnableControls;
-  tblDTEntrant.EnableControls;
+  tblmSession.EnableControls;
+  tblmEvent.EnableControls;
+  tblmHeat.EnableControls;
+  tblmLane.EnableControls;
 end;
 
-function TTDData.SyncCheck(APrecedence: dtPrecedence): boolean;
+function TAppData.SyncCheck(APrecedence: dtPrecedence): boolean;
 var
   IsSynced: boolean;
 begin
@@ -1315,21 +1340,21 @@ begin
     dtPrecHeader:
       begin
         if qrySession.FieldByName('SessionID').AsInteger =
-        tbldtSession.FieldByName('SessionNum').AsInteger then
+        tblmSession.FieldByName('SessionNum').AsInteger then
           if qryEvent.FieldByName('EventNum').AsInteger =
-          tbldtEvent.FieldByName('EventNum').AsInteger then
+          tblmEvent.FieldByName('EventNum').AsInteger then
             if qryHeat.FieldByName('HeatNum').AsInteger =
-            tbldtHeat.FieldByName('HeatNum').AsInteger then
+            tblmHeat.FieldByName('HeatNum').AsInteger then
               IsSynced := true;
       end;
     dtPrecFileName:
       begin
         if qrySession.FieldByName('SessionID').AsInteger =
-        tbldtSession.FieldByName('fnSessionNum').AsInteger then
+        tblmSession.FieldByName('fnSessionNum').AsInteger then
           if qryEvent.FieldByName('EventNum').AsInteger =
-          tbldtEvent.FieldByName('fnEventNum').AsInteger then
+          tblmEvent.FieldByName('fnEventNum').AsInteger then
             if qryHeat.FieldByName('HeatNum').AsInteger =
-            tbldtHeat.FieldByName('fnHeatNum').AsInteger then
+            tblmHeat.FieldByName('fnHeatNum').AsInteger then
               IsSynced := true;
       end;
   end;
@@ -1337,21 +1362,21 @@ begin
 
 end;
 
-function TTDData.SyncCheckSession(APrecedence: dtPrecedence): boolean;
+function TAppData.SyncCheckSession(APrecedence: dtPrecedence): boolean;
 var
   sessNum: integer;
 begin
   result := false;
   if APrecedence = dtPrecHeader then
-    sessNum := tbldtSession.FieldByName('SessionNum').AsInteger
+    sessNum := tblmSession.FieldByName('SessionNum').AsInteger
   else if APrecedence = dtPrecFileName then
-    sessNum := tbldtSession.FieldByName('fnSessionNum').AsInteger
+    sessNum := tblmSession.FieldByName('fnSessionNum').AsInteger
   else sessNum := 0;
   if qrySession.FieldByName('SessionID').AsInteger = sessNum then
     result := true;
 end;
 
-function TTDData.SyncSCMtoDT(APrecedence: dtPrecedence): boolean;
+function TAppData.SyncSCMtoDT(APrecedence: dtPrecedence): boolean;
 var
   found: boolean;
 begin
@@ -1369,14 +1394,14 @@ begin
   case APrecedence of
     dtPrecHeader:
     begin
-      if qryEvent.Locate('EventNum', tbldtEvent.FieldByName('EventNum').AsInteger, []) then
-        found :=  qryHeat.Locate('HeatNum', tbldtHeat.FieldByName('HeatNum').AsInteger, []);
+      if qryEvent.Locate('EventNum', tblmEvent.FieldByName('EventNum').AsInteger, []) then
+        found :=  qryHeat.Locate('HeatNum', tblmHeat.FieldByName('HeatNum').AsInteger, []);
     end;
 
     dtPrecFileName:
     begin
-      if qryEvent.Locate('EventNum', tbldtEvent.FieldByName('fnEventNum').AsInteger, []) then
-        found :=  qryHeat.Locate('HeatNum', tbldtHeat.FieldByName('fnHeatNum').AsInteger, []);
+      if qryEvent.Locate('EventNum', tblmEvent.FieldByName('fnEventNum').AsInteger, []) then
+        found :=  qryHeat.Locate('HeatNum', tblmHeat.FieldByName('fnHeatNum').AsInteger, []);
     end;
   end;
 
@@ -1389,20 +1414,20 @@ begin
 end;
 
 
-procedure TTDData.tblDTHeatAfterScroll(DataSet: TDataSet);
+procedure TAppData.tblmHeatAfterScroll(DataSet: TDataSet);
 begin
   if (msgHandle <> 0) then
     PostMessage(msgHandle, SCM_UPDATEUI3, 0,0);
 end;
 
-function TTDData.ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0):
+function TAppData.ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0):
 dtActiveRT;
 var
   art: dtActiveRT;
 begin
   result := artNone;
   if not ADataSet.Active then exit;
-  if not (ADataSet.Name = 'tblDTEntrant') then exit;
+  if not (ADataSet.Name = 'tblmLane') then exit;
   // Get the current ActiveRT value
   art := dtActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
   if (Direction = 0) then
@@ -1434,7 +1459,7 @@ begin
   end;
 end;
 
-function TTDData.ToggleWatchTime(ADataSet: TDataSet; idx: integer; art: dtActiveRT): Boolean;
+function TAppData.ToggleWatchTime(ADataSet: TDataSet; idx: integer; art: dtActiveRT): Boolean;
 var
 s, s2: string;
 b: boolean;
@@ -1444,7 +1469,7 @@ begin
 
   // Assert state ...
   if not ADataSet.Active then exit;
-  if (ADataSet.Name <> 'tblDTEntrant') then exit;
+  if (ADataSet.Name <> 'tblmLane') then exit;
   if not idx in [1..3] then exit;
   if art = artManual  then
     s2 := 'M'
@@ -1462,7 +1487,7 @@ begin
   end;
 end;
 
-function TTDData.ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer;
+function TAppData.ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer;
     art: dtActiveRT): boolean;
 var
   TimeField, EnabledField: TField;
@@ -1505,7 +1530,7 @@ begin
   result := true;
 end;
 
-procedure TTDData.WriteToBinary(AFilePath:string);
+procedure TAppData.WriteToBinary(AFilePath:string);
 var
 s: string;
 begin
@@ -1514,11 +1539,11 @@ begin
     s := IncludeTrailingPathDelimiter(AFilePath)
   else
     s := ''; // or handle this case if the path is mandatory
-  tblDTSession.SaveToFile(s + 'DTMaster.fsBinary', sfXML);
-  tblDTEvent.SaveToFile(s + 'DTEvent.fsBinary', sfXML);
-  tblDTHeat.SaveToFile(s + 'DTHeat.fsBinary', sfXML);
-  tblDTEntrant.SaveToFile(s + 'DTLane.fsBinary', sfXML);
-  tblDTNoodle.SaveToFile(s + 'DTNoodle.fsBinary', sfXML);
+  tblmSession.SaveToFile(s + 'DTMaster.fsBinary', sfXML);
+  tblmEvent.SaveToFile(s + 'DTEvent.fsBinary', sfXML);
+  tblmHeat.SaveToFile(s + 'DTHeat.fsBinary', sfXML);
+  tblmLane.SaveToFile(s + 'DTLane.fsBinary', sfXML);
+  tblmNoodle.SaveToFile(s + 'DTNoodle.fsBinary', sfXML);
 end;
 
 { TWatchTime }

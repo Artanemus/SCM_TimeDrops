@@ -1,4 +1,4 @@
-object TreeViewDT: TTreeViewDT
+object TreeViewData: TTreeViewData
   Left = 0
   Top = 0
   BorderStyle = bsDialog

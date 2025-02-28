@@ -138,8 +138,8 @@
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
-        <DCCReference Include="dmTDData.pas">
-            <Form>TDData</Form>
+        <DCCReference Include="dmAppData.pas">
+            <Form>AppData</Form>
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
@@ -153,7 +153,7 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="..\SCM_SHARED\Vcl.PlatformVclStylesActnCtrls.pas"/>
-        <DCCReference Include="tdUtils.pas"/>
+        <DCCReference Include="uAppUtils.pas"/>
         <DCCReference Include="DirectoryWatcher.pas"/>
         <DCCReference Include="tdMeetPrg.pas"/>
         <DCCReference Include="tdReConstruct.pas"/>
@@ -161,6 +161,27 @@
             <Form>Options</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="dlgPostData.pas">
+            <Form>PostData</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="dlgTreeViewData.pas">
+            <Form>TreeViewData</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="dlgTreeViewSCM.pas">
+            <Form>TreeViewSCM</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="dlgDataDebug.pas">
+            <Form>DataDebug</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="dlgUserRaceTime.pas">
+            <Form>UserRaceTime</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="..\SCM_SHARED\SCMUtility.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

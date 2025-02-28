@@ -2,7 +2,7 @@ unit tdReConstruct;
 
 interface
 
-uses dmSCM, dmTDData, System.SysUtils, System.Classes, system.Hash,
+uses dmSCM, dmAppData, System.SysUtils, System.Classes, system.Hash,
 DateUtils, variants, SCMDefines, Data.DB, tdSetting;
 
 procedure ReConstructDO3(SessionID: integer);
@@ -70,7 +70,7 @@ var
   SQL: string;
 begin
   result := etUnknown;
-    if not DTData.qryEvent.IsEmpty then
+    if not AppData.qryEvent.IsEmpty then
     begin
       SQL := 'SELECT [EventTypeID] FROM [SwimClubMeet].[dbo].[Event] ' +
         'INNER JOIN Distance ON [Event].DistanceID = Distance.DistanceID ' +
@@ -137,7 +137,7 @@ begin
   Result := 'X';
 
   // Ensure the query isn't empty
-  if not DTData.qryEvent.IsEmpty then
+  if not AppData.qryEvent.IsEmpty then
   begin
     // Query to get boys count
     SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
@@ -244,12 +244,12 @@ end;
 
 procedure ReConstructINDV(sl: TStringList; adtFileType: dtFileType);
 begin
-  ReConstructLanes(sl,adtFileType, DTData.qryINDV);
+  ReConstructLanes(sl,adtFileType, AppData.qryINDV);
 end;
 
 procedure ReConstructTEAM(sl: TStringList; adtFileType: dtFileType);
 begin
-  ReConstructLanes(sl,adtFileType, DTData.qryTEAM);
+  ReConstructLanes(sl,adtFileType, AppData.qryTEAM);
 end;
 
 procedure ReConstructHeat(SessionID, eventNum: integer; gender: string;
@@ -259,7 +259,7 @@ var
   s, fn, id, sess, ev, ht, RoundStr: string;
   success: boolean;
 begin
-  if DTData.qryHeat.IsEmpty then exit;
+  if AppData.qryHeat.IsEmpty then exit;
   if adtFileType = dtUnknown then exit;
 
   // Dolphin Timing term 'Round' : defined as :
@@ -278,7 +278,7 @@ begin
   {TODO -oBSA -cGeneral :
     DB version 1.1.5.4 will have table dbo.Round.
     Linked to dbo.Event on RoundID.
-    RoundID := DTData.qryEvent.FieldByName('RoundID').AsInteger;
+    RoundID := AppData.qryEvent.FieldByName('RoundID').AsInteger;
     SQLstr :=  'SELECT ABREV FROM SwimClubMeet.dbo.Round WHERE RoundID = :ID)';
     v :=  SCM.scmConnection.ExecScalar(SQLstr,[RoundID]);
     if not VarIsNull(v) then
@@ -291,11 +291,11 @@ begin
 
   // Assert the state of the local param 'seed' (int) ...
   if (seed > 999) or (seed = 0) then seed := 1;
-  DTData.qryHeat.first;
-  while not DTData.qryHeat.eof do
+  AppData.qryHeat.first;
+  while not AppData.qryHeat.eof do
   begin
     sl.Clear; // ensures - only one heat per file.
-    HeatNum := DTData.qryHeat.FieldByName('HeatNum').AsInteger;
+    HeatNum := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
     // first line - header.
     s := IntTostr(SessionID) + ';' + IntTostr(EventNum) + ';' + IntTostr(HeatNum) + ';' + gender;
     sl.Add(s);
@@ -330,7 +330,7 @@ begin
           fn := sess + '-' + ev + '-' + ht + RoundStr + '-' + id + '.DO4';
         end;
       end;
-      fn := IncludeTrailingPathDelimiter(Settings.DolphinReConstruct) + fn;
+      fn := IncludeTrailingPathDelimiter(Settings.ReConstruct) + fn;
       // trap for exception error.
       if fileExists(fn) then
         success := DeleteFile(fn);
@@ -341,7 +341,7 @@ begin
         if seed > 9999 then seed := 1; // check - out of bounds.
       end;
     end;
-    DTData.qryHeat.Next
+    AppData.qryHeat.Next
   end;
 end;
 
@@ -351,19 +351,19 @@ i, EventNum: integer;
 gender: string;
 aEventType: scmEventType;
 begin
-  if DTData.qryEvent.IsEmpty then exit;
-  DTData.qryEvent.first;
-  while not DTData.qryEvent.eof do
+  if AppData.qryEvent.IsEmpty then exit;
+  AppData.qryEvent.first;
+  while not AppData.qryEvent.eof do
   begin
-    EventNum := DTData.qryEvent.FieldByName('EventNum').AsInteger;
-    i := DTData.qryEvent.FieldByName('EventID').AsInteger;
+    EventNum := AppData.qryEvent.FieldByName('EventNum').AsInteger;
+    i := AppData.qryEvent.FieldByName('EventID').AsInteger;
     // NOTE: scmEventType >> etUnknown, etINDV, etTEAM.
     aEventType := GetEventType(i);
     // NOTE: GENDER >> A=boys, B=girls, X=mixed.
     gender := GetGenderTypeStr(i);
     // R e - c o n s t r u c t   D O 4 .
     ReConstructHeat(SessionID, EventNum, gender, aEventType, sl, adtFileType);
-    DTData.qryEvent.next;
+    AppData.qryEvent.next;
   end;
 end;
 
@@ -371,7 +371,7 @@ procedure ReConstructDO4(SessionID: integer);
 var
 sl: TStringList;
 begin
-  // Core DTData tables are Master-Detail schema.
+  // Core AppData tables are Master-Detail schema.
   // qrySession is cued, ready to process.
   seed := 1;
   sl := TStringList.Create;
@@ -383,7 +383,7 @@ procedure ReConstructDO3(SessionID: integer);
 var
 sl: TStringList;
 begin
-  // Core DTData tables are Master-Detail schema.
+  // Core AppData tables are Master-Detail schema.
   // qrySession is cued, ready to process.
   seed := 1;
   sl := TStringList.Create;

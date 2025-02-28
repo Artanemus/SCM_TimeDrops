@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, System.Actions,
   Vcl.ActnList, Vcl.Imaging.pngimage, Vcl.WinXCtrls, Vcl.StdCtrls, dmSCM,
-  tdSetting, SCMDefines, SCMSimpleConnect, dmTDData;
+  tdSetting, SCMDefines, SCMSimpleConnect, dmAppData;
 
 type
   TLogin = class(TForm)
@@ -179,13 +179,13 @@ begin
     Visible := false;
 
     // C R E A T E   T H E   D T  D A T A M O D U L E .
-    if NOT Assigned(TDData) then
-      TDData := TTDData.Create(Self);
+    if NOT Assigned(AppData) then
+      AppData := TAppData.Create(Self);
 
-    if Assigned(TDData) then
+    if Assigned(AppData) then
     begin
-      TDData.Connection := SCM.scmConnection;
-      TDData.ActivateDataSCM; // ... and cue-to most recent session.
+      AppData.Connection := SCM.scmConnection;
+      AppData.ActivateDataSCM; // ... and cue-to most recent session.
       dlg := TMain.Create(Self);
       { Init connection.}
       dlg.Prepare(SCM.scmConnection);
@@ -197,7 +197,7 @@ begin
     end;
 
     // F R E E   D T   D A T A M O D U L E .
-    FreeAndNil(TDData);
+    FreeAndNil(AppData);
     // de-activate SCM. Kill animation. Save Settings, etc...
     actnDisconnectExecute(Self);
     // Terminate application ....
@@ -224,17 +224,17 @@ end;
 procedure TLogin.btnBuildDataClick(Sender: TObject);
 begin
     // C R E A T E   T H E   D T  D A T A M O D U L E .
-    if NOT Assigned(TDData) then
-      TDData := TTDData.Create(Self);
+    if NOT Assigned(AppData) then
+      AppData := TAppData.Create(Self);
 
-    if Assigned(TDData) then
+    if Assigned(AppData) then
     begin
-      TDData.Connection := SCM.scmConnection;
-      TDData.BuildData;
+      AppData.Connection := SCM.scmConnection;
+      AppData.BuildAppData;
     end;
 
     // F R E E   D T   D A T A M O D U L E .
-    FreeAndNil(TDData);
+    FreeAndNil(AppData);
 end;
 
 procedure TLogin.FormCreate(Sender: TObject);

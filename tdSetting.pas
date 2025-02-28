@@ -7,7 +7,7 @@ uses
   system.SysUtils, system.Types, system.UITypes, system.Classes,
   system.Variants, VCL.Controls,
   XsuperObject,
-  dmTDData;
+  dmAppData;
 
 type
 

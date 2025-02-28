@@ -1,4 +1,4 @@
-object TDData: TTDData
+object AppData: TAppData
   OnCreate = DataModuleCreate
   OnDestroy = DataModuleDestroy
   Height = 1031
@@ -18159,7 +18159,7 @@ object TDData: TTDData
         Value = Null
       end>
   end
-  object tblDTNoodle: TFDMemTable
+  object tblmNoodle: TFDMemTable
     Active = True
     FieldDefs = <
       item
@@ -18196,7 +18196,7 @@ object TDData: TTDData
       end>
     IndexDefs = <>
     IndexFieldNames = 'HeatID'
-    MasterSource = dsDTHeat
+    MasterSource = dsmHeat
     MasterFields = 'HeatID'
     DetailFields = 'HeatID'
     FetchOptions.AssignedValues = [evMode, evItems, evCache]
@@ -18210,7 +18210,7 @@ object TDData: TTDData
     UpdateOptions.CheckRequired = False
     UpdateOptions.AutoCommitUpdates = True
     StoreDefs = True
-    Left = 408
+    Left = 368
     Top = 792
     Content = {
       4144425310000000A3030000FF00010001FF02FF03040016000000740062006C
@@ -18345,7 +18345,7 @@ object TDData: TTDData
     Left = 176
     Top = 408
   end
-  object tblDTSession: TFDMemTable
+  object tblmSession: TFDMemTable
     Active = True
     FieldDefs = <
       item
@@ -18434,9 +18434,9 @@ object TDData: TTDData
       0061007400650073004A006F00750072006E0061006C000E004300680061006E
       00670065007300}
   end
-  object tblDTHeat: TFDMemTable
+  object tblmHeat: TFDMemTable
     Active = True
-    AfterScroll = tblDTHeatAfterScroll
+    AfterScroll = tblmHeatAfterScroll
     FieldDefs = <
       item
         Name = 'HeatID'
@@ -18492,7 +18492,7 @@ object TDData: TTDData
       end>
     IndexDefs = <>
     IndexFieldNames = 'EventID'
-    MasterSource = dsDTEvent
+    MasterSource = dsmEvent
     MasterFields = 'EventID'
     DetailFields = 'EventID'
     FetchOptions.AssignedValues = [evMode, evItems, evCache]
@@ -18573,8 +18573,8 @@ object TDData: TTDData
       004C006900730074001C0055007000640061007400650073004A006F00750072
       006E0061006C000E004300680061006E00670065007300}
   end
-  object dsDTSession: TDataSource
-    DataSet = tblDTSession
+  object dsmSession: TDataSource
+    DataSet = tblmSession
     Left = 152
     Top = 592
   end
@@ -18582,7 +18582,7 @@ object TDData: TTDData
     Left = 640
     Top = 640
   end
-  object tblDTEntrant: TFDMemTable
+  object tblmLane: TFDMemTable
     Active = True
     FieldDefs = <
       item
@@ -18716,7 +18716,7 @@ object TDData: TTDData
       end>
     IndexDefs = <>
     IndexFieldNames = 'HeatID'
-    MasterSource = dsDTHeat
+    MasterSource = dsmHeat
     MasterFields = 'HeatID'
     DetailFields = 'HeatID'
     FetchOptions.AssignedValues = [evMode, evItems, evCache]
@@ -18846,13 +18846,13 @@ object TDData: TTDData
       00640061007400650073004A006F00750072006E0061006C000E004300680061
       006E00670065007300}
   end
-  object dsDTHeat: TDataSource
-    DataSet = tblDTHeat
+  object dsmHeat: TDataSource
+    DataSet = tblmHeat
     Left = 208
     Top = 728
   end
-  object dsDTEntrant: TDataSource
-    DataSet = tblDTEntrant
+  object dsmLane: TDataSource
+    DataSet = tblmLane
     Left = 280
     Top = 792
   end
@@ -19272,7 +19272,7 @@ object TDData: TTDData
     Left = 288
     Top = 472
   end
-  object tblDTEvent: TFDMemTable
+  object tblmEvent: TFDMemTable
     Active = True
     FieldDefs = <
       item
@@ -19308,7 +19308,7 @@ object TDData: TTDData
       end>
     IndexDefs = <>
     IndexFieldNames = 'SessionID'
-    MasterSource = dsDTSession
+    MasterSource = dsmSession
     MasterFields = 'SessionID'
     DetailFields = 'SessionID'
     FetchOptions.AssignedValues = [evMode, evItems, evCache]
@@ -19371,8 +19371,8 @@ object TDData: TTDData
       6E004C006900730074001C0055007000640061007400650073004A006F007500
       72006E0061006C000E004300680061006E00670065007300}
   end
-  object dsDTEvent: TDataSource
-    DataSet = tblDTEvent
+  object dsmEvent: TDataSource
+    DataSet = tblmEvent
     Left = 160
     Top = 656
   end
