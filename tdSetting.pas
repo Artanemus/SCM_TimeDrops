@@ -76,7 +76,7 @@ end;
 
 function TPrgSetting.GetDefaultSettingsFilename(): string;
 begin
-  result := TPath.Combine(GetSettingsFolder(), 'initDolphinTiming.json');
+  result := TPath.Combine(GetSettingsFolder(), 'initTimeDrops.json');
 end;
 
 function TPrgSetting.GetSettingsFolder(): string;
@@ -90,7 +90,7 @@ begin
 {$ELSE}
   // GETHOMEPATH = C:Users\<username>\AppData\Roaming (WINDOWS)
   // Should also work on ANDROID.
-  Result := TPath.Combine(TPath.GetHomePath(), 'Artanemus\SwimClubMeet\DolphinTiming');
+  Result := TPath.Combine(TPath.GetHomePath(), 'Artanemus\SwimClubMeet\TimeDrops');
 {$ENDIF}
 
 end;
