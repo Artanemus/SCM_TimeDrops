@@ -37,7 +37,7 @@ object SessionPicker: TSessionPicker
       Height = 21
       AutoSize = True
       DataField = 'Caption'
-      DataSource = DTData.dsSwimClub
+      DataSource = AppData.dsSwimClub
     end
     object dbtxtNickName: TDBText
       Left = 0
@@ -46,7 +46,7 @@ object SessionPicker: TSessionPicker
       Height = 21
       AutoSize = True
       DataField = 'NickName'
-      DataSource = DTData.dsSwimClub
+      DataSource = AppData.dsSwimClub
     end
   end
   object pnlFooter: TPanel
@@ -102,7 +102,7 @@ object SessionPicker: TSessionPicker
       Width = 546
       Height = 363
       Align = alClient
-      DataSource = DTData.dsSessionList
+      DataSource = AppData.dsSessionList
       Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack]
       ReadOnly = True
       TabOrder = 0

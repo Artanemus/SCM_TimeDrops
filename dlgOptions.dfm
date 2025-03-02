@@ -8387,7 +8387,7 @@ object Options: TOptions
       Top = 3
       Width = 73
       Height = 58
-      ImageCollection = DTData.imgcolDT
+      ImageCollection = AppData.imgcolDT
       ImageWidth = 0
       ImageHeight = 0
       ImageIndex = -1
@@ -8540,7 +8540,7 @@ object Options: TOptions
           Top = 92
           Width = 647
           Height = 29
-          Images = DTData.vimglistDTGrid
+          Images = AppData.vimglistDTGrid
           RightButton.ImageIndex = 1
           RightButton.ImageName = 'Folders'
           RightButton.Visible = True
@@ -8553,7 +8553,7 @@ object Options: TOptions
           Top = 216
           Width = 647
           Height = 29
-          Images = DTData.vimglistDTGrid
+          Images = AppData.vimglistDTGrid
           RightButton.ImageIndex = 1
           RightButton.ImageName = 'Folders'
           RightButton.Visible = True
@@ -8566,7 +8566,7 @@ object Options: TOptions
           Top = 30
           Width = 647
           Height = 29
-          Images = DTData.vimglistDTGrid
+          Images = AppData.vimglistDTGrid
           RightButton.ImageIndex = 1
           RightButton.ImageName = 'Folders'
           RightButton.Visible = True
@@ -8579,7 +8579,7 @@ object Options: TOptions
           Top = 278
           Width = 647
           Height = 29
-          Images = DTData.vimglistDTGrid
+          Images = AppData.vimglistDTGrid
           RightButton.ImageIndex = 1
           RightButton.ImageName = 'Folders'
           RightButton.Visible = True

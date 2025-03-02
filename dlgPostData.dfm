@@ -29,7 +29,7 @@ object PostData: TPostData
       Top = 1
       Width = 48
       Height = 48
-      ImageCollection = DTData.imgcolDT
+      ImageCollection = AppData.imgcolDT
       ImageWidth = 0
       ImageHeight = 0
       ImageIndex = 73

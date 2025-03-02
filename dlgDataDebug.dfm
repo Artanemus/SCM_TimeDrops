@@ -28,7 +28,7 @@ object DataDebug: TDataDebug
         Width = 963
         Height = 603
         Align = alClient
-        DataSource = DTData.dsDTSession
+        DataSource = AppData.dsDTSession
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
@@ -46,7 +46,7 @@ object DataDebug: TDataDebug
         Width = 963
         Height = 605
         Align = alClient
-        DataSource = DTData.dsDTEvent
+        DataSource = AppData.dsDTEvent
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
@@ -64,7 +64,7 @@ object DataDebug: TDataDebug
         Width = 963
         Height = 605
         Align = alClient
-        DataSource = DTData.dsDTHeat
+        DataSource = AppData.dsDTHeat
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
@@ -82,7 +82,7 @@ object DataDebug: TDataDebug
         Width = 963
         Height = 605
         Align = alClient
-        DataSource = DTData.dsDTEntrant
+        DataSource = AppData.dsDTEntrant
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText

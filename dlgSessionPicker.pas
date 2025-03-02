@@ -52,9 +52,16 @@ end;
 procedure TSessionPicker.FormCreate(Sender: TObject);
 begin
   fSessionID := 0;
-  // ensure data tables are active...
+  AppData.qrySessionList.Close;
+  AppData.qrySessionList.ParamByName('SWIMCLUBID').AsInteger :=
+    AppData.qrySwimClub.FieldByName('SwimClubID').AsInteger;
+  AppData.qrySessionList.Prepare;
+  AppData.qrySessionList.Open;
   if not AppData.qrySessionList.Active then
-    AppData.qrySessionList.Open;
+  begin
+    raise Exception.Create('Session List failed to load.');
+  end;
+
 end;
 
 procedure TSessionPicker.dbgridSessionDblClick(Sender: TObject);

@@ -29,12 +29,12 @@ object TreeViewSCM: TTreeViewSCM
     Font.Name = 'Segoe UI'
     Font.Style = []
     HideSelection = False
-    Images = DTData.vimglistTreeView
+    Images = AppData.vimglistTreeView
     Indent = 30
     ParentFont = False
     ReadOnly = True
     RowSelect = True
-    StateImages = DTData.vimglistStateImages
+    StateImages = AppData.vimglistStateImages
     TabOrder = 0
     OnDblClick = TVDblClick
     Items.NodeData = {

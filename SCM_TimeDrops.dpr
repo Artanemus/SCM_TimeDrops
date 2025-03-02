@@ -14,7 +14,7 @@ uses
   Vcl.PlatformVclStylesActnCtrls in '..\SCM_SHARED\Vcl.PlatformVclStylesActnCtrls.pas',
   uAppUtils in 'uAppUtils.pas',
   DirectoryWatcher in 'DirectoryWatcher.pas',
-  tdMeetPrg in 'tdMeetPrg.pas',
+  tdMeetProgram in 'tdMeetProgram.pas',
   Vcl.Themes,
   Vcl.Styles,
   tdReConstruct in 'tdReConstruct.pas',
@@ -24,7 +24,8 @@ uses
   dlgTreeViewSCM in 'dlgTreeViewSCM.pas' {TreeViewSCM},
   dlgDataDebug in 'dlgDataDebug.pas' {DataDebug},
   dlgUserRaceTime in 'dlgUserRaceTime.pas' {UserRaceTime},
-  SCMUtility in '..\SCM_SHARED\SCMUtility.pas';
+  SCMUtility in '..\SCM_SHARED\SCMUtility.pas',
+  dlgSessionPicker in 'dlgSessionPicker.pas' {SessionPicker};
 
 {$R *.res}
 

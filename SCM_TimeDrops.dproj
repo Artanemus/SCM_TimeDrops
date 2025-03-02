@@ -155,7 +155,7 @@
         <DCCReference Include="..\SCM_SHARED\Vcl.PlatformVclStylesActnCtrls.pas"/>
         <DCCReference Include="uAppUtils.pas"/>
         <DCCReference Include="DirectoryWatcher.pas"/>
-        <DCCReference Include="tdMeetPrg.pas"/>
+        <DCCReference Include="tdMeetProgram.pas"/>
         <DCCReference Include="tdReConstruct.pas"/>
         <DCCReference Include="dlgOptions.pas">
             <Form>Options</Form>
@@ -182,6 +182,10 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="..\SCM_SHARED\SCMUtility.pas"/>
+        <DCCReference Include="dlgSessionPicker.pas">
+            <Form>SessionPicker</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

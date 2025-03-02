@@ -23,7 +23,7 @@ object Main: TMain
     Width = 1444
     Height = 25
     UseSystemFont = False
-    ActionManager = actnManager
+    ActionManager = ActionManager1
     Caption = 'actnMenuBar'
     Color = clMenuBar
     ColorMap.DisabledFontColor = 7171437
@@ -215,12 +215,12 @@ object Main: TMain
         Hint = 
           'Syncronize SwimClubMeet to DT.'#13#10'(Must have the same session numb' +
           'er.)'
-        Action = actnSyncSCM
         Caption = 'SYNC'
         Images = AppData.vimglistMenu
         Layout = blGlyphRight
         ParentShowHint = False
         ShowHint = True
+        OnClick = actnSyncSCMExecute
       end
       object sbtnRefreshSCM: TSpeedButton
         Left = 16
@@ -230,12 +230,12 @@ object Main: TMain
         Hint = 
           'If changes have occurred (new events, heats, etc)'#13#10'pressing this' +
           ' button will re-sync to the SCM database.'
-        Action = actnRefresh
         Caption = 'REFRESH'
         Images = AppData.vimglistMenu
         Layout = blGlyphRight
         ParentShowHint = False
         ShowHint = True
+        OnClick = actnRefreshExecute
       end
       object ShapeSpaceerSCM: TShape
         AlignWithMargins = True
@@ -323,7 +323,7 @@ object Main: TMain
         DefaultRowHeight = 46
         DrawingStyle = gdsClassic
         FixedColor = 3880234
-        RowCount = 5
+        RowCount = 2
         FixedRows = 1
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindow
@@ -796,9 +796,6 @@ object Main: TMain
           34)
         RowHeights = (
           34
-          46
-          46
-          46
           46)
       end
       object btnPickSCMTreeView: TButton
@@ -1493,11 +1490,11 @@ object Main: TMain
           Width = 128
           Height = 41
           Hint = 'Syncronize Dolphin Timing to SCM.'
-          Action = actnSyncDT
           Caption = 'SYNC'
           Images = AppData.vimglistMenu
           ParentShowHint = False
           ShowHint = True
+          OnClick = actnSyncDTExecute
         end
         object spbtnPost: TSpeedButton
           Left = 0
@@ -1505,10 +1502,11 @@ object Main: TMain
           Width = 128
           Height = 41
           Hint = 'Post the DT '#39'Race-Times'#39' to the SCM heat.'
-          Action = actnPost
+          Caption = 'POST'
           Images = AppData.vimglistMenu
           ParentShowHint = False
           ShowHint = True
+          OnClick = actnPostExecute
         end
         object sbtnAutoPatch: TSpeedButton
           Left = 0
@@ -1559,7 +1557,65 @@ object Main: TMain
     SimpleText = 'Check here for information and messages.'
     StyleElements = [seClient, seBorder]
   end
-  object actnManager: TActionManager
+  object FileSaveDlgMeetProgram: TFileSaveDialog
+    DefaultExtension = '.csv'
+    DefaultFolder = 'c:\CTSDolphin\EventCSV'
+    FavoriteLinks = <>
+    FileTypes = <
+      item
+        DisplayName = 'Comma-separated values (*.csv)'
+        FileMask = '*.csv'
+      end
+      item
+        DisplayName = 'Any file type (*.*)'
+        FileMask = '*.*'
+      end>
+    OkButtonLabel = 'Save DT Event file'
+    Options = []
+    Title = 'Create a Dolphin Timing '#39'event setup'#39' csv file.'
+    Left = 984
+    Top = 480
+  end
+  object PickDTFolderDlg: TFileOpenDialog
+    DefaultFolder = 'c:\Dolphin\Meets'
+    FavoriteLinks = <>
+    FileTypes = <>
+    OkButtonLabel = 'Select DT folder'
+    Options = [fdoPickFolders]
+    Title = 'Select the Dolphin Timing folder.'
+    Left = 984
+    Top = 424
+  end
+  object DTAppendFile: TFileOpenDialog
+    FavoriteLinks = <>
+    FileTypes = <
+      item
+        DisplayName = 'Dolphin Timing DO3 file.'
+        FileMask = '*.DO3'
+      end
+      item
+        DisplayName = 'Dolphin Timing DO4 file.'
+        FileMask = '*.DO4'
+      end
+      item
+        DisplayName = 'All Dolphin DO types.'
+        FileMask = '*.DO*'
+      end>
+    FileTypeIndex = 3
+    OkButtonLabel = 'Append DO file(s)'
+    Options = [fdoStrictFileTypes, fdoAllowMultiSelect, fdoPathMustExist, fdoFileMustExist]
+    Title = 'Append Dolphin Timing DO[3..4] files(s)...'
+    Left = 983
+    Top = 548
+  end
+  object Timer1: TTimer
+    Enabled = False
+    Interval = 6000
+    OnTimer = Timer1Timer
+    Left = 1116
+    Top = 374
+  end
+  object ActionManager1: TActionManager
     ActionBars = <
       item
         Items = <
@@ -1623,20 +1679,14 @@ object Main: TMain
               item
                 Items = <
                   item
-                    Action = actnExportDTCSV
-                    Caption = '&Export Dolphin Timing Event CSV ...'
+                    Action = actnExportMeetProgram
+                    Caption = '&Export JSON Meet Program ...'
                     ImageIndex = 1
                     ImageName = 'file_saveAlt'
                   end
                   item
-                    Action = actnReConstructDO3
-                    Caption = 'Re-&construct and export DO3 files ...'
-                    ImageIndex = 9
-                    ImageName = 'build'
-                  end
-                  item
-                    Action = actnReConstructDO4
-                    Caption = '&Re-construct and export DO4 files ...'
+                    Action = actnReConstructTDResultFiles
+                    Caption = '&Re-construct and export TD results ...'
                     ImageIndex = 9
                     ImageName = 'build'
                   end>
@@ -1734,29 +1784,21 @@ object Main: TMain
       ImageName = 'document_search'
       OnExecute = actnSelectSessionExecute
     end
-    object actnExportDTCSV: TAction
+    object actnExportMeetProgram: TAction
       Category = 'Export'
-      Caption = 'Export Dolphin Timing Event CSV ...'
+      Caption = 'Export JSON Meet Program ...'
       ImageIndex = 1
       ImageName = 'file_saveAlt'
-      OnExecute = actnExportDTCSVExecute
-      OnUpdate = actnExportDTCSVUpdate
+      OnExecute = actnExportMeetProgramExecute
+      OnUpdate = actnExportMeetProgramUpdate
     end
-    object actnReConstructDO3: TAction
+    object actnReConstructTDResultFiles: TAction
       Category = 'Export'
-      Caption = 'Re-construct and export DO3 files ...'
+      Caption = 'Re-construct and export TD results ...'
       ImageIndex = 9
       ImageName = 'build'
-      OnExecute = actnReConstructDO3Execute
-      OnUpdate = actnReConstructDO3Update
-    end
-    object actnReConstructDO4: TAction
-      Category = 'Export'
-      Caption = 'Re-construct and export DO4 files ...'
-      ImageIndex = 9
-      ImageName = 'build'
-      OnExecute = actnReConstructDO4Execute
-      OnUpdate = actnReConstructDO4Update
+      OnExecute = actnReConstructTDResultFilesExecute
+      OnUpdate = actnReConstructTDResultFilesUpdate
     end
     object actnPreferences: TAction
       Category = 'Edit'
@@ -1845,63 +1887,5 @@ object Main: TMain
       ImageName = 'arrow_forward'
       OnExecute = actnSyncSCMExecute
     end
-  end
-  object FileSaveDlgMeetProgram: TFileSaveDialog
-    DefaultExtension = '.csv'
-    DefaultFolder = 'c:\CTSDolphin\EventCSV'
-    FavoriteLinks = <>
-    FileTypes = <
-      item
-        DisplayName = 'Comma-separated values (*.csv)'
-        FileMask = '*.csv'
-      end
-      item
-        DisplayName = 'Any file type (*.*)'
-        FileMask = '*.*'
-      end>
-    OkButtonLabel = 'Save DT Event file'
-    Options = []
-    Title = 'Create a Dolphin Timing '#39'event setup'#39' csv file.'
-    Left = 984
-    Top = 480
-  end
-  object PickDTFolderDlg: TFileOpenDialog
-    DefaultFolder = 'c:\Dolphin\Meets'
-    FavoriteLinks = <>
-    FileTypes = <>
-    OkButtonLabel = 'Select DT folder'
-    Options = [fdoPickFolders]
-    Title = 'Select the Dolphin Timing folder.'
-    Left = 984
-    Top = 424
-  end
-  object DTAppendFile: TFileOpenDialog
-    FavoriteLinks = <>
-    FileTypes = <
-      item
-        DisplayName = 'Dolphin Timing DO3 file.'
-        FileMask = '*.DO3'
-      end
-      item
-        DisplayName = 'Dolphin Timing DO4 file.'
-        FileMask = '*.DO4'
-      end
-      item
-        DisplayName = 'All Dolphin DO types.'
-        FileMask = '*.DO*'
-      end>
-    FileTypeIndex = 3
-    OkButtonLabel = 'Append DO file(s)'
-    Options = [fdoStrictFileTypes, fdoAllowMultiSelect, fdoPathMustExist, fdoFileMustExist]
-    Title = 'Append Dolphin Timing DO[3..4] files(s)...'
-    Left = 983
-    Top = 548
-  end
-  object Timer1: TTimer
-    Enabled = False
-    Interval = 6000
-    OnTimer = Timer1Timer
-    Left = 1116
-    Top = 374
   end
 end

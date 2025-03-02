@@ -32,9 +32,7 @@ uses
 
 type
   TMain = class(TForm)
-    actnManager: TActionManager;
     actnMenuBar: TActionMainMenuBar;
-    actnSelectSession: TAction;
     dtGrid: TDBAdvGrid;
     btnNextDTFile: TButton;
     btnNextEvent: TButton;
@@ -54,46 +52,47 @@ type
     vimgStrokeBug: TVirtualImage;
     pBar: TProgressBar;
     dbtxtDTFileName: TDBText;
-    actnExportDTCSV: TAction;
-    actnReConstructDO4: TAction;
-    actnReConstructDO3: TAction;
-    actnPreferences: TAction;
-    actnImportAppendDO: TAction;
-    actnClearReScanMeets: TAction;
     pnlSCM: TPanel;
     pnlDT: TPanel;
-    actnSaveSession: TAction;
-    actnLoadSession: TAction;
     rpnlBody: TRelativePanel;
     pnlTool1: TPanel;
     pnlTool2: TPanel;
     stackpnlTool2: TStackPanel;
     ShapeSpacer: TShape;
-    actnAbout: TAction;
-    actnSyncDT: TAction;
-    actnConnect: TAction;
-    actnPost: TAction;
     lblMetersRelay: TLabel;
     lblSessionStart: TLabel;
     btnPickSCMTreeView: TButton;
     btnPickDTTreeView: TButton;
-    actnSelectSwimClub: TAction;
     btnDataDebug: TButton;
     lblDTDetails: TLabel;
-    actnRefresh: TAction;
     DTAppendFile: TFileOpenDialog;
-    actnReportSCMSession: TAction;
-    actnReportDT: TAction;
-    actnReportSCMEvent: TAction;
     sbtnAutoPatch: TSpeedButton;
     sbtnSyncSCMtoDT: TSpeedButton;
     sbtnRefreshSCM: TSpeedButton;
     ShapeSpaceerSCM: TShape;
-    actnSyncSCM: TAction;
     StatBar: TStatusBar;
     Timer1: TTimer;
-    procedure actnExportDTCSVExecute(Sender: TObject);
-    procedure actnExportDTCSVUpdate(Sender: TObject);
+    ActionManager1: TActionManager;
+    actnRefresh: TAction;
+    actnSelectSwimClub: TAction;
+    actnSelectSession: TAction;
+    actnExportMeetProgram: TAction;
+    actnReConstructTDResultFiles: TAction;
+    actnPreferences: TAction;
+    actnImportAppendDO: TAction;
+    actnClearReScanMeets: TAction;
+    actnSaveSession: TAction;
+    actnLoadSession: TAction;
+    actnAbout: TAction;
+    actnSyncDT: TAction;
+    actnConnect: TAction;
+    actnPost: TAction;
+    actnReportSCMSession: TAction;
+    actnReportSCMEvent: TAction;
+    actnReportDT: TAction;
+    actnSyncSCM: TAction;
+    procedure actnExportMeetProgramExecute(Sender: TObject);
+    procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearReScanMeetsExecute(Sender: TObject);
     procedure actnImportAppendDOExecute(Sender: TObject);
     procedure actnPostExecute(Sender: TObject);
@@ -101,8 +100,8 @@ type
     procedure actnPreferencesExecute(Sender: TObject);
     procedure actnReConstructDO3Execute(Sender: TObject);
     procedure actnReConstructDO3Update(Sender: TObject);
-    procedure actnReConstructDO4Execute(Sender: TObject);
-    procedure actnReConstructDO4Update(Sender: TObject);
+    procedure actnReConstructTDResultFilesExecute(Sender: TObject);
+    procedure actnReConstructTDResultFilesUpdate(Sender: TObject);
     procedure actnRefreshExecute(Sender: TObject);
     procedure actnSelectSessionExecute(Sender: TObject);
     procedure actnSetDTMeetsFolderExecute(Sender: TObject);
@@ -175,7 +174,7 @@ implementation
 {$R *.dfm}
 
 uses UITypes, DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
-  dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData;
+  dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram;
 
 const
   MSG_CONFIRM_RECONSTRUCT =
@@ -190,16 +189,14 @@ const
   DO3_FILE_EXTENSION = 'DO3';
 
 
-procedure TMain.actnExportDTCSVExecute(Sender: TObject);
+procedure TMain.actnExportMeetProgramExecute(Sender: TObject);
 var
   fn: TFileName;
-  i: integer;
   dt: TDatetime;
   s: string;
   fs: TFormatSettings;
 begin
   FileSaveDlgMeetProgram.DefaultFolder := Settings.ProgramFolder;
-  i := AppData.qrySession.FieldByName('SessionID').AsInteger;
 try
   dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
   fs := TFormatSettings.Create;
@@ -214,14 +211,14 @@ end;
   if FileSaveDlgMeetProgram.Execute then
   begin
     fn := FileSaveDlgMeetProgram.FileName;
-    AppData.BuildCSVEventData(fn); // Build CSV Event Data and save to file.
+    BuildAndSaveMeetProgram(fn); // Build CSV Event Data and save to file.
     MessageBox(0,
       PChar('Export of the Dolphin Timing event csv has been completed.'),
       PChar('Export Event CSV'), MB_ICONINFORMATION or MB_OK);
   end;
 end;
 
-procedure TMain.actnExportDTCSVUpdate(Sender: TObject);
+procedure TMain.actnExportMeetProgramUpdate(Sender: TObject);
 begin
   if Assigned(AppData) then
   begin
@@ -480,7 +477,7 @@ begin
 end;
 }
 
-procedure TMain.actnReConstructDO4Execute(Sender: TObject);
+procedure TMain.actnReConstructTDResultFilesExecute(Sender: TObject);
 begin
   ReconstructAndExportFiles(DO4_FILE_EXTENSION, 'DO4');
 end;
@@ -502,7 +499,7 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
-procedure TMain.actnReConstructDO4Update(Sender: TObject);
+procedure TMain.actnReConstructTDResultFilesUpdate(Sender: TObject);
 begin
   if Assigned(AppData) then
   begin
@@ -525,19 +522,27 @@ var
   dlg: TSessionPicker;
   mr: TModalResult;
 begin
-  dlg := TSessionPicker.Create(Self);
-  // the picker will locate to the given session id.
-  dlg.rtnSessionID := AppData.qrySession.FieldByName('SessionID').AsInteger;
-  mr := dlg.ShowModal;
-  if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
+  if Assigned(AppData) then
   begin
-    AppData.MSG_Handle := 0;
-    AppData.LocateSCMSessionID(dlg.rtnSessionID);
-    AppData.MSG_Handle := Self.Handle;
+    dlg := TSessionPicker.Create(Self);
+    dlg.rtnSessionID := 0;
+    // the picker will locate to the given session id.
+    if AppData.qrySession.Active and not AppData.qrySession.IsEmpty then
+    begin
+      dlg.rtnSessionID := AppData.qrySession.FieldByName('SessionID').AsInteger;
+    end;
+
+    mr := dlg.ShowModal;
+    if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
+    begin
+      AppData.MSG_Handle := 0;
+      AppData.LocateSCMSessionID(dlg.rtnSessionID);
+      AppData.MSG_Handle := Self.Handle;
+    end;
+    dlg.Free;
+    UpdateCaption;
+    PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
   end;
-  dlg.Free;
-  UpdateCaption;
-  PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
 end;
 
 procedure TMain.actnSetDTMeetsFolderExecute(Sender: TObject);

@@ -327,10 +327,13 @@ begin
     if Assigned(SCM) then
     begin
       if SCM.scmConnection.Connected then
+      begin
         SaveToSettings; // store parameters.
+        Key := 0;
+        Close();
+      end;
     end
   end;
-  Close();
 end;
 
 function TLogin.GetSCMVerInfo: string;

@@ -2,7 +2,7 @@ object AppData: TAppData
   OnCreate = DataModuleCreate
   OnDestroy = DataModuleDestroy
   Height = 1031
-  Width = 811
+  Width = 966
   object qrySession: TFDQuery
     Active = True
     IndexFieldNames = 'SwimClubID'
@@ -18876,6 +18876,7 @@ object AppData: TAppData
     Top = 16
   end
   object qrySessionList: TFDQuery
+    Active = True
     IndexFieldNames = 'SwimClubID'
     MasterSource = dsSwimClub
     MasterFields = 'SwimClubID'
@@ -18906,7 +18907,7 @@ object AppData: TAppData
     ParamData = <
       item
         Name = 'SWIMCLUBID'
-        DataType = ftInteger
+        DataType = ftAutoInc
         ParamType = ptInput
         Value = 1
       end>
