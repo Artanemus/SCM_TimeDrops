@@ -17,16 +17,215 @@ var
   X: ISuperObject;
   AFormatSettings: TFormatSettings;
   dt: TDateTime;
+  j, NumOfHeats, EventTypeID: Integer;
+  SessObj, EventObj, RaceObj, LaneObj, PoolObj: ISuperObject;
+begin
+  AFormatSettings := TFormatSettings.Create;
+  AFormatSettings.DateSeparator := '-';
+  AFormatSettings.TimeSeparator := ':';
+  AFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
+  AFormatSettings.LongTimeFormat := 'hh:nn:ss';
+
+  // Create the main SuperObject
+  X := SO();
+  X.S['type'] := 'MeetProgramJson';
+
+  with X.O['Meet'] {Auto Create} do
+  begin
+    dt := DateOf(AppData.qrySession.FieldByName('SessionStart').AsDateTime);
+    // Name of the meet as assigned by the user
+    S['meetName'] := AppData.qrySession.FieldByName('Caption').AsString;
+    // Data format version, must be 1
+    I['meetProgramVersion'] := 1;
+    // Date/Time the program was last updated, in ISO 8601 UTC format
+    S['meetProgramDateTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
+    // name of the team or organization hosting the meet
+    S['meetHostTeamName'] := AppData.qrySwimClub.FieldByName('Caption').AsString;
+    // First day of the meet, in ISO 8601 DAY ONLY format (e.g. "2023-07-31")
+    S['meetStartDate'] := FormatDateTime('yyyy-mm-dd', dt, AFormatSettings);
+    // Last day of the meet, in ISO 8601 DAY ONLY format (e.g. "2023-07-31")
+    S['meetEndDate'] := FormatDateTime('yyyy-mm-dd', dt, AFormatSettings);
+
+    with A['meetEvents']do
+    begin
+      AppData.qryEvent.ApplyMaster;
+      AppData.qryEvent.First;
+      while not AppData.qryEvent.Eof do
+      begin
+        EventObj := SO();
+        // number of the event, e.g. "3" or "4A"
+        EventObj.S['eventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        // Stroke code
+        EventObj.I['eventStrokeCode'] := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
+        // Stroke description
+        EventObj.S['eventStroke'] := AppData.qryStroke.FieldByName('Caption').AsString;
+        // Relay or not
+        if AppData.qryDistance.FieldByName('EventTypeID').AsInteger = 1 then
+        begin
+          EventObj.B['eventIsRelay'] := false;
+          EventObj.I['eventRelaylegs'] := 0;
+          EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
+        end
+        else
+        begin
+          EventObj.B['eventIsRelay'] := true;
+          EventObj.I['eventRelaylegs'] := 4;
+          EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
+        end;
+        // Gender
+        EventObj.S['eventGender'] := 'X';
+        // Ages
+        EventObj.I['eventMinAge'] := 0;
+        EventObj.I['eventMaxAge'] := 0;
+        // Description
+        EventObj.S['eventDescription'] := AppData.qryEvent.FieldByName('Caption').AsString;
+        EventObj.S['eventShortLabel'] := '';
+        EventObj.S['eventFullLabel'] := '';
+
+        // Records
+        with EventObj.A['eventRecords'].O[0] {Auto Create} do
+        begin
+          // Add record fields here if any
+        end;
+        // Standards
+        with EventObj.A['eventStandards'].O[0] {Auto Create} do
+        begin
+          // Add standard fields here if any
+        end;
+        Add(EventObj);
+        AppData.qryEvent.Next;
+      end;
+    end;
+
+    // ONLY ONE SESSION -
+    with A['meetSessions'] do
+    begin
+      SessObj := SO();
+      SessObj.I['sessionNumber'] := 1;
+      SessObj.S['sessionId'] := IntToStr(AppData.qrySession.FieldByName('SessionID').AsInteger);
+      SessObj.S['sessionName'] := AppData.qrySession.FieldByName('Caption').AsString;
+      dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
+      SessObj.S['sessionBeginAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', dt, AFormatSettings);
+      // db v1.1.5.3 doesn't have field SessionEnd - Calculate a session end time.
+      dt := IncHour(dt,2);
+      SessObj.S['sessionEndAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', dt, AFormatSettings);
+      SessObj.B['sessionIsCurrent'] :=  true;
+      with SessObj.A['sessionRaces'] do
+      begin
+        AppData.qryEvent.First;
+        while not AppData.qryEvent.Eof do
+        begin
+          AppData.qryDistance.ApplyMaster;
+          EventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
+          AppData.qryHeat.ApplyMaster;
+          AppData.qryHeat.Last;
+          NumOfHeats := AppData.qryHeat.RecordCount;
+          AppData.qryHeat.First;
+          while not AppData.qryHeat.Eof do
+          begin
+            RaceObj := SO();
+            RaceObj.S['raceEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+            j := AppData.qryEvent.FieldByName('EventNum').AsInteger * 100 + AppData.qryHeat.FieldByName('HeatNum').AsInteger;
+            RaceObj.I['raceNumber'] := j;
+            RaceObj.S['raceHeatType'] := 'Prelims';
+            // NUMBER OF THE HEAT - not dbo.HeatIndividual.HeatID
+            RaceObj.I['raceHeatNumber'] := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
+            RaceObj.I['raceTotalHeats'] := NumOfHeats;
+
+            with RaceObj.A['raceLanes'] do
+            begin
+              // Individual event
+              if EventTypeID = 1 then
+              begin
+                AppData.qryINDV.ApplyMaster;
+                AppData.qryINDV.First;
+                while not AppData.qryINDV.Eof do
+                begin
+                  LaneObj := SO();
+                  LaneObj.I['laneNumber'] := AppData.qryINDV.FieldByName('Lane').AsInteger;
+                  LaneObj.B['isEmpty'] := AppData.qryINDV.FieldByName('MemberID').IsNull;
+                  LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+                  if not AppData.qryINDV.FieldByName('MemberID').IsNull then
+                    LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger)
+                  else
+                    LaneObj.S['laneSwimmerId'] := '';
+                  LaneObj.S['laneTeamId'] := '';
+                  Add(LaneObj);
+                  AppData.qryINDV.Next;
+                end;
+              end
+              // Team event
+              else if EventTypeID = 2 then
+              begin
+                AppData.qryTEAM.ApplyMaster;
+                AppData.qryTEAM.First;
+                while not AppData.qryTEAM.Eof do
+                begin
+                  LaneObj := SO();
+                  LaneObj.I['laneNumber'] := AppData.qryTEAM.FieldByName('Lane').AsInteger;
+                  LaneObj.B['isEmpty'] := AppData.qryTEAM.FieldByName('MemberID').IsNull;
+                  LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+                  if not AppData.qryTEAM.FieldByName('MemberID').IsNull then
+                    LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryTEAM.FieldByName('MemberID').AsInteger)
+                  else
+                    LaneObj.S['laneSwimmerId'] := '';
+                  LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
+                  Add(LaneObj);
+                  AppData.qryTEAM.Next;
+                end;
+              end;
+              Add(RaceObj);
+            end;
+            AppData.qryHeat.Next;
+          end;
+          AppData.qryEvent.Next;
+        end;
+        // specification for the pool this session is run in
+        with SessObj.A['sessionPool'] do
+        begin
+          PoolObj := SO();
+          PoolObj.I['poolNumberOfLanes'] := AppData.qrySwimClub.FieldByName('NumOfLanes').AsInteger;
+          j := AppData.qrySwimClub.FieldByName('PoolTypeID').AsInteger;
+          case j of
+            1: PoolObj.S['poolCourse'] :=  'SCM';
+            2: PoolObj.S['poolCourse'] :=  'LCM';
+            3: PoolObj.S['poolCourse'] :=  'SCY';
+            4: PoolObj.S['poolCourse'] :=  'LCY';
+          end;
+          PoolObj.I['poolFirstLaneNumber'] := 1;
+          Add(PoolObj);
+        end;
+      end;
+      Add(SessObj);
+    end;
+
+  end;
+  X.SaveTo(AFileName);
+  Result := True;
+end;
+
+
+
+{
+function BuildAndSaveMeetProgram(AFileName: TFileName): boolean;
+var
+  X: ISuperObject;
+  AFormatSettings: TFormatSettings;
+  dt: TDateTime;
   j, NumOfHeats: Integer;
 begin
   AFormatSettings := TFormatSettings.Create;
-  FormatSettings.DateSeparator := '-';
-  FormatSettings.TimeSeparator := ':';
-  FormatSettings.ShortDateFormat := 'yyyy-mm-dd';
-  FormatSettings.LongTimeFormat := 'hh:nn:ss';
+  AFormatSettings.DateSeparator := '-';
+  AFormatSettings.TimeSeparator := ':';
+  AFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
+  AFormatSettings.LongTimeFormat := 'hh:nn:ss';
 
-  X := SO('MeetProgramJson');
-  with X.A['Meet'].O[0] {Auto Create} do
+  // Initialize as an empty SuperObject
+  X := SO();
+  // Set the type property
+  X.S['type'] := 'MeetProgramJson';
+
+  with X.A['Meet'].O[0]  do
   begin
     dt := DateOf(AppData.qrySession.FieldByName('SessionStart').AsDateTime);
     // Name of the meet as assigned by the user
@@ -40,27 +239,27 @@ begin
     // name of the team or organization hosting the meet
     S['meetHostTeamName'] := AppData.qrySwimClub.FieldByName('Caption').AsString;
     // First day of the meet, in ISO 8061 DAY ONLY format (e.g. "2023‐07‐31")
-    S['meetStartDate'] := FormatDateTime('yyyy-mm-dd"T"', dt, AFormatSettings);
+    S['meetStartDate'] := FormatDateTime('yyyy-mm-dd', dt, AFormatSettings);
     // Last day of the meet, in ISO 8061 DAY ONLY format (e.g. "2023‐07‐31")
-    S['meetEndDate'] := FormatDateTime('yyyy-mm-dd"T"', dt, AFormatSettings);
+    S['meetEndDate'] := FormatDateTime('yyyy-mm-dd', dt, AFormatSettings);
 
     with X.O['meetEvents'] do
     begin
       AppData.qryEvent.First;
       while not AppData.qryEvent.Eof do
       begin
-        with X.A['Events'].o[0] {Auto Create}  do
+        with X.A['Events'].o[0]  do
         begin
           // number of the event, e.g. "3" or "4A"
           S['eventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
           // 1 -> Free 2 -> Back 3 -> Breast 4 -> Fly 5 -> Medley
-          { In my table dbo.Stroke - BS preceeds BK. Don't ask me why.
-            j := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
-            if (j = 3) then j := 4 else if (j = 4) then j:= 3;
-           }
+          // In my table dbo.Stroke - BS preceeds BK. Don't ask me why.
+          //  j := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
+          //  if (j = 3) then j := 4 else if (j = 4) then j:= 3;
+
           I['eventStrokeCode'] := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
           // Freeform description of the stroke, can be used for localization.
-          { As I can localize my erronous stroke identity - it can be ignored. }
+          // As I can localize my erronous stroke identity - it can be ignored.
           S['eventStroke'] := AppData.qryStroke.FieldByName('Caption').AsString;
           // true for relays
           if AppData.qryDistance.FieldByName('EventTypeID').AsInteger = 1 then
@@ -80,7 +279,7 @@ begin
             I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
           end;
           // "M", "F", or "X" or any other category designation
-          { TODO: call dtUtils.EventGender. }
+          // TODO: call dtUtils.EventGender.
           S['eventGender'] := 'X';
           // minimum age for event, specify 0 for "&under" or open events
           I['eventMinAge'] := 0;
@@ -92,12 +291,12 @@ begin
           S['eventFullLabel'] := '';
 
           // list of records applicable to this event. can be empty
-          with X.A['eventRecords'].o[0] {Auto Create}  do
+          with X.A['eventRecords'].o[0]   do
           begin
 
           end;
           // list of time standards applicable to this event. can be empty
-          with X.A['eventStandards'].o[0] {Auto Create}  do
+          with X.A['eventStandards'].o[0]  do
           begin
 
           end;
@@ -108,7 +307,7 @@ begin
 
 
     // ONLY ONE SESSION -
-    with X.A['meetSessions'].O[0] {Auto Create} do
+    with X.A['meetSessions'].O[0]  do
     begin
       // number of the session within the meet
       I['sessionNumber'] := 1;
@@ -133,13 +332,13 @@ begin
           while not AppData.qryHeat.Eof do
             begin
 
-              { Commonly called a heat - Race is slightly different as it defines
-                  the specific order of races in the program
-                IMPORTANT: the race number defines the order of races at the
-                  meet irrespective of the event number and heat number ...
-                  therefore it is possible to have preliminaries and finals
-                  out of order
-              }
+              // Commonly called a heat - Race is slightly different as it defines
+              //    the specific order of races in the program
+              //  IMPORTANT: the race number defines the order of races at the
+              //    meet irrespective of the event number and heat number ...
+              //    therefore it is possible to have preliminaries and finals
+              //    out of order
+
               with X.A['Race'].O[0] do
               begin
                 S['raceEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
@@ -152,7 +351,7 @@ begin
                 I['raceNumber'] := j;
                 // for Prelims, Finals, Swimoffs etc.
                 // TODO JOIN dbo.HeatType
-                { S['raceHeatType'] := AppData.qryHeatType.FieldByName('Caption').AsString; }
+                // S['raceHeatType'] := AppData.qryHeatType.FieldByName('Caption').AsString;
                 S['raceHeatType'] := 'Prelims';
                 // number of the heat
                 I['raceHeatNumber'] := AppData.qryHeat.FieldByName('HeatID').AsInteger;
@@ -160,7 +359,7 @@ begin
                 I['raceTotalHeats'] := NumOfHeats;
                 with X.O['raceLanes'] do
                 begin
-                  { I N D I V I D U A L   E V E N T . }
+                  // I N D I V I D U A L   E V E N T .
                   if AppData.qryEvent.FieldByName('EventTypeID').AsInteger = 1 then
                   begin
                     while not AppData.qryINDV.Eof do
@@ -175,11 +374,11 @@ begin
                         else
                           B['isEmpty'] := false;
                         // for the purpose of combining events, each lane  has it's own event number
-                        { SHOULDN'T THIS BE HEAT NUMBER ?}
+                        // SHOULDN'T THIS BE HEAT NUMBER ?
                         S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
                         // seed time in 1/100 of a second.
-                        { TODO: locate conversion tool}
-                        { I['laneSeedTime'] :=  CnvTimeToSeconds(TimeOf(AppData.qryINDV.FieldByName('TimeToBeat').AsDateTime)); }
+                       // TODO: locate conversion tool
+                       // I['laneSeedTime'] :=  CnvTimeToSeconds(TimeOf(AppData.qryINDV.FieldByName('TimeToBeat').AsDateTime));
                         // nullable type, will be null in relay events and have a value in individual events
                         if AppData.qryINDV.FieldByName('MemberID').IsNull then
                           S['laneSwimmerId'] := ''
@@ -187,13 +386,13 @@ begin
                           S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger) ;
                         // used in relay events - something like "RSM A" - OR - just "A" and then combine with the team name/abbreviation
                         // TODO JOIN TEAM NAME ON ....
-                        { S['laneRelayTeamName'] := AppData.qryTeamName.FieldByName('Caption').AsString;  }
+                        // S['laneRelayTeamName'] := AppData.qryTeamName.FieldByName('Caption').AsString;
 
                         // for relay events - list of swimmers in this relay - null for individual events
                         // TODO JOIN TEAM ENTRANT ON ....
                         with X.O['laneRelaySwimmerIds'] do
                         begin
-                        {val X.O['laneRelaySwimmerIds'] := List<String?>? = null, }
+                        // val X.O['laneRelaySwimmerIds'] := List<String?>? = null,
                         end;
                         // Team association of this entry
                         S['laneTeamId'] := '' ;
@@ -201,7 +400,7 @@ begin
                       AppData.qryINDV.Next;
                     end;
                   end;
-                  { T E A M   E V E N T . }
+                  // T E A M   E V E N T .
                   if AppData.qryEvent.FieldByName('EventTypeID').AsInteger = 2 then
                   begin
                     while not AppData.qryTEAM.Eof do
@@ -216,11 +415,11 @@ begin
                         else
                           B['isEmpty'] := false;
                         // for the purpose of combining events, each lane  has it's own event number
-                        { SHOULDN'T THIS BE HEAT NUMBER ?}
+                        // SHOULDN'T THIS BE HEAT NUMBER ?
                         S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
                         // seed time in 1/100 of a second.
-                        { TODO: locate conversion tool}
-                        { I['laneSeedTime'] :=  CnvTimeToSeconds(TimeOf(AppData.qryTEAM.FieldByName('TimeToBeat').AsDateTime)); }
+                        // TODO: locate conversion tool
+                        // I['laneSeedTime'] :=  CnvTimeToSeconds(TimeOf(AppData.qryTEAM.FieldByName('TimeToBeat').AsDateTime));
                         // nullable type, will be null in relay events and have a value in individual events
                         if AppData.qryTEAM.FieldByName('MemberID').IsNull then
                           S['laneSwimmerId'] := ''
@@ -228,13 +427,13 @@ begin
                           S['laneSwimmerId'] := IntToStr(AppData.qryTEAM.FieldByName('MemberID').AsInteger) ;
                         // used in relay events - something like "RSM A" - OR - just "A" and then combine with the team name/abbreviation
                         // TODO JOIN TEAM NAME ON ....
-                        { S['laneRelayTeamName'] := AppData.qryTeamName.FieldByName('Caption').AsString;  }
+                        // S['laneRelayTeamName'] := AppData.qryTeamName.FieldByName('Caption').AsString;
 
                         // for relay events - list of swimmers in this relay - null for individual events
                         // TODO JOIN TEAM ENTRANT ON ....
                         with X.O['laneRelaySwimmerIds'] do
                         begin
-                        {val X.O['laneRelaySwimmerIds'] := List<String?>? = null, }
+                        //val X.O['laneRelaySwimmerIds'] := List<String?>? = null,
                         end;
                         // Team association of this entry
                         S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger) ;
@@ -260,7 +459,7 @@ begin
           I['poolNumberOfLanes'] := AppData.qrySwimClub.FieldByName('NumOfLanes').AsInteger;
 
           // LCM, SCM, or SCY
-          {TODO - pull ABREV from table dbo.PoolType }
+          //TODO - pull ABREV from table dbo.PoolType
           j := AppData.qrySwimClub.FieldByName('PoolTypeID').AsInteger;
           case j of
             1: S['poolCourse'] :=  'SCM';
@@ -282,6 +481,9 @@ begin
 //  X.SaveTo('c:\TIMEDROPS\MEETS\TestSessionProgram.JSON');
 
 end;
+
+
+
 
 
 {

@@ -23,7 +23,7 @@ object Main: TMain
     Width = 1444
     Height = 25
     UseSystemFont = False
-    ActionManager = ActionManager1
+    ActionManager = actnManager
     Caption = 'actnMenuBar'
     Color = clMenuBar
     ColorMap.DisabledFontColor = 7171437
@@ -323,7 +323,7 @@ object Main: TMain
         DefaultRowHeight = 46
         DrawingStyle = gdsClassic
         FixedColor = 3880234
-        RowCount = 2
+        RowCount = 5
         FixedRows = 1
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindow
@@ -796,6 +796,9 @@ object Main: TMain
           34)
         RowHeights = (
           34
+          46
+          46
+          46
           46)
       end
       object btnPickSCMTreeView: TButton
@@ -1558,21 +1561,21 @@ object Main: TMain
     StyleElements = [seClient, seBorder]
   end
   object FileSaveDlgMeetProgram: TFileSaveDialog
-    DefaultExtension = '.csv'
-    DefaultFolder = 'c:\CTSDolphin\EventCSV'
+    DefaultExtension = '.json'
+    DefaultFolder = 'c:\TimeDrops\Meets'
     FavoriteLinks = <>
     FileTypes = <
       item
-        DisplayName = 'Comma-separated values (*.csv)'
-        FileMask = '*.csv'
+        DisplayName = 'JSON  (*.json)'
+        FileMask = '*.json'
       end
       item
         DisplayName = 'Any file type (*.*)'
         FileMask = '*.*'
       end>
-    OkButtonLabel = 'Save DT Event file'
+    OkButtonLabel = 'Save TD Meet Program file'
     Options = []
-    Title = 'Create a Dolphin Timing '#39'event setup'#39' csv file.'
+    Title = 'Create a Time Drops '#39'Meet Program'#39' file.'
     Left = 984
     Top = 480
   end
@@ -1615,7 +1618,7 @@ object Main: TMain
     Left = 1116
     Top = 374
   end
-  object ActionManager1: TActionManager
+  object actnManager: TActionManager
     ActionBars = <
       item
         Items = <

@@ -72,7 +72,7 @@ type
     ShapeSpaceerSCM: TShape;
     StatBar: TStatusBar;
     Timer1: TTimer;
-    ActionManager1: TActionManager;
+    actnManager: TActionManager;
     actnRefresh: TAction;
     actnSelectSwimClub: TAction;
     actnSelectSession: TAction;
@@ -210,11 +210,15 @@ end;
   FileSaveDlgMeetProgram.FileName := fn;
   if FileSaveDlgMeetProgram.Execute then
   begin
+    SCMGrid.BeginUpdate;
     fn := FileSaveDlgMeetProgram.FileName;
     BuildAndSaveMeetProgram(fn); // Build CSV Event Data and save to file.
     MessageBox(0,
-      PChar('Export of the Dolphin Timing event csv has been completed.'),
+      PChar('Export of the Time Drops Meet Program has been completed.'),
       PChar('Export Event CSV'), MB_ICONINFORMATION or MB_OK);
+    // restore list display
+    AppData.RefreshSCM;
+    SCMGrid.EndUpdate;
   end;
 end;
 
