@@ -19587,4 +19587,8 @@ object AppData: TAppData
     Left = 376
     Top = 408
   end
+  object qrySwimmer: TFDQuery
+    Left = 320
+    Top = 152
+  end
 end
