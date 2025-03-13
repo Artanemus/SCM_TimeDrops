@@ -98,6 +98,7 @@ type
     vimglistStateImages: TVirtualImageList;
     vimglistTreeView: TVirtualImageList;
     qrySwimmer: TFDQuery;
+    qrySplit: TFDQuery;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
     procedure tblmHeatAfterScroll(DataSet: TDataSet);

@@ -18038,8 +18038,8 @@ object AppData: TAppData
               720A80DC1B1E736771BE1214480000000049454E44AE426082}
           end>
       end>
-    Left = 80
-    Top = 344
+    Left = 72
+    Top = 440
   end
   object vimglistDTEvent: TVirtualImageList
     Images = <
@@ -18101,8 +18101,8 @@ object AppData: TAppData
     ImageCollection = imgcolDT
     Width = 50
     Height = 50
-    Left = 80
-    Top = 408
+    Left = 72
+    Top = 504
   end
   object qryNearestSessionID: TFDQuery
     Connection = SCM.scmConnection
@@ -18211,7 +18211,7 @@ object AppData: TAppData
     UpdateOptions.AutoCommitUpdates = True
     StoreDefs = True
     Left = 368
-    Top = 792
+    Top = 872
     Content = {
       4144425310000000A3030000FF00010001FF02FF03040016000000740062006C
       00440054004E006F006F0064006C006500050016000000740062006C00440054
@@ -18342,8 +18342,8 @@ object AppData: TAppData
     ImageCollection = imgcolDT
     Width = 28
     Height = 28
-    Left = 176
-    Top = 408
+    Left = 168
+    Top = 504
   end
   object tblmSession: TFDMemTable
     Active = True
@@ -18385,7 +18385,7 @@ object AppData: TAppData
     UpdateOptions.KeyFields = 'DTID'
     StoreDefs = True
     Left = 72
-    Top = 592
+    Top = 672
     Content = {
       41444253100000000F030000FF00010001FF02FF03040018000000740062006C
       0044005400530065007300730069006F006E00050018000000740062006C0044
@@ -18507,7 +18507,7 @@ object AppData: TAppData
     UpdateOptions.AutoCommitUpdates = True
     StoreDefs = True
     Left = 152
-    Top = 728
+    Top = 808
     Content = {
       41444253100000002B050000FF00010001FF02FF03040012000000740062006C
       00440054004800650061007400050012000000740062006C0044005400480065
@@ -18576,7 +18576,7 @@ object AppData: TAppData
   object dsmSession: TDataSource
     DataSet = tblmSession
     Left = 152
-    Top = 592
+    Top = 672
   end
   object FDStanStorageXMLLink1: TFDStanStorageXMLLink
     Left = 640
@@ -18731,7 +18731,7 @@ object AppData: TAppData
     UpdateOptions.AutoCommitUpdates = True
     StoreDefs = True
     Left = 208
-    Top = 792
+    Top = 872
     Content = {
       4144425310000000450B0000FF00010001FF02FF03040018000000740062006C
       004400540045006E007400720061006E007400050018000000740062006C0044
@@ -18849,12 +18849,12 @@ object AppData: TAppData
   object dsmHeat: TDataSource
     DataSet = tblmHeat
     Left = 208
-    Top = 728
+    Top = 808
   end
   object dsmLane: TDataSource
     DataSet = tblmLane
     Left = 280
-    Top = 792
+    Top = 872
   end
   object qrySwimClub: TFDQuery
     Active = True
@@ -19034,8 +19034,8 @@ object AppData: TAppData
     ImageCollection = imgcolDT
     Width = 32
     Height = 32
-    Left = 264
-    Top = 408
+    Left = 256
+    Top = 504
   end
   object vimglistTreeView: TVirtualImageList
     Images = <
@@ -19232,8 +19232,8 @@ object AppData: TAppData
     ImageCollection = imgcolDT
     Width = 24
     Height = 24
-    Left = 176
-    Top = 472
+    Left = 168
+    Top = 568
   end
   object vimglistStateImages: TVirtualImageList
     Images = <
@@ -19270,8 +19270,8 @@ object AppData: TAppData
     ImageCollection = imgcolDT
     Width = 24
     Height = 24
-    Left = 288
-    Top = 472
+    Left = 280
+    Top = 568
   end
   object tblmEvent: TFDMemTable
     Active = True
@@ -19322,7 +19322,7 @@ object AppData: TAppData
     UpdateOptions.AutoCommitUpdates = True
     StoreDefs = True
     Left = 96
-    Top = 656
+    Top = 736
     Content = {
       414442531000000056030000FF00010001FF02FF03040014000000740062006C
       00440054004500760065006E007400050014000000740062006C004400540045
@@ -19375,7 +19375,7 @@ object AppData: TAppData
   object dsmEvent: TDataSource
     DataSet = tblmEvent
     Left = 160
-    Top = 656
+    Top = 736
   end
   object SVGIconImageCollection1: TSVGIconImageCollection
     SVGIconItems = <
@@ -19584,11 +19584,83 @@ object AppData: TAppData
     ImageCollection = imgcolDT
     Width = 34
     Height = 34
-    Left = 376
-    Top = 408
+    Left = 368
+    Top = 504
   end
   object qrySwimmer: TFDQuery
-    Left = 320
-    Top = 152
+    Connection = SCM.scmConnection
+    SQL.Strings = (
+      '/*'
+      '  @Keep'
+      '  data class Swimmer('
+      
+        '  val swimmerId: String?, // unique id of each swimmer (not nece' +
+        'ssarily globally unique,'
+      '  but must be unique within the meet'
+      
+        '  val swimmerName: String?, // name of swimmer in the preferred ' +
+        'order (first last or last,'
+      '  first)'
+      '  val swimmerGender: String?,'
+      '  val swimmerAge: Int?, // per age up date'
+      '  val swimmerTeamId: String?, // references list of teams'
+      '  )'
+      '*/'
+      
+        'DECLARE @SessionID INT = 100; -- SessionID of the session to get' +
+        ' swimmers for'
+      ''
+      'SELECT DISTINCT'
+      #9#9' [Member].[MemberID] as swimmerId'
+      #9#9'--,[MembershipNum]'
+      #9#9'--,[MembershipStr]'
+      #9#9'--,[FirstName]'
+      #9#9'--,[MiddleInitial]'
+      #9#9'--,[LastName]'
+      '        , CONCAT([FirstName], '#39' '#39', [LastName]) as swimmerName'
+      '        , Gender.Caption as swimmerGender'
+      
+        '        , dbo.SwimmerAge(dbo.[Session].SessionStart, Member.DOB)' +
+        ' as swimmerAge'
+      '        , '#39'0'#39' as swimmerTeamId'
+      #9#9'--,[DOB]'
+      #9#9'--,[RegisterNum]'
+      #9#9'--,[IsArchived]'
+      #9#9'--,[RegisterStr]'
+      #9#9'--,[IsActive]'
+      #9#9'--,[IsSwimmer]'
+      #9#9'--,[Email]'
+      #9#9'--,[EnableEmailOut]'
+      #9#9'--,[Member].[GenderID]'
+      #9#9'--,[Member].[SwimClubID]'
+      #9#9'--,[CreatedOn]'
+      #9#9'--,[ArchivedOn]'
+      #9#9'--,[EnableEmailNomineeForm]'
+      #9#9'--,[EnableEmailSessionReport]'
+      #9#9'--,[HouseID]'
+      #9#9'--,[TAGS]'
+      'FROM [SwimClubMeet].[dbo].[Member] '
+      
+        'LEFT JOIN [SwimClubMeet].[dbo].[Gender] ON [Member].[GenderID] =' +
+        ' [Gender].[GenderID]'
+      'INNER JOIN dbo.Entrant ON Member.MemberID = Entrant.MemberID'
+      
+        'INNER JOIN dbo.HeatIndividual ON Entrant.HeatID = HeatIndividual' +
+        '.HeatID'
+      'INNER JOIN dbo.Event ON HeatIndividual.EventID = Event.EventID'
+      
+        'INNER JOIN dbo.[Session] ON Event.SessionID = [Session].SessionI' +
+        'D'
+      
+        'WHERE Entrant.MemberID IS NOT NULL AND Session.SessionID = @Sess' +
+        'ionID -- AND Member.IsActive = 1 AND Member.IsSwimmer = 1'
+      'ORDER BY [Member].[MemberID] ASC')
+    Left = 272
+    Top = 376
+  end
+  object qrySplit: TFDQuery
+    Connection = SCM.scmConnection
+    Left = 352
+    Top = 376
   end
 end

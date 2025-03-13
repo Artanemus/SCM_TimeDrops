@@ -6,15 +6,56 @@ uses
   system.IOUtils,
   system.SysUtils, system.Types, system.UITypes, system.Classes,
   system.Variants, VCL.Controls, system.DateUtils,
-  XSuperJSON, XSuperObject, dmAppData;
+  XSuperJSON, XSuperObject, dmAppData,
+  FireDAC.Stan.Param, dmSCM;
 
 function BuildAndSaveMeetProgram(AFileName: TFileName): boolean;
 
-var
-  // global param ?
-  RACE_NUMBER: integer = 0;
+//var
+  {TODO -oBSA -cGeneral : use persistent variable?}
+  // RACE_NUMBER: integer = 0;
 
 implementation
+
+uses
+  Math;
+
+function GetGenderTypeStr(AEventID: integer): string;
+var
+  boysCount, girlsCount: Integer;
+  SQL: string;
+begin
+  // Default result is 'X' (mixed genders)
+  Result := 'X';
+
+  // Ensure the query isn't empty
+  if not AppData.qryEvent.IsEmpty then
+  begin
+    // Query to get boys count
+    SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
+           'INNER JOIN HeatIndividual ON [Event].EventID = HeatIndividual.EventID ' +
+           'INNER JOIN Entrant ON [HeatIndividual].HeatID = Entrant.HeatID ' +
+           'INNER JOIN Member ON [Entrant].MemberID = Member.MemberID ' +
+           'WHERE [Event].EventID = :ID AND GenderID = 1';
+    boysCount := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
+
+    // Query to get girls count
+    SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
+           'INNER JOIN HeatIndividual ON [Event].EventID = HeatIndividual.EventID ' +
+           'INNER JOIN Entrant ON [HeatIndividual].HeatID = Entrant.HeatID ' +
+           'INNER JOIN Member ON [Entrant].MemberID = Member.MemberID ' +
+           'WHERE [Event].EventID = :ID AND GenderID = 2';
+    girlsCount := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
+
+    // Determine the result based on counts
+    if (boysCount > 0) and (girlsCount > 0) then
+      Result := 'X'
+    else if boysCount > 0 then
+      Result := 'A'
+    else if girlsCount > 0 then
+      Result := 'B';
+  end;
+end;
 
 function BuildAndSaveMeetProgram(AFileName: TFileName): boolean;
 var
@@ -23,6 +64,7 @@ var
   dt: TDateTime;
   j, NumOfHeats, EventTypeID: Integer;
   SessObj, EventObj, RaceObj, LaneObj, PoolObj, swimmerObj: ISuperObject;
+  genderStr: string;
 begin
   AFormatSettings := TFormatSettings.Create;
   AFormatSettings.DateSeparator := '-';
@@ -100,8 +142,10 @@ begin
         end;
         { M", "F", or "X" or any other category designation.
           TODO: call dtUtils.EventGender to obtain correct gender assignment. }
+
+        genderStr := GetGenderTypeStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
         // Gender
-        EventObj.S['eventGender'] := 'X';
+        EventObj.S['eventGender'] := genderStr;
         // Ages
         EventObj.I['eventMinAge'] := 0;
         EventObj.I['eventMaxAge'] := 0;
@@ -154,20 +198,21 @@ begin
             RaceObj := SO();
             RaceObj.S['raceEventId'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
             RaceObj.S['raceEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
-
             {
               IMPORTANT: the race number defines the order of races at the meet
               irrespective of the event number and heat number
               therefore it is possible to have preliminaries and finals out of order
             }
-            {
-              Calculate a racenumber?
+            // Calculate a unique racenumber? (unique for this session only).
                 j := AppData.qryEvent.FieldByName('EventNum').AsInteger * 100 +
                     AppData.qryHeat.FieldByName('HeatNum').AsInteger;
-            }
+                RaceObj.I['raceNumber'] := j;
 
+            {
+            // Use persisent variable ... store in JSON init file?
             Inc(RACE_NUMBER);
             RaceObj.I['raceNumber'] := RACE_NUMBER;
+            }
 
             { TODO JOIN dbo.HeatType on AppData.qryHeat for correct assignment.
               RaceObj.S['raceHeatType'] :=
@@ -197,10 +242,26 @@ begin
                   LaneObj.B['isEmpty'] := AppData.qryINDV.FieldByName('MemberID').IsNull;
                   LaneObj.S['laneEventId'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
                   LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+
                   {TODO: Convert TTB - TDataTime to fraction of seconds ...}
                   dt := TimeOf(AppData.qryINDV.FieldByName('TTB').AsDateTime);
                   // seed time in 1/100 of a second.
-                  LaneObj.F['laneSeedTime'] := dt;
+                  var seedTimeInCentiseconds: integer;
+                  seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
+                  // Assign to laneSeedTime
+                  LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
+
+                  (*
+                  // In seconds + fraction of seconds - rounded to 1/100 of a second.
+                  var totalSeconds: Double;
+                  // Convert TTime to milliseconds.
+                  totalSeconds := MilliSecondOfTheDay(dt) / 1000;
+                  // Round to 1/100 of a second.
+                  totalSeconds := RoundTo(totalSeconds, -2);
+                  // Assign to laneSeedTime
+                  LaneObj.F['laneSeedTime'] := totalSeconds;
+                  *)
+
                   if not AppData.qryINDV.FieldByName('MemberID').IsNull then
                     LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger)
                   else
@@ -257,20 +318,30 @@ begin
 
     with A['meetSwimmer'] do
     begin
-      AppData.qrySwimmer.ApplyMaster;
-      AppData.qrySwimmer.First;
-      while not AppData.qrySwimmer.Eof do
+      // DISTINCT list of Entrants nominating to swim event(s)...
+      AppData.qrySwimmer.Close;
+      AppData.qrySwimmer.ParamByName('SESSIONID').AsInteger :=
+        AppData.qrySession.FieldByName('SessionID').AsInteger;
+      AppData.qrySwimmer.Prepare;
+      AppData.qrySwimmer.Open;
+      if AppData.qrySwimmer.Active then
       begin
-        swimmerObj := SO();
-        // unique id of each swimmer (not necessarily globally unique, but must be unique within the meet
-        swimmerObj.I['swimmerId'] := AppData.qrySwimmer.FieldByName('MemberID').AsInteger;
-        // name of swimmer in the preferred order (first last or last, first)
-        swimmerObj.S['swimmerName'] := AppData.qrySwimmer.FieldByName('FName').AsString;
-        swimmerObj.S['swimmerGender'] := AppData.qrySwimmer.FieldByName('Gender').AsString;
-        // per age up date
-        swimmerObj.I['swimmerAge'] := AppData.qrySwimmer.FieldByName('Age').AsInteger;
-        // references list of teams
-        swimmerObj.S['swimmerTeamID'] := AppData.qrySwimmer.FieldByName('TeamID').AsString;
+        AppData.qrySwimmer.First;
+        while not AppData.qrySwimmer.Eof do
+        begin
+          swimmerObj := SO();
+          // unique id of each swimmer (not necessarily globally unique, but must be unique within the meet
+          swimmerObj.I['swimmerId'] := AppData.qrySwimmer.FieldByName('swimmerId').AsInteger;
+          // name of swimmer in the preferred order (first last or last, first)
+          swimmerObj.S['swimmerName'] := AppData.qrySwimmer.FieldByName('swimmerName').AsString;
+          swimmerObj.S['swimmerGender'] := AppData.qrySwimmer.FieldByName('swimmerGender').AsString;
+          // per age up date
+          swimmerObj.I['swimmerAge'] := AppData.qrySwimmer.FieldByName('swimmerAge').AsInteger;
+          {TODO -oBSA -cGeneral : query team assignment}
+          // What if swimmer is assigned to multi-teams?
+          // references list of teams
+          swimmerObj.S['swimmerTeamID'] := AppData.qrySwimmer.FieldByName('swimmerTeamID').AsString;
+        end;
       end;
     end;
 
@@ -294,6 +365,7 @@ class MeetProgramJson {
   val meetEndDate: String?, // Last day of the meet, in ISO 8061 DAY ONLY format (e.g.
   "2023‐07‐31")
 
+  // A R R A Y S .. -----------------------------
   val meetEvents: List<Event>, // list of events for the entire meet (see class Event
   below)
   val meetSessions: List<Session>, // list of Sessions for the meet, must contain at least
@@ -302,6 +374,8 @@ class MeetProgramJson {
   below
   val meetSwimmers: List<Swimmer>, // list of swimmers participating in the meet, see class
   Swimmer below
+  // --------------------------------------------
+
   )
 
   @Keep
@@ -399,7 +473,11 @@ class MeetProgramJson {
   val raceHeatType: String, // for Prelims, Finals, Swimoffs etc.
   val raceHeatNumber: Int, // number of the heat
   val raceTotalHeats: Int, // this is strictly for display, e.g. "Heat 1 of 3"
+
+  // A R R A Y S .. -----------------------------
   val raceLanes: List<Lane>,
+  // --------------------------------------------
+
   )
 
   @Keep

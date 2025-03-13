@@ -1,19 +1,71 @@
 unit tdReConstruct;
 
+(*
+  The results .json files will have the following content:
+  {
+    "createdAt": "2023-07-31T17:53:00.042-07:00",
+    "protocolVersion": "1.1.0",
+    "sessionNumber": 123, // from program
+    "sessionId": "67251", // from program
+    "eventNumber": "1",
+    "heatNumber": 2,
+    "raceNumber": 2,
+    "startTime": "2023-07-31T17:52:11.234-07:00",
+
+    "lanes": [
+        {
+          "lane": 1,
+          // combination of the pad and button times. Meet Management program
+          // may prefer to calculate this time themselves
+
+          “finalTime”: 4883,
+          "padTime": 4883, // only present when using pads
+          "timer1": 4942, // in 1/100th of seconds
+          "timer2": 4925,
+          "timer3": 4904,
+          "isEmpty": false, // lane declared empty by timing operator, may still have times in case of
+          operator error
+          "isDq": false, // for relay judging platform
+          "splits": [
+              {
+              "distance": 25,
+              "time": 1686
+              }
+          ]
+        },
+    //…… more lanes to follow
+    ]
+
+  }
+*)
+
+
+
 interface
 
 uses dmSCM, dmAppData, System.SysUtils, System.Classes, system.Hash,
-DateUtils, variants, SCMDefines, Data.DB, tdSetting;
+DateUtils, variants, SCMDefines, Data.DB, tdSetting, XSuperJSON, XSuperObject;
 
-procedure ReConstructDO3(SessionID: integer);
-procedure ReConstructDO4(SessionID: integer);
-function Get3Digits(i: integer): string;
-function Get4Digits(i: integer): string;
+procedure ReConstructTD(SessionID: integer);
 
 implementation
 
 var
-seed: integer = 1;
+X: ISuperObject;
+AFormatSettings: TFormatSettings;
+raceNumber: integer;
+
+function ConverDateTimeTo100thSeconds(ADateTime:TDateTime): integer;
+var
+dt: TTime;
+seedTimeInCentiseconds: integer;
+begin
+  dt := TimeOf(ADateTime);
+  // seed time in 1/100 of a second.
+  seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
+  // Assign to laneSeedTime
+  result := seedTimeInCentiseconds;
+end;
 
 function ConvertTimeToSecondsStr(ATime: TTime): string;
 var
@@ -53,17 +105,6 @@ end;
 }
 
 
-function GetStringListChecksum(sl: TStringList; hashLength: Integer = 8): string;
-var
-  fullHash: string;
-begin
-  // Generate the full SHA256 hash of the concatenated TStringList text
-  fullHash := THashSHA2.GetHashString(sl.Text);
-
-  // Truncate to the desired length if needed (e.g., first 8 characters for a short checksum)
-  Result := Copy(fullHash, 1, hashLength);
-end;
-
 function GetEventType(aEventID: integer): scmEventType;
 var
   v: variant;
@@ -82,50 +123,6 @@ begin
       1: result := etINDV;
       2: result := etTEAM;
     end;
-end;
-
-function Get4Digits(i: integer): string;
-var
-  s: string;
-begin
-  // Step 2: Convert i to a string
-  s := IntToStr(i);
-  // Step 3: Pad with leading zeros if less than four characters
-  while Length(s) < 4 do
-    s := '0' + s;
-  // Step 4: Trim to four characters if longer than four
-  if Length(s) > 4 then
-    s := Copy(s, Length(s) - 3, 4);
-  // Return the result
-  Result := s;
-end;
-
-function Get3Digits(i: integer): string;
-var
-s: string;
-begin
-    // Step 2: Convert i to a string
-    s := IntToStr(i);
-    // Step 3: Pad with leading zeros if less than three characters
-    while Length(s) < 3 do
-      s := '0' + s;
-    // Step 4: Trim to three characters if longer than three
-    if Length(s) > 3 then
-      s := Copy(s, Length(s) - 2, 3);
-  // Return the result
-  Result := s;
-end;
-
-function CreateHash(sess, ev, ht: integer): string;
-var
-  combinedValue: Integer;
-begin
-  // Step 1: Combine sess, ev, and ht as integers
-  combinedValue := sess * 1000000 + ev * 1000 + ht;
-  // Step 2: Generate a seven-digit hex hash (mod a large prime to constrain size)
-  combinedValue := combinedValue mod 9999999;
-  // Step 3: Convert to a hexadecimal string, padded to ensure seven digits
-  Result := UpperCase(IntToHex(combinedValue, 7));
 end;
 
 function GetGenderTypeStr(AEventID: integer): string;
@@ -165,13 +162,15 @@ begin
   end;
 end;
 
-procedure ReConstructLanes(sl: TStringList; adtFileType: dtFileType; ADataSet: TDataSet);
+procedure ReConstructLanes(ADataSet: TDataSet; aEventType: scmEventType);
 var
   laneValue: Variant;
   s, lane, dtstr: string;
   rt, rtk: TDateTime;
   fs: TFormatSettings;
   msec: integer;
+  raceObj, splitObj: ISuperObject;
+  ID: integer;
 begin
   if ADataSet.IsEmpty then exit;
 
@@ -183,213 +182,183 @@ begin
   fs.ShortTimeFormat := 'nn:ss.zzz';
   fs.TimeSeparator := ':';
   fs.DecimalSeparator := '.';
-
-  while not ADataSet.Eof do
+  with X.A['Lanes'] do
   begin
-    // lane data
-    laneValue := ADataSet.FieldByName('Lane').AsVariant;
-    if not VarIsNull(laneValue) then
-      lane := IntToStr(laneValue)
-    else
-      // SCM will always return a lane number.
-      // SCM uses lane numbers 1 to TotalNumOfLanes in swimming pool
-      // Safe to assign Dolphin Timing File with zero lane number.
-      // Does indicates a error but this code line will never be reached.
-      lane := '0'; // SAFE...
-
-    case adtFileType of
-      dtDO4: lane := 'Lane' + lane;
-    end;
-
-    rt := TimeOf(ADataSet.FieldByName('RaceTime').AsDateTime);
-
-    if rt <> 0 then
+    while not ADataSet.Eof do
     begin
-      dtstr := ConvertTimeToSecondsStr(rt);
-{
-        // Use FormatDateTime to format the time string
-        dtstr := FormatDateTime(fs.ShortTimeFormat, rt, fs);
-        // Dolphin Timing time format is terse.
-        // Remove leading zeros from the formatted time string
-        if dtstr.StartsWith('00:') then
-          dtstr := Copy(dtstr, 4, Length(dtstr) - 3) // Remove '00:'
-        else if dtstr.StartsWith('0') then
-          dtstr := Copy(dtstr, 2, Length(dtstr) - 1); // Remove '0'
-}
-{$IFDEF DEBUG}
-      // construct some dummy times for timekeeper 2 and 3
-      s := lane + ';' + dtstr + ';';
-      msec := random(400);
-      rtk := IncMilliSecond(rt,msec);
-      dtstr := ConvertTimeToSecondsStr(rtk);
-      s := s + dtstr + ';';
-      msec := random(600);
-      rtk := IncMilliSecond(rt,msec);
-      dtstr := ConvertTimeToSecondsStr(rtk);
-      s := s + dtstr;
-{$ELSE}
-      // indicates no time given by TimeKeepers 2 and 3.
-      s := lane + ';' + dtstr + ';;';
-{$ENDIF}
-    end
-    else
-      // Dolphin Timing syntax -
-      // indicates no time given by TimeKeepers 1, 2 and 3.
-      s := lane + ';;;';
+      RaceObj := SO();
 
-    sl.Add(s);
-    ADataSet.Next;
+      // lane data
+      laneValue := ADataSet.FieldByName('Lane').AsVariant;
+      if not VarIsNull(laneValue) then
+        RaceObj.I['lane'] := laneValue
+      else
+        // SCM will always return a lane number.
+        // SCM uses lane numbers 1 to TotalNumOfLanes in swimming pool
+        // Safe to assign Dolphin Timing File with zero lane number.
+        // Does indicates a error but this code line will never be reached.
+        RaceObj.I['lane'] := 0; // SAFE...
+
+      // in 1/100th of seconds
+
+      RaceObj.I['finalTime'] := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
+      // only present when using pads
+      // RaceObj.I['padTime'] :=
+      RaceObj.I['timer1'] := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
+      // RaceObj.I['timer2'] :=
+      // RaceObj.I['timer3'] :=
+
+      if aEventType = etINDV then
+        RaceObj.B['isEmpty'] := ADataSet.FieldByName('MemberID').IsNull
+      else if aEventType = etTEAM then
+        RaceObj.B['isEmpty'] := ADataSet.FieldByName('TeamID').IsNull;
+
+      RaceObj.B['isDq'] := false;
+      Add(RaceObj);
+
+      {TODO -oBSA -cGeneral : Insert split data into superObject. }
+      (*
+      With RaceObj.A['Splits'] do
+      begin
+        AppData.qrySplit.Close;
+        AppData.qrySplit.ParamByName('EVENTTYPEID').AsInteger := Ord(aEventType);
+        if aEventType = etINDV then
+        begin
+          ID := AppData.qryINDV.FieldByName('EntrantID').AsInteger;
+          AppData.qrySplit.ParamByName('ID').AsInteger := ID;
+        end
+        else if aEventType = etTEAM then
+        begin
+          ID := AppData.qryTEAM.FieldByName('TeamID').AsInteger;
+          AppData.qrySplit.ParamByName('ID').AsInteger := ID;
+        end;
+        AppData.qrySplit.Prepare;
+        AppData.qrySplit.Open;
+        if AppData.qrySplit.Active then
+        begin
+          AppData.qrySplit.first;
+          while not AppData.qrySplit.eof do
+          begin
+            splitObj := SO();
+            splitObj.I['distance'] := 25;
+            splitObj.I['time'] := ConverDateTimeTo100thSeconds(AppData.qrySplit.FieldByName('RaceTime').AsDateTime);
+            Add(splitObj);
+            AppData.qrySplit.next;
+          end;
+        end;
+      end;
+      *)
+
+
+      ADataSet.Next;
+    end;
   end;
 end;
 
-procedure ReConstructINDV(sl: TStringList; adtFileType: dtFileType);
-begin
-  ReConstructLanes(sl,adtFileType, AppData.qryINDV);
-end;
 
-procedure ReConstructTEAM(sl: TStringList; adtFileType: dtFileType);
-begin
-  ReConstructLanes(sl,adtFileType, AppData.qryTEAM);
-end;
-
-procedure ReConstructHeat(SessionID, eventNum: integer; gender: string;
-   aEventType: scmEventType; sl: TStringList; adtFileType: dtFileType);
+procedure ReConstructHeat(aEventType: scmEventType);
 var
   HeatNum: integer;
   s, fn, id, sess, ev, ht, RoundStr: string;
   success: boolean;
 begin
+  AppData.qryHeat.ApplyMaster;
   if AppData.qryHeat.IsEmpty then exit;
-  if adtFileType = dtUnknown then exit;
 
-  // Dolphin Timing term 'Round' : defined as :
-  //  A = ALL, P = Prelimary, F = Final.
 
-  // NOTE: GENDER >> A=boys, B=girls, X=mixed. (Not used in ReConstructHeat)
-
-  {
-  SCM 'Round' : defined as :
-    A = 1, 'All', 'A'   -  (for compatability)
-    P = 2, 'Prelimary',  'P'
-    Q = 3, 'QuaterFinal', 'Q'
-    S = 4, 'SemiFinal', 'S'
-    F = 5, 'Final', 'F"
-  }
-  {TODO -oBSA -cGeneral :
-    DB version 1.1.5.4 will have table dbo.Round.
-    Linked to dbo.Event on RoundID.
-    RoundID := AppData.qryEvent.FieldByName('RoundID').AsInteger;
-    SQLstr :=  'SELECT ABREV FROM SwimClubMeet.dbo.Round WHERE RoundID = :ID)';
-    v :=  SCM.scmConnection.ExecScalar(SQLstr,[RoundID]);
-    if not VarIsNull(v) then
-    begin
-      RoundStr := var.AsString;
-    end;
-  }
-  // DEFAULT ASSIGNMENT (DBv1.1.5.3 doesn't have knowledge of param).
-  RoundStr := 'A';
-
-  // Assert the state of the local param 'seed' (int) ...
-  if (seed > 999) or (seed = 0) then seed := 1;
   AppData.qryHeat.first;
   while not AppData.qryHeat.eof do
   begin
-    sl.Clear; // ensures - only one heat per file.
-    HeatNum := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
-    // first line - header.
-    s := IntTostr(SessionID) + ';' + IntTostr(EventNum) + ';' + IntTostr(HeatNum) + ';' + gender;
-    sl.Add(s);
-    // body - lanes and timekeepers times.
+    X.I['heatID'] := AppData.qryHeat.FieldByName('HeatID').AsInteger;
+    X.I['heatNumber'] := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
+    X.S['startTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
+    Inc(raceNumber);
+    X.I['raceNumber'] := raceNumber;
+
+    // lanes and timekeepers times.
     if aEventType = etINDV then
-      ReConstructINDV(sl, adtFileType)
-    else if aEventType = etTEAM then
-      ReConstructTEAM(sl, adtFileType);
-    // last line - footer. - checksum
-    s := UpperCase(GetStringListChecksum(sl, 16));
-    // ALT METHOD : THashSHA2.GetHashString(sl.Text, SHA256);
-    sl.Add(s);
-    if not sl.IsEmpty then
     begin
-      success := true;
-      // C o n s t r u c t   f i l e n a m e .
-      // pad numbers with leading zeros.
-      ht := Get3Digits(HeatNum);
-      ev := Get3Digits(EventNum);
-      sess := Get3Digits(SessionID);
-      case adtFileType of
-        dtUnknown:
-          fn := '';
-        dtDO3:
-          begin
-          id := CreateHash(SessionID, EventNum, HeatNum);
-          fn := sess + '-' + ev + '-' + id + '.DO3';
-          end;
-        dtDO4:
-        begin
-          id := Get4Digits(seed);
-          fn := sess + '-' + ev + '-' + ht + RoundStr + '-' + id + '.DO4';
-        end;
-      end;
-      fn := IncludeTrailingPathDelimiter(Settings.ReConstruct) + fn;
-      // trap for exception error.
-      if fileExists(fn) then
-        success := DeleteFile(fn);
-      if success then
-      begin
-        sl.SaveToFile(fn);
-        inc(seed); // calculate next seed number.
-        if seed > 9999 then seed := 1; // check - out of bounds.
-      end;
+      AppData.qryINDV.ApplyMaster;
+      ReConstructLanes(AppData.qryINDV, aEventType);
+    end
+    else if aEventType = etTEAM then
+    begin
+      AppData.qryTEAM.ApplyMaster;
+      ReConstructLanes(AppData.qryTEAM, aEventType);
     end;
+
+
     AppData.qryHeat.Next
   end;
 end;
 
-procedure ReConstructEvent(SessionID: integer; sl: TStringList; adtFileType: dtFileType);
+procedure ReConstructEvent(SessionID: integer);
 var
 i, EventNum: integer;
 gender: string;
 aEventType: scmEventType;
 begin
+  AppData.qryEvent.ApplyMaster;
   if AppData.qryEvent.IsEmpty then exit;
   AppData.qryEvent.first;
   while not AppData.qryEvent.eof do
   begin
-    EventNum := AppData.qryEvent.FieldByName('EventNum').AsInteger;
-    i := AppData.qryEvent.FieldByName('EventID').AsInteger;
-    // NOTE: scmEventType >> etUnknown, etINDV, etTEAM.
-    aEventType := GetEventType(i);
-    // NOTE: GENDER >> A=boys, B=girls, X=mixed.
-    gender := GetGenderTypeStr(i);
-    // R e - c o n s t r u c t   D O 4 .
-    ReConstructHeat(SessionID, EventNum, gender, aEventType, sl, adtFileType);
+    X.I['eventID'] := AppData.qryEvent.FieldByName('EventID').AsInteger;
+    X.I['eventNumber'] := AppData.qryEvent.FieldByName('EventNum').AsInteger;
+    // R e - c o n s t r u c t   H E A T .
+    ReConstructHeat(aEventType);
     AppData.qryEvent.next;
   end;
 end;
 
-procedure ReConstructDO4(SessionID: integer);
+procedure ReConstructTD(SessionID: integer);
 var
-sl: TStringList;
+  dt: TDateTime;
+  success: boolean;
+  fn: TFileName;
 begin
+  // Date/Time in ISO 8601 UTC format
+  AFormatSettings := TFormatSettings.Create;
+  AFormatSettings.DateSeparator := '-';
+  AFormatSettings.TimeSeparator := ':';
+  AFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
+  AFormatSettings.LongTimeFormat := 'hh:nn:ss';
   // Core AppData tables are Master-Detail schema.
   // qrySession is cued, ready to process.
-  seed := 1;
-  sl := TStringList.Create;
-  ReConstructEvent(SessionID, sl, dtDO4);
-  sl.Free;
+  raceNumber := 0;
+  // Create the main SuperObject
+  X := SO();
+  X.S['type'] := 'Results';
+  X.S['createdAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
+  dt := DateOf(AppData.qrySession.FieldByName('SessionStart').AsDateTime);
+  X.S['protocolVersion'] := '1.1.0';
+  X.I['sessionNumber'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
+  ReConstructEvent(SessionID);
+
+  // C o n s t r u c t   f i l e n a m e .
+  (*
+  SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
+  where SSSS is the session ID, EEEE the heat number, HHHH the heat number, RRRR the race
+  number and XXXX the revision number
+  T
+  *)
+  fn := '';
+  fn := fn + 'Session'+ IntToStr(AppData.qrySession.FieldByName('SessionID').AsInteger);
+  fn := fn + '_Event'+ IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+  fn := fn + '_Heat' + IntToStr(AppData.qryHeat.FieldByName('HeatNum').AsInteger);
+  fn := fn + '_Race' + IntToStr(raceNumber) + '.JSON';
+  fn := IncludeTrailingPathDelimiter(Settings.ReConstruct) + fn;
+  success := true;
+  // trap for exception error.
+  if fileExists(fn) then
+    success := DeleteFile(fn);
+  if success then
+    X.SaveTo(fn);
+
+
 end;
 
-procedure ReConstructDO3(SessionID: integer);
-var
-sl: TStringList;
-begin
-  // Core AppData tables are Master-Detail schema.
-  // qrySession is cued, ready to process.
-  seed := 1;
-  sl := TStringList.Create;
-  ReConstructEvent(SessionID, sl, dtDO3);
-  sl.Free;
-end;
+
 
 
 
