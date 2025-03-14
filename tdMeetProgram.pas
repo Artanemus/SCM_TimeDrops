@@ -151,8 +151,8 @@ begin
         EventObj.I['eventMaxAge'] := 0;
         // Description
         EventObj.S['eventDescription'] := AppData.qryEvent.FieldByName('Caption').AsString;
-        EventObj.S['eventShortLabel'] := '';
-        EventObj.S['eventFullLabel'] := '';
+        EventObj.Null['eventShortLabel'];
+        EventObj.Null['eventFullLabel'];
 
         // Records
         with EventObj.A['eventRecords'].O[0] {Auto Create} do
@@ -265,8 +265,8 @@ begin
                   if not AppData.qryINDV.FieldByName('MemberID').IsNull then
                     LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger)
                   else
-                    LaneObj.S['laneSwimmerId'] := '';
-                  LaneObj.S['laneTeamId'] := '';
+                    LaneObj.Null['laneSwimmerId'];
+                  LaneObj.Null['laneTeamId'];
                   Add(LaneObj);
                   AppData.qryINDV.Next;
                 end;
@@ -286,7 +286,7 @@ begin
                   if not AppData.qryTEAM.FieldByName('MemberID').IsNull then
                     LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryTEAM.FieldByName('MemberID').AsInteger)
                   else
-                    LaneObj.S['laneSwimmerId'] := '';
+                    LaneObj.Null['laneSwimmerId'];
                   LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
                   Add(LaneObj);
                   AppData.qryTEAM.Next;

@@ -186,6 +186,7 @@
             <Form>SessionPicker</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="tdResults.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

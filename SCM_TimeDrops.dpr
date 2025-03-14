@@ -25,7 +25,8 @@ uses
   dlgDataDebug in 'dlgDataDebug.pas' {DataDebug},
   dlgUserRaceTime in 'dlgUserRaceTime.pas' {UserRaceTime},
   SCMUtility in '..\SCM_SHARED\SCMUtility.pas',
-  dlgSessionPicker in 'dlgSessionPicker.pas' {SessionPicker};
+  dlgSessionPicker in 'dlgSessionPicker.pas' {SessionPicker},
+  tdResults in 'tdResults.pas';
 
 {$R *.res}
 
