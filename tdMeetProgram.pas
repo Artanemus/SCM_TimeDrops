@@ -10,6 +10,7 @@ uses
   FireDAC.Stan.Param, dmSCM;
 
 function BuildAndSaveMeetProgram(AFileName: TFileName): boolean;
+function BuildAndSaveMeetProgramBasic(AFileName: TFileName): boolean;
 
 //var
   {TODO -oBSA -cGeneral : use persistent variable?}
@@ -56,6 +57,13 @@ begin
       Result := 'B';
   end;
 end;
+
+function BuildAndSaveMeetProgramBasic(AFileName: TFileName): boolean;
+begin
+
+end;
+
+
 
 function BuildAndSaveMeetProgram(AFileName: TFileName): boolean;
 var

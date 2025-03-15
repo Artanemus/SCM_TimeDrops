@@ -26,7 +26,8 @@ uses
   dlgUserRaceTime in 'dlgUserRaceTime.pas' {UserRaceTime},
   SCMUtility in '..\SCM_SHARED\SCMUtility.pas',
   dlgSessionPicker in 'dlgSessionPicker.pas' {SessionPicker},
-  tdResults in 'tdResults.pas';
+  tdResults in 'tdResults.pas',
+  tdMeetProgramPick in 'tdMeetProgramPick.pas' {MeetProgramPick};
 
 {$R *.res}
 

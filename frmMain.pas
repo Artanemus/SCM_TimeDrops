@@ -174,7 +174,8 @@ implementation
 {$R *.dfm}
 
 uses UITypes, DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
-  dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram;
+  dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
+  tdMeetProgramPick;
 
 const
   MSG_CONFIRM_RECONSTRUCT =
@@ -192,34 +193,31 @@ const
 procedure TMain.actnExportMeetProgramExecute(Sender: TObject);
 var
   fn: TFileName;
-  dt: TDatetime;
-  s: string;
-  fs: TFormatSettings;
+  dlg: TMeetProgramPick;
+  AModalResult: TModalResult;
 begin
-  FileSaveDlgMeetProgram.DefaultFolder := Settings.ProgramFolder;
-try
-  dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
-  fs := TFormatSettings.Create;
-  fs.DateSeparator := '_';
-  s := '-' + DatetoStr(dt, fs);
-except
-  on E: Exception do
-    s := '';
-end;
-  fn := 'meet_program.json';
-  FileSaveDlgMeetProgram.FileName := fn;
-  if FileSaveDlgMeetProgram.Execute then
+  dlg := TMeetProgramPick.Create(self);
+  AModalResult := dlg.ShowModal;
+  if IsPositiveResult(AModalResult) then
   begin
+    // The meet program folder may have changed.
+    Settings.LoadFromFile();
+    // The default filename required by TimeDrops
+    fn := IncludeTrailingPathDelimiter(Settings.ProgramFolder)  + 'meet_program.json';
     SCMGrid.BeginUpdate;
-    fn := FileSaveDlgMeetProgram.FileName;
-    BuildAndSaveMeetProgram(fn); // Build CSV Event Data and save to file.
-    MessageBox(0,
-      PChar('Export of the Time Drops Meet Program has been completed.'),
-      PChar('Export Event CSV'), MB_ICONINFORMATION or MB_OK);
-    // restore list display
+    if Settings.MeetProgramType = 1 then
+      BuildAndSaveMeetProgram(fn) // Detailed meet program.
+    else if Settings.MeetProgramType = 0 then
+      BuildAndSaveMeetProgramBasic(fn); // Basic meet program.
+    // perform a TDBAdvGrid display update.
     AppData.RefreshSCM;
     SCMGrid.EndUpdate;
+    // Message user.
+    MessageBox(0,
+      PChar('Export of the Time Drops Meet Program has been completed.'),
+      PChar('Export Meet Program'), MB_ICONINFORMATION or MB_OK);
   end;
+  dlg.Free;
 end;
 
 procedure TMain.actnExportMeetProgramUpdate(Sender: TObject);
@@ -1390,6 +1388,7 @@ begin
     begin
       scmGrid.BeginUpdate;
       scmGrid.DataSource.DataSet.DisableControls;
+(*
       currEv := AppData.qryEvent.FieldByName('EventID').AsInteger;
       currHt := AppData.qryHeat.FieldByName('HeatID').AsInteger;
       SessionID := AppData.qrysession.FieldByName('SessionID').AsInteger;
@@ -1402,6 +1401,7 @@ begin
         ReConstructDO4(SessionID);
       AppData.LocateSCMEventID(currEv);
       AppData.LocateSCMHeatID(currHt);
+*)
       scmGrid.DataSource.DataSet.EnableControls;
       scmGrid.EndUpdate;
       MessageBox(0,

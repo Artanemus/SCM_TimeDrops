@@ -187,6 +187,10 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="tdResults.pas"/>
+        <DCCReference Include="tdMeetProgramPick.pas">
+            <Form>MeetProgramPick</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

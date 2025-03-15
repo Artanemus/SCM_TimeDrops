@@ -8390,7 +8390,7 @@ object Options: TOptions
       ImageCollection = AppData.imgcolDT
       ImageWidth = 0
       ImageHeight = 0
-      ImageIndex = -1
+      ImageIndex = 16
       ImageName = 'SCMTimeDropsICON'
     end
     object lblHeaderTitle: TLabel
@@ -8432,7 +8432,7 @@ object Options: TOptions
       Top = 0
       Width = 661
       Height = 402
-      ActivePage = tabSettings
+      ActivePage = tabsheetPaths
       Align = alClient
       TabOrder = 0
       object tabSettings: TTabSheet

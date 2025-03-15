@@ -25,6 +25,7 @@ type
     OSAuthent: boolean;
     LoginTimeOut: integer;
     MeetsFolder: string;
+    MeetProgramType: integer;
     ProgramFolder: string;
     AppData: string;
     ReConstruct: string;
@@ -58,6 +59,7 @@ begin
   OSAuthent := false;
   LoginTimeOut := CONNECTIONTIMEOUT;
   MeetsFolder := 'c:\TimeDrops\Meets';
+  MeetProgramType := 0; // Export a basic meet program (Minimalistic).
   ProgramFolder := 'c:\TimeDrops\Meets';
   AppData := 'c:\TimeDrops\AppData';
   ReConstruct := 'c:\TimeDrops\ReConstruct';

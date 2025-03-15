@@ -52,15 +52,11 @@ type
     procedure SaveToSettings; // JSON Program Settings
     function GetSCMVerInfo(): string;
 
-  const
-    { SCM_DolphinTiming specific windows message ....}
-     SCM_CALL_DOLPHIN_TIMING = WM_USER + 998;
-
   public
     { Public declarations }
 
   protected
-    procedure MSG_execDolphinTiming(var Msg: TMessage); message SCM_CALL_DOLPHIN_TIMING;
+    procedure MSG_execDolphinTiming(var Msg: TMessage); message SCM_CALL_TIME_DROPS;
 
 
   end;
@@ -309,7 +305,7 @@ begin
       complete it's job. Then run the main form ... dtfrmExec.pas.
       This is why POST MESSAGE is used here ...  }
     if (SCM.IsActive = true) then
-        PostMessage(Handle, SCM_CALL_DOLPHIN_TIMING, 0, 0);
+        PostMessage(Handle, SCM_CALL_TIME_DROPS, 0, 0);
   end;
 
   { Mandatory for both connected and unconnected. Execute action 'update'

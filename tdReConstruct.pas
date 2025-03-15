@@ -54,6 +54,7 @@ var
 X: ISuperObject;
 AFormatSettings: TFormatSettings;
 raceNumber: integer;
+laneObj: ISuperObject;
 
 function ConverDateTimeTo100thSeconds(ADateTime:TDateTime): integer;
 var
@@ -67,20 +68,22 @@ begin
   result := seedTimeInCentiseconds;
 end;
 
-function ConvertTimeToSecondsStr(ATime: TTime): string;
-var
-  Hours, Minutes, Seconds, Milliseconds: Word;
-  TotalSeconds: Double;
-begin
-  // Decode the TTime value into its components
-  DecodeTime(ATime, Hours, Minutes, Seconds, Milliseconds);
+{
+  function ConvertTimeToSecondsStr(ATime: TTime): string;
+  var
+    Hours, Minutes, Seconds, Milliseconds: Word;
+    TotalSeconds: Double;
+  begin
+    // Decode the TTime value into its components
+    DecodeTime(ATime, Hours, Minutes, Seconds, Milliseconds);
 
-  // Calculate the total number of seconds as a floating point value
-  TotalSeconds := Hours * 3600 + Minutes * 60 + Seconds + Milliseconds / 1000.0;
+    // Calculate the total number of seconds as a floating point value
+    TotalSeconds := Hours * 3600 + Minutes * 60 + Seconds + Milliseconds / 1000.0;
 
-  // Convert the floating point value to a string
-  Result := FloatToStr(TotalSeconds);
-end;
+    // Convert the floating point value to a string
+    Result := FloatToStr(TotalSeconds);
+  end;
+}
 
 {
   function ConvertSecondsStrToTime(ASecondsStr: string): TTime;
@@ -186,35 +189,41 @@ begin
   begin
     while not ADataSet.Eof do
     begin
-      RaceObj := SO();
+      LaneObj := SO();
 
       // lane data
       laneValue := ADataSet.FieldByName('Lane').AsVariant;
       if not VarIsNull(laneValue) then
-        RaceObj.I['lane'] := laneValue
+        LaneObj.I['lane'] := laneValue
       else
         // SCM will always return a lane number.
         // SCM uses lane numbers 1 to TotalNumOfLanes in swimming pool
         // Safe to assign Dolphin Timing File with zero lane number.
         // Does indicates a error but this code line will never be reached.
-        RaceObj.I['lane'] := 0; // SAFE...
+        LaneObj.I['lane'] := 0; // SAFE...
 
       // in 1/100th of seconds
 
-      RaceObj.I['finalTime'] := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
+      LaneObj.I['finalTime'] := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
       // only present when using pads
-      // RaceObj.I['padTime'] :=
-      RaceObj.I['timer1'] := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
+      // cs := CountSplits()
+      // if cs > 0 then
+      // RaceObj.I['padTime'] := ConverDateTimeTo100thSeconds(lastSplitTime);
+      // else
+      // RaceObj.Null['padTime']
+
+      LaneObj.I['timer1'] := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
       // RaceObj.I['timer2'] :=
       // RaceObj.I['timer3'] :=
 
       if aEventType = etINDV then
-        RaceObj.B['isEmpty'] := ADataSet.FieldByName('MemberID').IsNull
+        LaneObj.B['isEmpty'] := ADataSet.FieldByName('MemberID').IsNull
       else if aEventType = etTEAM then
-        RaceObj.B['isEmpty'] := ADataSet.FieldByName('TeamID').IsNull;
+        LaneObj.B['isEmpty'] := ADataSet.FieldByName('TeamID').IsNull;
 
-      RaceObj.B['isDq'] := false;
-      Add(RaceObj);
+      LaneObj.B['isDq'] := false;  // for relay judging platform
+
+      Add(LaneObj);
 
       {TODO -oBSA -cGeneral : Insert split data into superObject. }
       (*
