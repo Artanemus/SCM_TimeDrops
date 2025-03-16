@@ -33,6 +33,7 @@ type
     AcceptedDeviation: double;
     CalcRTMethod: integer;
     EnableRenameResultFiles: boolean;
+    RaceNumber: integer;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -65,6 +66,7 @@ begin
   ReConstruct := 'c:\TimeDrops\ReConstruct';
   Precedence := dtPrecHeader;
   AcceptedDeviation := 0.3;
+  RaceNumber := 0;
   // 0 = default DT method : 1 = extended SCM method.
   CalcRTMethod := 0;
   EnableRenameResultFiles := false;

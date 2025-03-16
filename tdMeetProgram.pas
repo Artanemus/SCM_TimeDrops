@@ -7,9 +7,9 @@ uses
   system.SysUtils, system.Types, system.UITypes, system.Classes,
   system.Variants, VCL.Controls, system.DateUtils,
   XSuperJSON, XSuperObject, dmAppData,
-  FireDAC.Stan.Param, dmSCM;
+  FireDAC.Stan.Param, dmSCM, tdSetting;
 
-function BuildAndSaveMeetProgram(AFileName: TFileName): boolean;
+function BuildAndSaveMeetProgramDetailed(AFileName: TFileName): boolean;
 function BuildAndSaveMeetProgramBasic(AFileName: TFileName): boolean;
 
 //var
@@ -20,6 +20,61 @@ implementation
 
 uses
   Math;
+
+var
+  currRaceNumber: integer;
+
+function GetHeatTypeStr(AHeatID: integer): string;
+var
+  SQL: string;
+  vType: variant;
+begin
+  result := 'Prelim';
+  if not AppData.qryHeat.IsEmpty then
+  begin
+    SQL := '''
+      SELECT dbo.HeatType.Caption AS vType
+      FROM [SwimClubMeet].[dbo].[HeatIndividual]
+      INNER JOIN HeatType ON [HeatIndividual].[HeatTypeID] = [HeatType].[HeatTypeID]
+      WHERE [HeatIndividual].HeatID = :ID
+      ''';
+  end;
+  vType := SCM.scmConnection.ExecSQLScalar(SQL, [AHeatID]);
+  if VarIsNull(vType) or VarIsEmpty(vType) then exit;
+  { VarAsType raises an exception if the variant cannot be converted to the 
+  given type. This will be EVariantError or one of its descendants, such as 
+  EVariantOverflowError or EVariantTypeCastError.  }
+  try
+      result := VarAsType(vType, varString);
+  except on E: Exception do
+    result := 'Prelim'; // ASSERT.  
+  end;
+end;
+
+function GetRelayLegs(AEventID: integer): integer;
+var
+  SQL: string;
+  vLegs: variant;
+begin
+  result := 1;
+  if not AppData.qryEvent.IsEmpty then
+  begin
+    SQL := '''
+      SELECT [distance].[Meters] / [SwimClub].[LenOfPool] AS Legs
+      FROM [SwimClubMeet].[dbo].[Event]
+      INNER JOIN Distance
+          ON [Event].[DistanceID] = [Distance].[DistanceID]
+      INNER JOIN Session
+          ON [Event].[SessionID] = [Session].[SessionID]
+      INNER JOIN SwimClub
+          ON [Session].[SwimClubID] = [SwimClub].[SwimClubID]
+      WHERE [Event].EventID = :ID;
+      ''';
+  end;
+  vLegs := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
+  if VarIsNull(vLegs) or VarIsEmpty(vLegs) or (vLegs <= 0) then exit;
+  result := vLegs;
+end;
 
 function GetGenderTypeStr(AEventID: integer): string;
 var
@@ -59,26 +114,254 @@ begin
 end;
 
 function BuildAndSaveMeetProgramBasic(AFileName: TFileName): boolean;
-begin
-
-end;
-
-
-
-function BuildAndSaveMeetProgram(AFileName: TFileName): boolean;
 var
   X: ISuperObject;
   AFormatSettings: TFormatSettings;
   dt: TDateTime;
-  j, NumOfHeats, EventTypeID: Integer;
-  SessObj, EventObj, RaceObj, LaneObj, PoolObj, swimmerObj: ISuperObject;
+  j, NumOfHeats, AEventTypeID, RelayLegs: Integer;
+  SessObj, EventObj, RaceObj, LaneObj, PoolObj, teamObj, swimmerObj: ISuperObject;
   genderStr: string;
+  seedTimeInCentiseconds: integer;
+
 begin
   AFormatSettings := TFormatSettings.Create;
   AFormatSettings.DateSeparator := '-';
   AFormatSettings.TimeSeparator := ':';
   AFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
   AFormatSettings.LongTimeFormat := 'hh:nn:ss';
+
+  if Assigned(Settings) then
+    currRaceNumber := Settings.RaceNumber
+  else
+    currRaceNumber := 0;
+
+  // Create the main SuperObject
+  X := SO();
+  X.S['type'] := 'MeetProgramJson';
+
+  with X.O['Meet'] do
+  begin
+    dt := DateOf(AppData.qrySession.FieldByName('SessionStart').AsDateTime);
+    S['meetName'] := AppData.qrySession.FieldByName('Caption').AsString;
+    I['meetProgramVersion'] := 1;
+    Null['meetProgramDateTime'];
+    S['meetHostTeamName'] := AppData.qrySwimClub.FieldByName('Caption').AsString;
+    S['meetStartDate'] := FormatDateTime('yyyy-mm-dd', dt, AFormatSettings);
+    Null['meetEndDate'];
+    with A['meetEvents']do
+    begin
+      AppData.qryEvent.ApplyMaster;
+      AppData.qryEvent.First;
+      while not AppData.qryEvent.Eof do
+      begin
+        EventObj := SO();
+        EventObj.S['eventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+        EventObj.I['eventStrokeCode'] := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
+        EventObj.S['eventStroke'] := AppData.qryStroke.FieldByName('Caption').AsString;
+        RelayLegs := GetRelayLegs(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
+        if  AEventTypeID = 1 then
+          EventObj.B['eventIsRelay'] := false else EventObj.B['eventIsRelay'] := true;
+        EventObj.I['eventRelaylegs'] := RelayLegs;
+        EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
+        genderStr := GetGenderTypeStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        EventObj.S['eventGender'] := genderStr;
+        EventObj.I['eventMinAge'] := 0;
+        EventObj.I['eventMaxAge'] := 0;
+        EventObj.Null['eventDescription'];
+        EventObj.Null['eventShortLabel'];
+        EventObj.Null['eventFullLabel'];
+        EventObj.Null['eventStartTime'];
+        Add(EventObj);
+        AppData.qryEvent.Next;
+      end;
+    end;
+    with A['meetSessions'] do
+    begin
+      SessObj := SO();
+      SessObj.I['sessionNumber'] := 1;
+      SessObj.S['sessionId'] := IntToStr(AppData.qrySession.FieldByName('SessionID').AsInteger);
+      SessObj.S['sessionName'] := AppData.qrySession.FieldByName('Caption').AsString;
+      dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
+      SessObj.S['sessionBeginAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', dt, AFormatSettings);
+      SessObj.Null['sessionEndAt'];
+      with SessObj.A['sessionRaces'] do
+      begin
+        AppData.qryEvent.First;
+        while not AppData.qryEvent.Eof do
+        begin
+          AppData.qryDistance.ApplyMaster;
+          AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
+          AppData.qryHeat.ApplyMaster;
+          AppData.qryHeat.Last;
+          NumOfHeats := AppData.qryHeat.RecordCount;
+          AppData.qryHeat.First;
+          while not AppData.qryHeat.Eof do
+          begin
+            RaceObj := SO();
+            RaceObj.S['raceEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+            Inc(currRaceNumber);
+            RaceObj.I['raceNumber'] := currRaceNumber;
+            RaceObj.S['raceHeatType'] := GetHeatTypeStr(AppData.qryHeat.FieldByName('HeatID').AsInteger);
+            RaceObj.I['raceHeatNumber'] := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
+            RaceObj.I['raceTotalHeats'] := NumOfHeats;
+            Add(RaceObj);
+
+            with RaceObj.A['raceLanes'] do
+            begin
+              // INDIVIDUAL.
+              if AEventTypeID = 1 then
+              begin
+                AppData.qryINDV.ApplyMaster;
+                AppData.qryINDV.First;
+                while not AppData.qryINDV.Eof do
+                begin
+                  if AppData.qryINDV.FieldByName('MemberID').IsNull then
+                    AppData.qryINDV.Next
+                  else
+                  begin
+                    LaneObj := SO();
+                    LaneObj.I['laneNumber'] := AppData.qryINDV.FieldByName('Lane').AsInteger;
+                    LaneObj.B['isEmpty'] := false;
+                    LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+                    try
+                      dt := TimeOf(AppData.qryINDV.FieldByName('TimeToBeat').AsDateTime);
+                      seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
+                      LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
+                    except on E: Exception do
+                      LaneObj.Null['laneSeedTime'];
+                    end;
+                    LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger);
+                    LaneObj.Null['laneTeamId'];
+                    Add(LaneObj);
+                    AppData.qryINDV.Next;
+                  end;
+                end;
+              end
+              // TEAM.
+              else if AEventTypeID = 2 then
+              begin
+                AppData.qryTEAM.ApplyMaster;
+                AppData.qryTEAM.First;
+                while not AppData.qryTEAM.Eof do
+                begin
+                  if AppData.qryTEAM.FieldByName('TeamNameID').IsNull then
+                    AppData.qryTEAM.Next
+                  else
+                  begin
+                    LaneObj := SO();
+                    LaneObj.I['laneNumber'] := AppData.qryTEAM.FieldByName('Lane').AsInteger;
+                    LaneObj.B['isEmpty'] := false;
+                    LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+                    try
+                      dt := TimeOf(AppData.qryTEAM.FieldByName('TimeToBeat').AsDateTime);
+                      seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
+                      LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
+                    except on E: Exception do
+                      LaneObj.Null['laneSeedTime'];
+                    end;
+                    LaneObj.Null['laneSwimmerId'];
+                    LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
+                    Add(LaneObj);
+                    AppData.qryTEAM.Next;
+                  end;
+                end;
+              end;
+            end;
+            AppData.qryHeat.Next;
+          end;
+          AppData.qryEvent.Next;
+        end;
+      end;
+      SessObj.Null['sessionPool'];
+      SessObj.B['sessionIsCurrent'] := true;
+      Add(SessObj);
+    end;
+
+    // Meet Teams.
+    with A['meetTeams'] do
+    begin
+      // DISTINCT list of TEAMS...
+      AppData.qryListTeams.Close;
+      AppData.qryListTeams.ParamByName('SESSIONID').AsInteger :=
+        AppData.qrySession.FieldByName('SessionID').AsInteger;
+      AppData.qryListTeams.Prepare;
+      AppData.qryListTeams.Open;
+      if AppData.qryListTeams.Active then
+      begin
+        AppData.qryListTeams.First;
+        while not AppData.qryListTeams.Eof do
+        begin
+          teamObj := SO();
+          teamObj.I['teamId'] := AppData.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.Null['teamMascot'];
+          Add(teamObj);
+        end;
+      end;
+
+    end;
+
+    // Meet Swimmers.
+    with A['meetSwimmers'] do
+    begin
+      // DISTINCT list of Entrants nominating to swim event(s)...
+      AppData.qryListSwimmers.Close;
+      AppData.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
+        AppData.qrySession.FieldByName('SessionID').AsInteger;
+      AppData.qryListSwimmers.Prepare;
+      AppData.qryListSwimmers.Open;
+      if AppData.qryListSwimmers.Active then
+      begin
+        AppData.qryListSwimmers.First;
+        while not AppData.qryListSwimmers.Eof do
+        begin
+          swimmerObj := SO();
+          swimmerObj.I['swimmerId'] := AppData.qryListSwimmers.FieldByName('swimmerId').AsInteger;
+          swimmerObj.S['swimmerName'] := AppData.qryListSwimmers.FieldByName('swimmerName').AsString;
+          swimmerObj.S['swimmerGender'] := AppData.qryListSwimmers.FieldByName('swimmerGender').AsString;
+          swimmerObj.I['swimmerAge'] := AppData.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
+          swimmerObj.I['swimmerTeamID']  := AppData.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
+          Add(swimmerObj);
+        end;
+      end;
+    end;
+  end;
+  
+  if Assigned(Settings) then
+    Settings.RaceNumber := currRaceNumber;
+
+  X.SaveTo(AFileName);
+  Result := True;
+      
+end;
+
+
+
+function BuildAndSaveMeetProgramDetailed(AFileName: TFileName): boolean;
+var
+  X: ISuperObject;
+  AFormatSettings: TFormatSettings;
+  dt: TDateTime;
+  j, NumOfHeats, AEventTypeID, RelayLegs: Integer;
+  SessObj, EventObj, RaceObj, LaneObj, PoolObj, swimmerObj, teamobj: ISuperObject;
+  genderStr: string;
+  seedTimeInCentiseconds: integer;
+  
+begin
+  AFormatSettings := TFormatSettings.Create;
+  AFormatSettings.DateSeparator := '-';
+  AFormatSettings.TimeSeparator := ':';
+  AFormatSettings.ShortDateFormat := 'yyyy-mm-dd';
+  AFormatSettings.LongTimeFormat := 'hh:nn:ss';
+
+  if Assigned(Settings) then
+    currRaceNumber := Settings.RaceNumber
+  else
+    currRaceNumber := 0;
+
 
   // Create the main SuperObject
   X := SO();
@@ -135,19 +418,16 @@ begin
         }
         // Stroke description
         EventObj.S['eventStroke'] := AppData.qryStroke.FieldByName('Caption').AsString;
-        // Relay or not
-        if AppData.qryDistance.FieldByName('EventTypeID').AsInteger = 1 then
-        begin
-          EventObj.B['eventIsRelay'] := false;
-          EventObj.I['eventRelaylegs'] := 0;
-          EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
-        end
-        else
-        begin
-          EventObj.B['eventIsRelay'] := true;
-          EventObj.I['eventRelaylegs'] := 4;
-          EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
-        end;
+        // number of laps to swim, typically - Distance div LengthOfPool
+        RelayLegs := GetRelayLegs(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        // INDV ot TEAM (Relay).
+        AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
+        if  AEventTypeID = 1 then
+          EventObj.B['eventIsRelay'] := false else EventObj.B['eventIsRelay'] := true;
+        EventObj.I['eventRelaylegs'] := RelayLegs;
+        EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
+
+        
         { M", "F", or "X" or any other category designation.
           TODO: call dtUtils.EventGender to obtain correct gender assignment. }
 
@@ -161,7 +441,9 @@ begin
         EventObj.S['eventDescription'] := AppData.qryEvent.FieldByName('Caption').AsString;
         EventObj.Null['eventShortLabel'];
         EventObj.Null['eventFullLabel'];
+        EventObj.Null['eventStartTime'];
 
+        (*
         // Records
         with EventObj.A['eventRecords'].O[0] {Auto Create} do
         begin
@@ -172,6 +454,8 @@ begin
         begin
           // Add standard fields here if any
         end;
+        *)
+
         Add(EventObj);
         AppData.qryEvent.Next;
       end;
@@ -190,13 +474,15 @@ begin
       dt := IncHour(dt,2);
       SessObj.S['sessionEndAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', dt, AFormatSettings);
       SessObj.B['sessionIsCurrent'] :=  true;
+      Add(SessObj);
+
       with SessObj.A['sessionRaces'] do
       begin
         AppData.qryEvent.First;
         while not AppData.qryEvent.Eof do
         begin
           AppData.qryDistance.ApplyMaster;
-          EventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
+          AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
           AppData.qryHeat.ApplyMaster;
           AppData.qryHeat.Last;
           NumOfHeats := AppData.qryHeat.RecordCount;
@@ -211,22 +497,14 @@ begin
               irrespective of the event number and heat number
               therefore it is possible to have preliminaries and finals out of order
             }
-            // Calculate a unique racenumber? (unique for this session only).
-                j := AppData.qryEvent.FieldByName('EventNum').AsInteger * 100 +
-                    AppData.qryHeat.FieldByName('HeatNum').AsInteger;
-                RaceObj.I['raceNumber'] := j;
-
-            {
-            // Use persisent variable ... store in JSON init file?
-            Inc(RACE_NUMBER);
-            RaceObj.I['raceNumber'] := RACE_NUMBER;
-            }
+            Inc(currRaceNumber);
+            RaceObj.I['raceNumber'] := currRaceNumber;
 
             { TODO JOIN dbo.HeatType on AppData.qryHeat for correct assignment.
               RaceObj.S['raceHeatType'] :=
               AppData.qryHeatType.FieldByName('Caption').AsString;   }
             // for Prelims, Finals, Swimoffs etc.
-            RaceObj.S['raceHeatType'] := 'Prelims';
+            RaceObj.S['raceHeatType'] := GetHeatTypeStr(AppData.qryHeat.FieldByName('HeatID').AsInteger);
             //  HEAT IDENTIFICATION.
             RaceObj.I['raceHeatId'] := AppData.qryHeat.FieldByName('HeatID').AsInteger;
             { The order of heats can be changed by the user ..
@@ -239,65 +517,64 @@ begin
             with RaceObj.A['raceLanes'] do
             begin
               // Individual event
-              if EventTypeID = 1 then
+              if AEventTypeID = 1 then
               begin
                 AppData.qryINDV.ApplyMaster;
                 AppData.qryINDV.First;
                 while not AppData.qryINDV.Eof do
                 begin
-                  LaneObj := SO();
-                  LaneObj.I['laneNumber'] := AppData.qryINDV.FieldByName('Lane').AsInteger;
-                  LaneObj.B['isEmpty'] := AppData.qryINDV.FieldByName('MemberID').IsNull;
-                  LaneObj.S['laneEventId'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
-                  LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
-
-                  {TODO: Convert TTB - TDataTime to fraction of seconds ...}
-                  dt := TimeOf(AppData.qryINDV.FieldByName('TTB').AsDateTime);
-                  // seed time in 1/100 of a second.
-                  var seedTimeInCentiseconds: integer;
-                  seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
-                  // Assign to laneSeedTime
-                  LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
-
-                  (*
-                  // In seconds + fraction of seconds - rounded to 1/100 of a second.
-                  var totalSeconds: Double;
-                  // Convert TTime to milliseconds.
-                  totalSeconds := MilliSecondOfTheDay(dt) / 1000;
-                  // Round to 1/100 of a second.
-                  totalSeconds := RoundTo(totalSeconds, -2);
-                  // Assign to laneSeedTime
-                  LaneObj.F['laneSeedTime'] := totalSeconds;
-                  *)
-
-                  if not AppData.qryINDV.FieldByName('MemberID').IsNull then
-                    LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger)
+                  if AppData.qryINDV.FieldByName('MemberID').IsNull then
+                    AppData.qryINDV.Next
                   else
-                    LaneObj.Null['laneSwimmerId'];
-                  LaneObj.Null['laneTeamId'];
-                  Add(LaneObj);
-                  AppData.qryINDV.Next;
+                  begin
+                    LaneObj := SO();
+                    LaneObj.I['laneNumber'] := AppData.qryINDV.FieldByName('Lane').AsInteger;
+                    LaneObj.B['isEmpty'] := AppData.qryINDV.FieldByName('MemberID').IsNull;
+                    LaneObj.S['laneEventId'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+                    LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+
+                    try
+                      dt := TimeOf(AppData.qryINDV.FieldByName('TimeToBeat').AsDateTime);
+                      // in 100th of seconds.
+                      seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
+                      LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
+                    except on E: Exception do
+                      LaneObj.Null['laneSeedTime'];
+                    end;
+                    LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger);
+                    LaneObj.Null['laneTeamId'];
+                    Add(LaneObj);
+                    AppData.qryINDV.Next;
+                  end;
                 end;
               end
               // Team event
-              else if EventTypeID = 2 then
+              else if AEventTypeID = 2 then
               begin
                 AppData.qryTEAM.ApplyMaster;
                 AppData.qryTEAM.First;
                 while not AppData.qryTEAM.Eof do
                 begin
-                  LaneObj := SO();
-                  LaneObj.I['laneNumber'] := AppData.qryTEAM.FieldByName('Lane').AsInteger;
-                  LaneObj.B['isEmpty'] := AppData.qryTEAM.FieldByName('MemberID').IsNull;
-                  LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
-                  LaneObj.F['laneSeedTime'] := 0;
-                  if not AppData.qryTEAM.FieldByName('MemberID').IsNull then
-                    LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryTEAM.FieldByName('MemberID').AsInteger)
+                  if AppData.qryTEAM.FieldByName('TeamNameID').IsNull then
+                    AppData.qryTEAM.Next
                   else
+                  begin
+                    LaneObj := SO();
+                    LaneObj.I['laneNumber'] := AppData.qryTEAM.FieldByName('Lane').AsInteger;
+                    LaneObj.B['isEmpty'] := false;
+                    LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+                    try
+                      dt := TimeOf(AppData.qryTEAM.FieldByName('TimeToBeat').AsDateTime);
+                      seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
+                      LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
+                    except on E: Exception do
+                      LaneObj.Null['laneSeedTime'];
+                    end;
                     LaneObj.Null['laneSwimmerId'];
-                  LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
-                  Add(LaneObj);
-                  AppData.qryTEAM.Next;
+                    LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
+                    Add(LaneObj);
+                    AppData.qryTEAM.Next;
+                  end;
                 end;
               end;
             end;
@@ -321,39 +598,68 @@ begin
           Add(PoolObj);
         end;
       end;
-      Add(SessObj);
     end;
 
-    with A['meetSwimmer'] do
+    // Meet Teams.
+    with A['meetTeams'] do
+    begin
+      // DISTINCT list of TEAMS...
+      AppData.qryListTeams.Close;
+      AppData.qryListTeams.ParamByName('SESSIONID').AsInteger :=
+        AppData.qrySession.FieldByName('SessionID').AsInteger;
+      AppData.qryListTeams.Prepare;
+      AppData.qryListTeams.Open;
+      if AppData.qryListTeams.Active then
+      begin
+        AppData.qryListTeams.First;
+        while not AppData.qryListTeams.Eof do
+        begin
+          teamObj := SO();
+          teamObj.I['teamId'] := AppData.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.Null['teamMascot'];
+          Add(teamObj);
+        end;
+      end;
+
+    end;
+
+    with A['meetSwimmers'] do
     begin
       // DISTINCT list of Entrants nominating to swim event(s)...
-      AppData.qrySwimmer.Close;
-      AppData.qrySwimmer.ParamByName('SESSIONID').AsInteger :=
+      AppData.qryListSwimmers.Close;
+      AppData.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
         AppData.qrySession.FieldByName('SessionID').AsInteger;
-      AppData.qrySwimmer.Prepare;
-      AppData.qrySwimmer.Open;
-      if AppData.qrySwimmer.Active then
+      AppData.qryListSwimmers.Prepare;
+      AppData.qryListSwimmers.Open;
+      if AppData.qryListSwimmers.Active then
       begin
-        AppData.qrySwimmer.First;
-        while not AppData.qrySwimmer.Eof do
+        AppData.qryListSwimmers.First;
+        while not AppData.qryListSwimmers.Eof do
         begin
           swimmerObj := SO();
           // unique id of each swimmer (not necessarily globally unique, but must be unique within the meet
-          swimmerObj.I['swimmerId'] := AppData.qrySwimmer.FieldByName('swimmerId').AsInteger;
+          swimmerObj.I['swimmerId'] := AppData.qryListSwimmers.FieldByName('swimmerId').AsInteger;
           // name of swimmer in the preferred order (first last or last, first)
-          swimmerObj.S['swimmerName'] := AppData.qrySwimmer.FieldByName('swimmerName').AsString;
-          swimmerObj.S['swimmerGender'] := AppData.qrySwimmer.FieldByName('swimmerGender').AsString;
+          swimmerObj.S['swimmerName'] := AppData.qryListSwimmers.FieldByName('swimmerName').AsString;
+          swimmerObj.S['swimmerGender'] := AppData.qryListSwimmers.FieldByName('swimmerGender').AsString;
           // per age up date
-          swimmerObj.I['swimmerAge'] := AppData.qrySwimmer.FieldByName('swimmerAge').AsInteger;
+          swimmerObj.I['swimmerAge'] := AppData.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
           {TODO -oBSA -cGeneral : query team assignment}
           // What if swimmer is assigned to multi-teams?
           // references list of teams
-          swimmerObj.S['swimmerTeamID'] := AppData.qrySwimmer.FieldByName('swimmerTeamID').AsString;
+          swimmerObj.S['swimmerTeamID'] := AppData.qryListSwimmers.FieldByName('swimmerTeamID').AsString;
         end;
       end;
     end;
 
   end;
+
+  if Assigned(Settings) then
+    Settings.RaceNumber := currRaceNumber;
+  
   X.SaveTo(AFileName);
   Result := True;
 end;

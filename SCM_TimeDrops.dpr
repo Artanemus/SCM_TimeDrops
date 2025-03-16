@@ -27,7 +27,8 @@ uses
   SCMUtility in '..\SCM_SHARED\SCMUtility.pas',
   dlgSessionPicker in 'dlgSessionPicker.pas' {SessionPicker},
   tdResults in 'tdResults.pas',
-  tdMeetProgramPick in 'tdMeetProgramPick.pas' {MeetProgramPick};
+  tdMeetProgramPick in 'tdMeetProgramPick.pas' {MeetProgramPick},
+  dtTimingSystemStatus in 'dtTimingSystemStatus.pas';
 
 {$R *.res}
 

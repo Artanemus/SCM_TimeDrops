@@ -191,6 +191,7 @@
             <Form>MeetProgramPick</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="dtTimingSystemStatus.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

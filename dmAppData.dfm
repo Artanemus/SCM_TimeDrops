@@ -19635,7 +19635,7 @@ object AppData: TAppData
     Left = 368
     Top = 504
   end
-  object qrySwimmer: TFDQuery
+  object qryListSwimmers: TFDQuery
     Connection = SCM.scmConnection
     SQL.Strings = (
       '/*'
@@ -19708,7 +19708,44 @@ object AppData: TAppData
   end
   object qrySplit: TFDQuery
     Connection = SCM.scmConnection
-    Left = 352
+    Left = 384
     Top = 376
+  end
+  object qryListTeams: TFDQuery
+    Connection = SCM.scmConnection
+    SQL.Strings = (
+      'DECLARE @SessionID INT;'
+      'SET @SessionID = :SESSIONID;'
+      ''
+      'SELECT DISTINCT [TeamName].TeamNameID as teamID'
+      ', TeamName.Caption as teamFullName '
+      ', TeamName.CaptionShort as teamShortName'
+      ', TeamName.ABREV as teamAbbreviation'
+      ','#39#39' as teamMascot'
+      ''
+      'FROM [SwimClubMeet].[dbo].[TeamName] '
+      
+        'LEFT JOIN [dbo].[Team] ON [TeamName].[TeamNameID] = [Team].[Team' +
+        'NameID]'
+      
+        'INNER JOIN dbo.HeatIndividual ON Team.HeatID = HeatIndividual.He' +
+        'atID'
+      'INNER JOIN dbo.Event ON HeatIndividual.EventID = Event.EventID'
+      
+        'INNER JOIN dbo.[Session] ON Event.SessionID = [Session].SessionI' +
+        'D'
+      
+        'WHERE Team.TeamNameID IS NOT NULL AND Session.SessionID = @Sessi' +
+        'onID '
+      'ORDER BY [TeamName].[TeamNameID] ASC')
+    Left = 160
+    Top = 376
+    ParamData = <
+      item
+        Name = 'SESSIONID'
+        DataType = ftInteger
+        ParamType = ptInput
+        Value = 0
+      end>
   end
 end

@@ -206,7 +206,7 @@ begin
     fn := IncludeTrailingPathDelimiter(Settings.ProgramFolder)  + 'meet_program.json';
     SCMGrid.BeginUpdate;
     if Settings.MeetProgramType = 1 then
-      BuildAndSaveMeetProgram(fn) // Detailed meet program.
+      BuildAndSaveMeetProgramDetailed(fn) // Detailed meet program.
     else if Settings.MeetProgramType = 0 then
       BuildAndSaveMeetProgramBasic(fn); // Basic meet program.
     // perform a TDBAdvGrid display update.

@@ -364,6 +364,8 @@ begin
   if success then
     X.SaveTo(fn);
 
+  {TODO -oBSA -cGeneral : write out 'Timing System Status' }
+
 
 end;
 
