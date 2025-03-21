@@ -8432,7 +8432,7 @@ object Options: TOptions
       Top = 0
       Width = 661
       Height = 402
-      ActivePage = tabsheetPaths
+      ActivePage = tabSettings
       Align = alClient
       TabOrder = 0
       object tabSettings: TTabSheet
@@ -8482,7 +8482,7 @@ object Options: TOptions
           Width = 613
           Height = 97
           Caption = 'Precedence '
-          ItemIndex = 0
+          ItemIndex = 1
           Items.Strings = (
             'Use  the JSON data for Session, Event, Heat && Race data.'
             'Use the filename to extract Session, Event, Heat && Race  data.')

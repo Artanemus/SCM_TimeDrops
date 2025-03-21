@@ -13,7 +13,6 @@ var
   JSONObj, lanesObj: ISuperObject;
   FileStream: TFileStream;
   Iterator1, Iterator2: TSuperEnumerator<IJSONPair>;
-  str: string;
   cast1, cast2: ICast;
 begin
   FileStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
@@ -107,9 +106,6 @@ begin
         end;
       end;
 
-
-
-
     end;
   finally
     FileStream.Free;
@@ -123,7 +119,7 @@ var
   JSONString: string;
   JSONValue: TJSONValue;
   JSONObj: TJSONObject;
-  JSONReader: TStringReader;
+//  JSONReader: TStringReader;
   JSONStream: TFileStream;
 begin
   JSONStream := TFileStream.Create(FileName, fmOpenRead);

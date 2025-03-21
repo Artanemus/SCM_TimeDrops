@@ -44,9 +44,10 @@ unit tdReConstruct;
 interface
 
 uses dmSCM, dmAppData, System.SysUtils, System.Classes, system.Hash,
-DateUtils, variants, SCMDefines, Data.DB, tdSetting, XSuperJSON, XSuperObject;
+DateUtils, variants, SCMDefines, Data.DB, tdSetting, XSuperJSON, XSuperObject,
+FireDAC.Stan.Param;
 
-procedure ReConstructTD(SessionID: integer);
+procedure ReConstructSession(SessionID: integer);
 
 implementation
 
@@ -55,6 +56,37 @@ X: ISuperObject;
 AFormatSettings: TFormatSettings;
 raceNumber: integer;
 laneObj: ISuperObject;
+
+
+function SaveToJSONFile: boolean;
+var
+fn: TFileName;
+begin
+  result := false;
+  (*
+  SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
+  where SSSS is the session ID, EEEE the heat number, HHHH the heat number, RRRR the race
+  number and XXXX the revision number
+  T
+  *)
+  // C o n s t r u c t   f i l e n a m e .
+  fn := '';
+  fn := fn + 'Session'+ IntToStr(AppData.qrySession.FieldByName('SessionID').AsInteger);
+  fn := fn + '_Event'+ IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+  fn := fn + '_Heat' + IntToStr(AppData.qryHeat.FieldByName('HeatNum').AsInteger);
+  fn := fn + '_Race' + IntToStr(raceNumber) + '.JSON';
+  fn := IncludeTrailingPathDelimiter(Settings.ReConstruct) + fn;
+  { In case the file already exists, the current file contents will be
+  completely replaced with the new. If the named file cannot be created
+  or opened, SaveToFile raises an EFCreateError exception}
+  try
+    begin
+      X.SaveTo(fn);
+      result := true;
+    end;
+  except on E: Exception do
+  end;
+end;
 
 function ConverDateTimeTo100thSeconds(ADateTime:TDateTime): integer;
 var
@@ -106,6 +138,57 @@ end;
     Result := EncodeTime(Hours, Minutes, Seconds, Milliseconds);
   end;
 }
+
+function GetMaxSplitTime(aID: integer; aEventType: scmEventType): TDateTime;
+var
+  v: variant;
+  SQL: string;
+begin
+  result := 0;
+  if aID = 0 then exit;
+  SQL := '';
+  case aEventType of
+    etUnknown:
+      exit;
+    etINDV:
+    begin
+      if not AppData.qryINDV.IsEmpty then
+        SQL := '''
+        SELECT MAX(SplitTime) AS MaxSplitTime
+        FROM SwimClubMeet.dbo.Entrant
+        INNER JOIN SwimClubMeet.dbo.Split ON Entrant.EntrantID = Split.EntrantID
+        WHERE Entrant.EntrantID = :ID;
+        ''';
+      end;
+    etTEAM:
+    begin
+      if not AppData.qryTEAM.IsEmpty then
+        SQL := '''
+        SELECT MAX(SplitTime) AS MaxSplitTime
+        FROM SwimClubMeet.dbo.Team
+        INNER JOIN SwimClubMeet.dbo.TeamSplit ON Team.TeamID = TeamSplit.TeamID
+        WHERE Team.TeamID = :ID;
+        ''';
+      end;
+  end;
+  if not SQL.IsEmpty then
+  begin
+    try
+      v := SCM.scmConnection.ExecSQLScalar(SQL, [aID]);
+      if VarIsNull(v) or VarIsEmpty(v) or (v = 0)  then
+        exit; // No valid result found
+      result := v; // Assign the result
+    except
+      on E: Exception do
+      begin
+        // Log or handle the exception as needed
+        raise Exception.Create('Error retrieving MaxSplitTime: ' + E.Message);
+      end;
+    end;
+
+  end
+end;
+
 
 
 function GetEventType(aEventID: integer): scmEventType;
@@ -167,13 +250,13 @@ end;
 
 procedure ReConstructLanes(ADataSet: TDataSet; aEventType: scmEventType);
 var
-  laneValue: Variant;
-  s, lane, dtstr: string;
-  rt, rtk: TDateTime;
+  laneValue, vtime: Variant;
+  dt: TDateTime;
   fs: TFormatSettings;
-  msec: integer;
+  sec: integer;
   raceObj, splitObj: ISuperObject;
   ID: integer;
+  laneIsEmpty: boolean;
 begin
   if ADataSet.IsEmpty then exit;
 
@@ -202,32 +285,83 @@ begin
         // Does indicates a error but this code line will never be reached.
         LaneObj.I['lane'] := 0; // SAFE...
 
-      // in 1/100th of seconds
-
-      LaneObj.I['finalTime'] := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
-      // only present when using pads
-      // cs := CountSplits()
-      // if cs > 0 then
-      // RaceObj.I['padTime'] := ConverDateTimeTo100thSeconds(lastSplitTime);
-      // else
-      // RaceObj.Null['padTime']
-
-      LaneObj.I['timer1'] := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
-      // RaceObj.I['timer2'] :=
-      // RaceObj.I['timer3'] :=
-
+      laneIsEmpty := true;
       if aEventType = etINDV then
-        LaneObj.B['isEmpty'] := ADataSet.FieldByName('MemberID').IsNull
+        laneIsEmpty := ADataSet.FieldByName('MemberID').IsNull
       else if aEventType = etTEAM then
-        LaneObj.B['isEmpty'] := ADataSet.FieldByName('TeamID').IsNull;
+        laneIsEmpty := ADataSet.FieldByName('TeamID').IsNull;
+
+      if laneIsEmpty then
+      begin
+        LaneObj.Null['isEmpty'];
+        LaneObj.Null['finalTime'];
+        RaceObj.Null['padTime'];
+        LaneObj.Null['timer1'];
+        LaneObj.Null['timer2'];
+        LaneObj.Null['timer3'];
+      end
+      else
+      begin
+        LaneObj.B['isEmpty'] := false;
+        vtime := ADataSet.FieldByName('RaceTime').AsVariant;
+        // P A D   T I M E  - S P L I T T I M E S .
+        dt := 0;
+        if aEventType = scmEventType.etINDV then
+          dt := GetMaxSplitTime(ADataSet.FieldByName('EntrantID').AsInteger, aEventType);
+        if aEventType = scmEventType.etTeam then
+          dt := GetMaxSplitTime(ADataSet.FieldByName('TeamID').AsInteger, aEventType);
+        // T I M E K E E P E R .
+        // not timekeeper 'Time-Drop' given for swimmer in lane.
+        if VarIsNull(vtime) or VarIsEmpty(vtime) or vtime=0 then
+        begin
+          if dt<> 0 then
+            // use padtime as final time
+            LaneObj.I['finalTime'] := ConverDateTimeTo100thSeconds(dt)
+          else
+            LaneObj.Null['finalTime'];
+
+          RaceObj.Null['padTime'];
+          LaneObj.Null['timer1'];
+        end
+        else
+        begin
+          // in 1/100th of seconds
+          sec := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
+          // Settings : use padtime instead of racetime - else ...
+          if Settings.CalcRTMethod = 3 then
+            LaneObj.I['finalTime'] := ConverDateTimeTo100thSeconds(dt)
+          else
+            LaneObj.I['finalTime'] := sec;
+          LaneObj.I['timer1'] := sec;
+        end;
+        // only present when using pads
+        if (dt <> 0) then
+          RaceObj.I['padTime'] := ConverDateTimeTo100thSeconds(dt)
+        else
+          RaceObj.Null['padTime'];
+
+
+{TODO -oBSA -cGeneral : Add additional debug information to 'Results' file.}
+{$IFDEF DEBUG}
+        // calculate a re-construction race-time for timekeeper 2 and 3
+        LaneObj.Null['timer2'];
+        LaneObj.Null['timer3'];
+{$ELSE }
+        // not used in re-construct...
+        LaneObj.Null['timer2'];
+        LaneObj.Null['timer3'];
+{$ENDIF}
+
+
+      end;
 
       LaneObj.B['isDq'] := false;  // for relay judging platform
 
       Add(LaneObj);
 
       {TODO -oBSA -cGeneral : Insert split data into superObject. }
-      (*
-      With RaceObj.A['Splits'] do
+
+      With LaneObj.A['Splits'] do
       begin
         AppData.qrySplit.Close;
         AppData.qrySplit.ParamByName('EVENTTYPEID').AsInteger := Ord(aEventType);
@@ -256,7 +390,7 @@ begin
           end;
         end;
       end;
-      *)
+
 
 
       ADataSet.Next;
@@ -266,15 +400,9 @@ end;
 
 
 procedure ReConstructHeat(aEventType: scmEventType);
-var
-  HeatNum: integer;
-  s, fn, id, sess, ev, ht, RoundStr: string;
-  success: boolean;
 begin
   AppData.qryHeat.ApplyMaster;
   if AppData.qryHeat.IsEmpty then exit;
-
-
   AppData.qryHeat.first;
   while not AppData.qryHeat.eof do
   begin
@@ -295,16 +423,15 @@ begin
       AppData.qryTEAM.ApplyMaster;
       ReConstructLanes(AppData.qryTEAM, aEventType);
     end;
-
-
+    // write out the TSuperObject to a JSON Time-Drops 'Results' file
+    SaveToJSONFile;
+    {TODO -oBSA -cGeneral : write/update 'Timing System Status' }
     AppData.qryHeat.Next
   end;
 end;
 
 procedure ReConstructEvent(SessionID: integer);
 var
-i, EventNum: integer;
-gender: string;
 aEventType: scmEventType;
 begin
   AppData.qryEvent.ApplyMaster;
@@ -314,17 +441,19 @@ begin
   begin
     X.I['eventID'] := AppData.qryEvent.FieldByName('EventID').AsInteger;
     X.I['eventNumber'] := AppData.qryEvent.FieldByName('EventNum').AsInteger;
+
+    AppData.qryDistance.ApplyMaster;
+    aEventType := scmEventType(AppData.qryDistance.FieldByName('EventTypeID').AsInteger);
+
     // R e - c o n s t r u c t   H E A T .
     ReConstructHeat(aEventType);
     AppData.qryEvent.next;
   end;
 end;
 
-procedure ReConstructTD(SessionID: integer);
+procedure ReConstructSession(SessionID: integer);
 var
   dt: TDateTime;
-  success: boolean;
-  fn: TFileName;
 begin
   // Date/Time in ISO 8601 UTC format
   AFormatSettings := TFormatSettings.Create;
@@ -335,36 +464,20 @@ begin
   // Core AppData tables are Master-Detail schema.
   // qrySession is cued, ready to process.
   raceNumber := 0;
-  // Create the main SuperObject
-  X := SO();
-  X.S['type'] := 'Results';
-  X.S['createdAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
-  dt := DateOf(AppData.qrySession.FieldByName('SessionStart').AsDateTime);
-  X.S['protocolVersion'] := '1.1.0';
-  X.I['sessionNumber'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
-  ReConstructEvent(SessionID);
-
-  // C o n s t r u c t   f i l e n a m e .
-  (*
-  SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
-  where SSSS is the session ID, EEEE the heat number, HHHH the heat number, RRRR the race
-  number and XXXX the revision number
-  T
-  *)
-  fn := '';
-  fn := fn + 'Session'+ IntToStr(AppData.qrySession.FieldByName('SessionID').AsInteger);
-  fn := fn + '_Event'+ IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
-  fn := fn + '_Heat' + IntToStr(AppData.qryHeat.FieldByName('HeatNum').AsInteger);
-  fn := fn + '_Race' + IntToStr(raceNumber) + '.JSON';
-  fn := IncludeTrailingPathDelimiter(Settings.ReConstruct) + fn;
-  success := true;
-  // trap for exception error.
-  if fileExists(fn) then
-    success := DeleteFile(fn);
-  if success then
-    X.SaveTo(fn);
-
-  {TODO -oBSA -cGeneral : write out 'Timing System Status' }
+  // check current session
+  if AppData.qrySession.FieldByName('SessionID').AsInteger <> SessionID then
+    if AppData.LocateSCMSessionID(SessionID) then
+    begin
+      // Create the main SuperObject
+      X := SO();
+      X.S['type'] := 'Results';
+      X.S['createdAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
+      X.S['protocolVersion'] := '1.1.0';
+      X.I['sessionNumber'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
+      dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
+      X.S['startTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', dt, AFormatSettings);
+      ReConstructEvent(SessionID);
+    end;
 
 
 end;

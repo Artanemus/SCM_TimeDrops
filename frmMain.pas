@@ -1374,8 +1374,6 @@ end;
 procedure TMain.ReconstructAndExportFiles(fileExtension: string; messageText:
   string);
 var
-  SessionID, currEv, currHt: integer;
-  sessionPrefix: string;
   mr: TModalResult;
 begin
   if AppData.qrysession.Active then
@@ -1388,20 +1386,7 @@ begin
     begin
       scmGrid.BeginUpdate;
       scmGrid.DataSource.DataSet.DisableControls;
-(*
-      currEv := AppData.qryEvent.FieldByName('EventID').AsInteger;
-      currHt := AppData.qryHeat.FieldByName('HeatID').AsInteger;
-      SessionID := AppData.qrysession.FieldByName('SessionID').AsInteger;
-      sessionPrefix := Get3Digits(SessionID);
-      DeleteFilesWithWildcard(Settings.ReConstruct + fileExtension,
-        sessionPrefix + '-*.%' + fileExtension);
-      if messageText = 'DO3' then
-        ReConstructDO3(SessionID)
-      else
-        ReConstructDO4(SessionID);
-      AppData.LocateSCMEventID(currEv);
-      AppData.LocateSCMHeatID(currHt);
-*)
+      ReConstructSession(AppData.qrySession.FieldByName('SessionID').AsInteger);
       scmGrid.DataSource.DataSet.EnableControls;
       scmGrid.EndUpdate;
       MessageBox(0,

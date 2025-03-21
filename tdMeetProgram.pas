@@ -5,7 +5,7 @@ interface
 uses
   system.IOUtils,
   system.SysUtils, system.Types, system.UITypes, system.Classes,
-  system.Variants, VCL.Controls, system.DateUtils,
+  system.Variants, VCL.Controls, system.DateUtils, Data.DB,
   XSuperJSON, XSuperObject, dmAppData,
   FireDAC.Stan.Param, dmSCM, tdSetting;
 
@@ -118,8 +118,8 @@ var
   X: ISuperObject;
   AFormatSettings: TFormatSettings;
   dt: TDateTime;
-  j, NumOfHeats, AEventTypeID, RelayLegs: Integer;
-  SessObj, EventObj, RaceObj, LaneObj, PoolObj, teamObj, swimmerObj: ISuperObject;
+  NumOfHeats, AEventTypeID, RelayLegs: Integer;
+  SessObj, EventObj, RaceObj, LaneObj, teamObj, swimmerObj: ISuperObject;
   genderStr: string;
   seedTimeInCentiseconds: integer;
 

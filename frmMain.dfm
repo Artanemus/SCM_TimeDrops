@@ -22,7 +22,6 @@ object Main: TMain
     Top = 0
     Width = 1444
     Height = 25
-    UseSystemFont = False
     ActionManager = actnManager
     Caption = 'actnMenuBar'
     Color = clMenuBar
@@ -31,7 +30,7 @@ object Main: TMain
     ColorMap.BtnSelectedFont = clBlack
     ColorMap.UnusedColor = clWhite
     Font.Charset = DEFAULT_CHARSET
-    Font.Color = clBlack
+    Font.Color = clWindowText
     Font.Height = -12
     Font.Name = 'Segoe UI'
     Font.Style = []
