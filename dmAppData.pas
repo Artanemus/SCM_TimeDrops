@@ -1187,7 +1187,12 @@ begin
       if LocateSCMEventID(AEventID) then
       begin
         qryHeat.ApplyMaster;
-        LocateSCMHeatID(AHeatID);
+        if not LocateSCMHeatID(AHeatID) then
+          qryHeat.First;
+      end
+      else
+      begin
+        qryEvent.First;
       end;
     end;
   end;

@@ -100,45 +100,6 @@ begin
   result := seedTimeInCentiseconds;
 end;
 
-{
-  function ConvertTimeToSecondsStr(ATime: TTime): string;
-  var
-    Hours, Minutes, Seconds, Milliseconds: Word;
-    TotalSeconds: Double;
-  begin
-    // Decode the TTime value into its components
-    DecodeTime(ATime, Hours, Minutes, Seconds, Milliseconds);
-
-    // Calculate the total number of seconds as a floating point value
-    TotalSeconds := Hours * 3600 + Minutes * 60 + Seconds + Milliseconds / 1000.0;
-
-    // Convert the floating point value to a string
-    Result := FloatToStr(TotalSeconds);
-  end;
-}
-
-{
-  function ConvertSecondsStrToTime(ASecondsStr: string): TTime;
-  var
-    TotalSeconds: Double;
-    Hours, Minutes, Seconds, Milliseconds: Word;
-  begin
-    // Convert the string representation of seconds to a floating point value
-    TotalSeconds := StrToFloat(ASecondsStr);
-
-    // Calculate the hours, minutes, seconds, and milliseconds components
-    Hours := Trunc(TotalSeconds) div 3600;
-    TotalSeconds := TotalSeconds - (Hours * 3600);
-    Minutes := Trunc(TotalSeconds) div 60;
-    TotalSeconds := TotalSeconds - (Minutes * 60);
-    Seconds := Trunc(TotalSeconds);
-    Milliseconds := Round(Frac(TotalSeconds) * 1000);
-
-    // Encode the components back into a TTime value
-    Result := EncodeTime(Hours, Minutes, Seconds, Milliseconds);
-  end;
-}
-
 function GetMaxSplitTime(aID: integer; aEventType: scmEventType): TDateTime;
 var
   v: variant;

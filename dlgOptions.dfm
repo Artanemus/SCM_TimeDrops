@@ -8438,6 +8438,15 @@ object Options: TOptions
       object tabSettings: TTabSheet
         Caption = 'Settings'
         ImageIndex = 1
+        object lblSwimmerAge: TLabel
+          Left = 397
+          Top = 224
+          Width = 101
+          Height = 21
+          Alignment = taRightJustify
+          Caption = 'Seed date.'
+          Enabled = False
+        end
         object lbledtDeviation: TLabeledEdit
           Left = 22
           Top = 16
@@ -8457,7 +8466,7 @@ object Options: TOptions
           Top = 89
           Width = 269
           Height = 152
-          Caption = 'Calculate race times.'
+          Caption = 'Calculate race times ...'
           Enabled = False
           ItemIndex = 0
           Items.Strings = (
@@ -8482,11 +8491,36 @@ object Options: TOptions
           Width = 613
           Height = 97
           Caption = 'Precedence '
+          Enabled = False
           ItemIndex = 1
           Items.Strings = (
             'Use  the JSON data for Session, Event, Heat && Race data.'
             'Use the filename to extract Session, Event, Heat && Race  data.')
           TabOrder = 3
+        end
+        object rgrpSwimmerAge: TRadioGroup
+          Left = 352
+          Top = 89
+          Width = 281
+          Height = 125
+          Caption = 'Calculate swimmer age ...'
+          Enabled = False
+          ItemIndex = 0
+          Items.Strings = (
+            'Start of session (meet). '
+            'Start of season. (SCM options).'
+            'Pick a seed date for age. ')
+          TabOrder = 4
+        end
+        object dtpickSwimmerAge: TDateTimePicker
+          Left = 504
+          Top = 220
+          Width = 129
+          Height = 29
+          Date = 45738.000000000000000000
+          Time = 0.546796909722616000
+          Enabled = False
+          TabOrder = 5
         end
       end
       object tabsheetPaths: TTabSheet

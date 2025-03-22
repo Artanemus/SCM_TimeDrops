@@ -24,30 +24,114 @@ uses
 var
   currRaceNumber: integer;
 
+function GetMAXAge(aEventID,  aEventType: integer): integer;
+var
+  SQL: string;
+  vMAX: variant;
+begin
+  result := 0;
+  if AppData.qryEvent.IsEmpty then exit;
+  if aEventType = 1 then // INDV EVENT
+  begin
+    SQL := '''
+      SELECT MAX(dbo.SwimmerAge(SessionStart, [dbo].[Member].DOB)) AS Age
+      FROM [SwimClubMeet].[dbo].[Event]
+      JOIN [Session] ON [Event].[SessionID] = [Session].[SessionID]
+      JOIN SwimClub ON [Session].[SwimClubID] = SwimClub.SwimClubID
+      INNER JOIN [dbo].[HeatIndividual] ON [Event].[EventID] = [HeatIndividual].[EventID]
+      INNER JOIN [Entrant] ON [HeatIndividual].[HeatID] = [Entrant].[HeatID]
+      INNER JOIN [dbo].[Member] ON [Entrant].[MemberID] = [Member].[MemberID]
+      WHERE [Event].[EventID] = :ID;
+      ''';
+  end
+  else // TEAM EVENT
+  begin
+    SQL := '''
+      SELECT MAX(dbo.SwimmerAge(SessionStart, [dbo].[Member].DOB)) AS Age
+      FROM [SwimClubMeet].[dbo].[Event]
+      JOIN [Session] ON [Event].[SessionID] = [Session].[SessionID]
+      JOIN SwimClub ON [Session].[SwimClubID] = SwimClub.SwimClubID
+      INNER JOIN [dbo].[HeatIndividual] ON [Event].[EventID] = [HeatIndividual].[EventID]
+      INNER JOIN [Team] ON [HeatIndividual].[HeatID] = [Team].[HeatID]
+      INNER JOIN [TeamEntrant] ON [Team].TeamID = [TeamEntrant].[TeamID]
+      INNER JOIN [dbo].[Member] ON [TeamEntrant].[MemberID] = [Member].[MemberID]
+      WHERE [Event].[EventID] = :ID;
+    ''';
+  end;
+  vMAX := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
+  if VarIsNull(vMAX) or VarIsEmpty(vMAX) then exit;
+  try
+      result := vMAX;
+  except on E: Exception do
+    result := 0; // ASSERT.
+  end;
+end;
+
+function GetMINAge(aEventID,  aEventType: integer): integer;
+var
+  SQL: string;
+  vMin: variant;
+begin
+  result := 0;
+  if AppData.qryEvent.IsEmpty then exit;
+  if aEventType = 1 then // INDV EVENT
+  begin
+    SQL := '''
+      SELECT MIN(dbo.SwimmerAge(SessionStart, [dbo].[Member].DOB)) AS Age
+      FROM [SwimClubMeet].[dbo].[Event]
+      JOIN [Session] ON [Event].[SessionID] = [Session].[SessionID]
+      JOIN SwimClub ON [Session].[SwimClubID] = SwimClub.SwimClubID
+      INNER JOIN [dbo].[HeatIndividual] ON [Event].[EventID] = [HeatIndividual].[EventID]
+      INNER JOIN [Entrant] ON [HeatIndividual].[HeatID] = [Entrant].[HeatID]
+      INNER JOIN [dbo].[Member] ON [Entrant].[MemberID] = [Member].[MemberID]
+      WHERE [Event].[EventID] = :ID;
+      ''';
+  end
+  else // TEAM EVENT
+  begin
+    SQL := '''
+      SELECT MIN(dbo.SwimmerAge(SessionStart, [dbo].[Member].DOB)) AS Age
+      FROM [SwimClubMeet].[dbo].[Event]
+      JOIN [Session] ON [Event].[SessionID] = [Session].[SessionID]
+      JOIN SwimClub ON [Session].[SwimClubID] = SwimClub.SwimClubID
+      INNER JOIN [dbo].[HeatIndividual] ON [Event].[EventID] = [HeatIndividual].[EventID]
+      INNER JOIN [Team] ON [HeatIndividual].[HeatID] = [Team].[HeatID]
+      INNER JOIN [TeamEntrant] ON [Team].TeamID = [TeamEntrant].[TeamID]
+      INNER JOIN [dbo].[Member] ON [TeamEntrant].[MemberID] = [Member].[MemberID]
+      WHERE [Event].[EventID] = :ID;
+    ''';
+  end;
+  vMin := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
+  if VarIsNull(vMin) or VarIsEmpty(vMin) then exit;
+  try
+      result := vMin;
+  except on E: Exception do
+    result := 0; // ASSERT.
+  end;
+end;
+
 function GetHeatTypeStr(AHeatID: integer): string;
 var
   SQL: string;
   vType: variant;
 begin
   result := 'Prelim';
-  if not AppData.qryHeat.IsEmpty then
-  begin
-    SQL := '''
-      SELECT dbo.HeatType.Caption AS vType
-      FROM [SwimClubMeet].[dbo].[HeatIndividual]
-      INNER JOIN HeatType ON [HeatIndividual].[HeatTypeID] = [HeatType].[HeatTypeID]
-      WHERE [HeatIndividual].HeatID = :ID
-      ''';
-  end;
+  if AppData.qryHeat.IsEmpty then exit;
+  SQL := '''
+    SELECT dbo.HeatType.Caption AS vType
+    FROM [SwimClubMeet].[dbo].[HeatIndividual]
+    INNER JOIN HeatType ON [HeatIndividual].[HeatTypeID] = [HeatType].[HeatTypeID]
+    WHERE [HeatIndividual].HeatID = :ID
+    ''';
   vType := SCM.scmConnection.ExecSQLScalar(SQL, [AHeatID]);
   if VarIsNull(vType) or VarIsEmpty(vType) then exit;
-  { VarAsType raises an exception if the variant cannot be converted to the 
-  given type. This will be EVariantError or one of its descendants, such as 
+  { VarAsType raises an exception if the variant cannot be converted to the
+  given type. This will be EVariantError or one of its descendants, such as
   EVariantOverflowError or EVariantTypeCastError.  }
   try
       result := VarAsType(vType, varString);
   except on E: Exception do
-    result := 'Prelim'; // ASSERT.  
+    result := 'Prelim'; // ASSERT.
   end;
 end;
 
@@ -57,20 +141,18 @@ var
   vLegs: variant;
 begin
   result := 1;
-  if not AppData.qryEvent.IsEmpty then
-  begin
-    SQL := '''
-      SELECT [distance].[Meters] / [SwimClub].[LenOfPool] AS Legs
-      FROM [SwimClubMeet].[dbo].[Event]
-      INNER JOIN Distance
-          ON [Event].[DistanceID] = [Distance].[DistanceID]
-      INNER JOIN Session
-          ON [Event].[SessionID] = [Session].[SessionID]
-      INNER JOIN SwimClub
-          ON [Session].[SwimClubID] = [SwimClub].[SwimClubID]
-      WHERE [Event].EventID = :ID;
-      ''';
-  end;
+  if AppData.qryEvent.IsEmpty then exit;
+  SQL := '''
+    SELECT [distance].[Meters] / [SwimClub].[LenOfPool] AS Legs
+    FROM [SwimClubMeet].[dbo].[Event]
+    INNER JOIN Distance
+        ON [Event].[DistanceID] = [Distance].[DistanceID]
+    INNER JOIN Session
+        ON [Event].[SessionID] = [Session].[SessionID]
+    INNER JOIN SwimClub
+        ON [Session].[SwimClubID] = [SwimClub].[SwimClubID]
+    WHERE [Event].EventID = :ID;
+    ''';
   vLegs := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
   if VarIsNull(vLegs) or VarIsEmpty(vLegs) or (vLegs <= 0) then exit;
   result := vLegs;
@@ -83,34 +165,31 @@ var
 begin
   // Default result is 'X' (mixed genders)
   Result := 'X';
-
   // Ensure the query isn't empty
-  if not AppData.qryEvent.IsEmpty then
-  begin
-    // Query to get boys count
-    SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
-           'INNER JOIN HeatIndividual ON [Event].EventID = HeatIndividual.EventID ' +
-           'INNER JOIN Entrant ON [HeatIndividual].HeatID = Entrant.HeatID ' +
-           'INNER JOIN Member ON [Entrant].MemberID = Member.MemberID ' +
-           'WHERE [Event].EventID = :ID AND GenderID = 1';
-    boysCount := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
+  if AppData.qryEvent.IsEmpty then exit;
+  // Query to get boys count
+  SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
+         'INNER JOIN HeatIndividual ON [Event].EventID = HeatIndividual.EventID ' +
+         'INNER JOIN Entrant ON [HeatIndividual].HeatID = Entrant.HeatID ' +
+         'INNER JOIN Member ON [Entrant].MemberID = Member.MemberID ' +
+         'WHERE [Event].EventID = :ID AND GenderID = 1';
+  boysCount := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
 
-    // Query to get girls count
-    SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
-           'INNER JOIN HeatIndividual ON [Event].EventID = HeatIndividual.EventID ' +
-           'INNER JOIN Entrant ON [HeatIndividual].HeatID = Entrant.HeatID ' +
-           'INNER JOIN Member ON [Entrant].MemberID = Member.MemberID ' +
-           'WHERE [Event].EventID = :ID AND GenderID = 2';
-    girlsCount := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
+  // Query to get girls count
+  SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
+         'INNER JOIN HeatIndividual ON [Event].EventID = HeatIndividual.EventID ' +
+         'INNER JOIN Entrant ON [HeatIndividual].HeatID = Entrant.HeatID ' +
+         'INNER JOIN Member ON [Entrant].MemberID = Member.MemberID ' +
+         'WHERE [Event].EventID = :ID AND GenderID = 2';
+  girlsCount := SCM.scmConnection.ExecSQLScalar(SQL, [AEventID]);
 
-    // Determine the result based on counts
-    if (boysCount > 0) and (girlsCount > 0) then
-      Result := 'X'
-    else if boysCount > 0 then
-      Result := 'A'
-    else if girlsCount > 0 then
-      Result := 'B';
-  end;
+  // Determine the result based on counts
+  if (boysCount > 0) and (girlsCount > 0) then
+    Result := 'X'
+  else if boysCount > 0 then
+    Result := 'M'
+  else if girlsCount > 0 then
+    Result := 'F';
 end;
 
 function BuildAndSaveMeetProgramBasic(AFileName: TFileName): boolean;
@@ -118,7 +197,7 @@ var
   X: ISuperObject;
   AFormatSettings: TFormatSettings;
   dt: TDateTime;
-  NumOfHeats, AEventTypeID, RelayLegs: Integer;
+  NumOfHeats, AEventTypeID, RelayLegs, aEventID: Integer;
   SessObj, EventObj, RaceObj, LaneObj, teamObj, swimmerObj: ISuperObject;
   genderStr: string;
   seedTimeInCentiseconds: integer;
@@ -159,6 +238,7 @@ begin
         EventObj.I['eventStrokeCode'] := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
         EventObj.S['eventStroke'] := AppData.qryStroke.FieldByName('Caption').AsString;
         RelayLegs := GetRelayLegs(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        AppData.qryDistance.ApplyMaster;
         AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
         if  AEventTypeID = 1 then
           EventObj.B['eventIsRelay'] := false else EventObj.B['eventIsRelay'] := true;
@@ -166,8 +246,9 @@ begin
         EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
         genderStr := GetGenderTypeStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
         EventObj.S['eventGender'] := genderStr;
-        EventObj.I['eventMinAge'] := 0;
-        EventObj.I['eventMaxAge'] := 0;
+        aEventID := AppData.qryEvent.FieldByName('EventID').AsInteger;
+        EventObj.I['eventMinAge'] := GetMINAge(aEventID, AEventTypeID);
+        EventObj.I['eventMaxAge'] := GetMAXAge(aEventID, AEventTypeID);
         EventObj.Null['eventDescription'];
         EventObj.Null['eventShortLabel'];
         EventObj.Null['eventFullLabel'];
@@ -299,6 +380,7 @@ begin
           teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
           teamObj.Null['teamMascot'];
           Add(teamObj);
+          AppData.qryListTeams.Next;
         end;
       end;
 
@@ -325,6 +407,7 @@ begin
           swimmerObj.I['swimmerAge'] := AppData.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
           swimmerObj.I['swimmerTeamID']  := AppData.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
           Add(swimmerObj);
+          AppData.qryListSwimmers.Next;
         end;
       end;
     end;
@@ -345,7 +428,7 @@ var
   X: ISuperObject;
   AFormatSettings: TFormatSettings;
   dt: TDateTime;
-  j, NumOfHeats, AEventTypeID, RelayLegs: Integer;
+  j, NumOfHeats, AEventTypeID, RelayLegs, aEventID: Integer;
   SessObj, EventObj, RaceObj, LaneObj, PoolObj, swimmerObj, teamobj: ISuperObject;
   genderStr: string;
   seedTimeInCentiseconds: integer;
@@ -400,7 +483,8 @@ begin
       while not AppData.qryEvent.Eof do
       begin
         EventObj := SO();
-        EventObj.S['eventId'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        aEventID := AppData.qryEvent.FieldByName('EventID').AsInteger;
+        EventObj.S['eventId'] := IntToStr(aEventID);
         // number of the event, e.g. "3" or "4A"
         EventObj.S['eventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
         {
@@ -421,13 +505,14 @@ begin
         // number of laps to swim, typically - Distance div LengthOfPool
         RelayLegs := GetRelayLegs(AppData.qryEvent.FieldByName('EventID').AsInteger);
         // INDV ot TEAM (Relay).
+        AppData.qryDistance.ApplyMaster;
         AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
         if  AEventTypeID = 1 then
           EventObj.B['eventIsRelay'] := false else EventObj.B['eventIsRelay'] := true;
         EventObj.I['eventRelaylegs'] := RelayLegs;
         EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
 
-        
+
         { M", "F", or "X" or any other category designation.
           TODO: call dtUtils.EventGender to obtain correct gender assignment. }
 
@@ -435,8 +520,8 @@ begin
         // Gender
         EventObj.S['eventGender'] := genderStr;
         // Ages
-        EventObj.I['eventMinAge'] := 0;
-        EventObj.I['eventMaxAge'] := 0;
+        EventObj.I['eventMinAge'] := GetMINAge(aEventID, AEventTypeID);
+        EventObj.I['eventMaxAge'] := GetMAXAge(aEventID, AEventTypeID);
         // Description
         EventObj.S['eventDescription'] := AppData.qryEvent.FieldByName('Caption').AsString;
         EventObj.Null['eventShortLabel'];
@@ -621,6 +706,7 @@ begin
           teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
           teamObj.Null['teamMascot'];
           Add(teamObj);
+          AppData.qryListTeams.Next;
         end;
       end;
 
@@ -651,6 +737,60 @@ begin
           // What if swimmer is assigned to multi-teams?
           // references list of teams
           swimmerObj.S['swimmerTeamID'] := AppData.qryListSwimmers.FieldByName('swimmerTeamID').AsString;
+          AppData.qryListSwimmers.Next;
+        end;
+      end;
+    end;
+
+    // Meet Teams.
+    with A['meetTeams'] do
+    begin
+      // DISTINCT list of TEAMS...
+      AppData.qryListTeams.Close;
+      AppData.qryListTeams.ParamByName('SESSIONID').AsInteger :=
+        AppData.qrySession.FieldByName('SessionID').AsInteger;
+      AppData.qryListTeams.Prepare;
+      AppData.qryListTeams.Open;
+      if AppData.qryListTeams.Active then
+      begin
+        AppData.qryListTeams.First;
+        while not AppData.qryListTeams.Eof do
+        begin
+          teamObj := SO();
+          teamObj.I['teamId'] := AppData.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.Null['teamMascot'];
+          Add(teamObj);
+          AppData.qryListTeams.Next;
+        end;
+      end;
+
+    end;
+
+    // Meet Swimmers.
+    with A['meetSwimmers'] do
+    begin
+      // DISTINCT list of Entrants nominating to swim event(s)...
+      AppData.qryListSwimmers.Close;
+      AppData.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
+        AppData.qrySession.FieldByName('SessionID').AsInteger;
+      AppData.qryListSwimmers.Prepare;
+      AppData.qryListSwimmers.Open;
+      if AppData.qryListSwimmers.Active then
+      begin
+        AppData.qryListSwimmers.First;
+        while not AppData.qryListSwimmers.Eof do
+        begin
+          swimmerObj := SO();
+          swimmerObj.I['swimmerId'] := AppData.qryListSwimmers.FieldByName('swimmerId').AsInteger;
+          swimmerObj.S['swimmerName'] := AppData.qryListSwimmers.FieldByName('swimmerName').AsString;
+          swimmerObj.S['swimmerGender'] := AppData.qryListSwimmers.FieldByName('swimmerGender').AsString;
+          swimmerObj.I['swimmerAge'] := AppData.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
+          swimmerObj.I['swimmerTeamID']  := AppData.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
+          Add(swimmerObj);
+          AppData.qryListSwimmers.Next;
         end;
       end;
     end;

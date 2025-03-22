@@ -32,6 +32,7 @@ type
     Precedence: dtPrecedence;
     AcceptedDeviation: double;
     CalcRTMethod: integer;
+    CalcSwimmerAge: integer;
     EnableRenameResultFiles: boolean;
     RaceNumber: integer;
 
@@ -69,6 +70,7 @@ begin
   RaceNumber := 0;
   // 0 = default DT method : 1 = extended SCM method.
   CalcRTMethod := 0;
+  CalcSwimmerAge := 0;
   EnableRenameResultFiles := false;
   {
   ForceDirectories creates a new directory as specified in Dir,

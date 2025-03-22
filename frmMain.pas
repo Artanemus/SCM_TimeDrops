@@ -28,7 +28,8 @@ uses
   Vcl.ActnMan, Vcl.ActnCtrls, Vcl.ActnMenus, Vcl.PlatformDefaultStyleActnCtrls,
   Vcl.ExtDlgs, FireDAC.Stan.Param, Vcl.ComCtrls, Vcl.DBCtrls, tdReConstruct,
   Vcl.PlatformVclStylesActnCtrls, Vcl.WinXPanels, Vcl.WinXCtrls,
-  System.Types, System.IOUtils, uAppUtils, Math, DirectoryWatcher;
+  System.Types, System.IOUtils, uAppUtils, Math, DirectoryWatcher,
+  tdReConstructDlg;
 
 type
   TMain = class(TForm)
@@ -98,8 +99,6 @@ type
     procedure actnPostExecute(Sender: TObject);
     procedure actnPostUpdate(Sender: TObject);
     procedure actnPreferencesExecute(Sender: TObject);
-    procedure actnReConstructDO3Execute(Sender: TObject);
-    procedure actnReConstructDO3Update(Sender: TObject);
     procedure actnReConstructTDResultFilesExecute(Sender: TObject);
     procedure actnReConstructTDResultFilesUpdate(Sender: TObject);
     procedure actnRefreshExecute(Sender: TObject);
@@ -209,8 +208,10 @@ begin
       BuildAndSaveMeetProgramDetailed(fn) // Detailed meet program.
     else if Settings.MeetProgramType = 0 then
       BuildAndSaveMeetProgramBasic(fn); // Basic meet program.
-    // perform a TDBAdvGrid display update.
-    AppData.RefreshSCM;
+    // re-set to head of session.
+    AppData.dsEvent.DataSet.First;
+    AppData.dsHeat.DataSet.First;
+    // update grid.
     SCMGrid.EndUpdate;
     // Message user.
     MessageBox(0,
@@ -380,7 +381,6 @@ begin
   UpdateCaption;
 end;
 
-
 procedure TMain.DeleteFilesWithWildcard(const APath, APattern: string);
 var
   SR: TSearchRec;
@@ -399,106 +399,31 @@ begin
   end;
 end;
 
-{
-procedure TdtExec.actnReConstructDO4Execute(Sender: TObject);
-var
-  SessionID, currEv, currHt: integer;
-  sess: string;
-  mr: TModalResult;
-begin
-  if AppData.qrysession.Active then
-  begin
-    mr := MessageBox(0,
-      PChar('''
-      This uses the data in the current session to build Dolphin Timing DO4 files.
-      Files are saved to the EventCSV folder specified in preferences.
-      Do you want to perform the reconstruct?
-      '''),
-      PChar('Re-construct and export DO4 files...'), MB_ICONQUESTION or
-        MB_YESNO);
-    if isPositiveResult(mr) then
-    begin
-      scmGrid.BeginUpdate;
-      scmGrid.DataSource.DataSet.DisableControls;
-      currEv := AppData.qryEvent.FieldByName('EventID').AsInteger;
-      currHt := AppData.qryHeat.FieldByName('HeatID').AsInteger;
-      SessionID := AppData.qrysession.FieldByName('SessionID').AsInteger;
-      // remove the current session DO4 files.
-      sess := Get3Digits(SessionID);
-      DeleteFilesWithWildcard(Settings.DolphinReConstructDO4, sess + '-*.DO4');
-      // re-contruct the Dolphin Timing DO4 files for this session.
-      ReConstructDO4(SessionID);
-      AppData.LocateEvent(currEv);
-      AppData.LocateHeat(currHt);
-      scmGrid.DataSource.DataSet.EnableControls;
-      scmGrid.EndUpdate;
-      MessageBox(0,
-        PChar('Re-construct and export of DO4 files is complete.'),
-        PChar('DO4 files ...'), MB_ICONINFORMATION or MB_OK);
-    end;
-  end;
-end;
-
-procedure TdtExec.actnReConstructDO3Execute(Sender: TObject);
-var
-  SessionID, currEv, currHt: integer;
-  sess: string;
-  mr: TModalResult;
-begin
-  if AppData.qrysession.Active then
-  begin
-    mr := MessageBox(0,
-      PChar('''
-      This uses the data in the current session to build Dolphin Timing DO3 files.
-      Files are saved to the EventCSV folder specified in preferences.
-      Do you want to perform the reconstruct?
-      '''),
-      PChar('Re-construct and export DO3 files...'), MB_ICONQUESTION or
-        MB_YESNO);
-    if isPositiveResult(mr) then
-    begin
-      scmGrid.BeginUpdate;
-      scmGrid.DataSource.DataSet.DisableControls;
-      currEv := AppData.qryEvent.FieldByName('EventID').AsInteger;
-      currHt := AppData.qryHeat.FieldByName('HeatID').AsInteger;
-      SessionID := AppData.qrysession.FieldByName('SessionID').AsInteger;
-      // remove the current session DO3 files.
-      sess := Get3Digits(SessionID);
-      DeleteFilesWithWildcard(Settings.DolphinReConstructDO3, sess + '-*.DO3');
-      // re-contruct the Dolphin Timing DO3 files for this session.
-      ReConstructDO4(SessionID);
-      AppData.LocateEvent(currEv);
-      AppData.LocateHeat(currHt);
-      scmGrid.DataSource.DataSet.EnableControls;
-      scmGrid.EndUpdate;
-      MessageBox(0,
-        PChar('Re-construct and export of DO3 files is complete.'),
-        PChar('DO3 files ...'), MB_ICONINFORMATION or MB_OK);
-    end;
-  end;
-end;
-}
-
 procedure TMain.actnReConstructTDResultFilesExecute(Sender: TObject);
+var
+  dlg: TReConstructDlg;
+  AModalResult: TModalResult;
 begin
-  ReconstructAndExportFiles(DO4_FILE_EXTENSION, 'DO4');
-end;
-
-procedure TMain.actnReConstructDO3Execute(Sender: TObject);
-begin
-  ReconstructAndExportFiles(DO3_FILE_EXTENSION, 'DO3');
-end;
-
-
-procedure TMain.actnReConstructDO3Update(Sender: TObject);
-begin
-  if Assigned(AppData) then
+  dlg := TReConstructDlg.Create(self);
+  AModalResult := dlg.ShowModal;
+  if IsPositiveResult(AModalResult) then
   begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-      TAction(Sender).Enabled := false;
+    // ASSERT: Settings may have changed.
+    Settings.LoadFromFile();
+    // The default filename supplied in settings.
+    SCMGrid.BeginUpdate;
+    ReconstructSession(AppData.qrySession.FieldByName('SessionID').AsInteger);
+    // re-set to head of session.
+    AppData.dsEvent.DataSet.First;
+    AppData.dsHeat.DataSet.First;
+    // update grid.
+    SCMGrid.EndUpdate;
+    // Message user.
+    MessageBox(0,
+      PChar('Re-Construct & Export of the Time Drops Results has been completed.'),
+      PChar('Re-Construct & Export Meet Program'), MB_ICONINFORMATION or MB_OK);
+  end;
+  dlg.Free;
 end;
 
 procedure TMain.actnReConstructTDResultFilesUpdate(Sender: TObject);

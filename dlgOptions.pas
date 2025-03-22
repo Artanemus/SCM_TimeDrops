@@ -33,6 +33,9 @@ type
     vimgDT: TVirtualImage;
     BrowseFolderDlg: TFileOpenDialog;
     rgrpPrecedence: TRadioGroup;
+    rgrpSwimmerAge: TRadioGroup;
+    dtpickSwimmerAge: TDateTimePicker;
+    lblSwimmerAge: TLabel;
     procedure btnCloseClick(Sender: TObject);
     procedure btnedtAppDataRightButtonClick(Sender: TObject);
     procedure btnedtEventCSVRightButtonClick(Sender: TObject);

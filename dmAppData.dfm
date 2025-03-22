@@ -19655,8 +19655,10 @@ object AppData: TAppData
       '  )'
       '*/'
       
-        'DECLARE @SessionID INT = 100; -- SessionID of the session to get' +
-        ' swimmers for'
+        'DECLARE @SessionID INT; -- SessionID of the session to get swimm' +
+        'ers for'
+      ''
+      'SET @SessionID = :SESSIONID;'
       ''
       'SELECT DISTINCT'
       #9#9' [Member].[MemberID] as swimmerId'
@@ -19705,6 +19707,13 @@ object AppData: TAppData
       'ORDER BY [Member].[MemberID] ASC')
     Left = 272
     Top = 376
+    ParamData = <
+      item
+        Name = 'SESSIONID'
+        DataType = ftInteger
+        ParamType = ptInput
+        Value = Null
+      end>
   end
   object qrySplit: TFDQuery
     Connection = SCM.scmConnection

@@ -22,6 +22,7 @@ object Main: TMain
     Top = 0
     Width = 1444
     Height = 25
+    UseSystemFont = False
     ActionManager = actnManager
     Caption = 'actnMenuBar'
     Color = clMenuBar
@@ -30,7 +31,7 @@ object Main: TMain
     ColorMap.BtnSelectedFont = clBlack
     ColorMap.UnusedColor = clWhite
     Font.Charset = DEFAULT_CHARSET
-    Font.Color = clWindowText
+    Font.Color = clBlack
     Font.Height = -12
     Font.Name = 'Segoe UI'
     Font.Style = []
@@ -1682,13 +1683,11 @@ object Main: TMain
                 Items = <
                   item
                     Action = actnExportMeetProgram
-                    Caption = '&Export JSON Meet Program ...'
                     ImageIndex = 1
                     ImageName = 'file_saveAlt'
                   end
                   item
                     Action = actnReConstructTDResultFiles
-                    Caption = '&Re-construct and export TD results ...'
                     ImageIndex = 9
                     ImageName = 'build'
                   end>
@@ -1788,7 +1787,7 @@ object Main: TMain
     end
     object actnExportMeetProgram: TAction
       Category = 'Export'
-      Caption = 'Export JSON Meet Program ...'
+      Caption = 'Export Time-Drops Meet Program ...'
       ImageIndex = 1
       ImageName = 'file_saveAlt'
       OnExecute = actnExportMeetProgramExecute
@@ -1796,7 +1795,7 @@ object Main: TMain
     end
     object actnReConstructTDResultFiles: TAction
       Category = 'Export'
-      Caption = 'Re-construct and export TD results ...'
+      Caption = 'Re-construct and export Time-Drops Results ...'
       ImageIndex = 9
       ImageName = 'build'
       OnExecute = actnReConstructTDResultFilesExecute

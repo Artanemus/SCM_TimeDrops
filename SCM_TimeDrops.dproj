@@ -192,6 +192,10 @@
             <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="dtTimingSystemStatus.pas"/>
+        <DCCReference Include="tdReConstructDlg.pas">
+            <Form>ReConstructDlg</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
