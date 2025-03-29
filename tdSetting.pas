@@ -35,6 +35,7 @@ type
     CalcSwimmerAge: integer;
     EnableRenameResultFiles: boolean;
     RaceNumber: integer;
+    lastMeetProgramDate: TDateTime;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -72,6 +73,9 @@ begin
   CalcRTMethod := 0;
   CalcSwimmerAge := 0;
   EnableRenameResultFiles := false;
+  // The datetime of the last meet program contructed and saved _
+  // (by SCM_TimeDrops) to the Time-Drops Meet folder.
+  lastMeetProgramDate := Now;
   {
   ForceDirectories creates a new directory as specified in Dir,
   which must be a fully-qualified path name. If the directories given in

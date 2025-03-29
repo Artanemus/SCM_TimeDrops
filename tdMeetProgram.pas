@@ -223,10 +223,10 @@ begin
     dt := DateOf(AppData.qrySession.FieldByName('SessionStart').AsDateTime);
     S['meetName'] := AppData.qrySession.FieldByName('Caption').AsString;
     I['meetProgramVersion'] := 1;
-    Null['meetProgramDateTime'];
+    Null['meetProgramDateTime'] := jNull;
     S['meetHostTeamName'] := AppData.qrySwimClub.FieldByName('Caption').AsString;
     S['meetStartDate'] := FormatDateTime('yyyy-mm-dd', dt, AFormatSettings);
-    Null['meetEndDate'];
+    Null['meetEndDate'] := jNull;
     with A['meetEvents']do
     begin
       AppData.qryEvent.ApplyMaster;
@@ -249,10 +249,10 @@ begin
         aEventID := AppData.qryEvent.FieldByName('EventID').AsInteger;
         EventObj.I['eventMinAge'] := GetMINAge(aEventID, AEventTypeID);
         EventObj.I['eventMaxAge'] := GetMAXAge(aEventID, AEventTypeID);
-        EventObj.Null['eventDescription'];
-        EventObj.Null['eventShortLabel'];
-        EventObj.Null['eventFullLabel'];
-        EventObj.Null['eventStartTime'];
+        EventObj.Null['eventDescription'] := jNull;
+        EventObj.Null['eventShortLabel'] := jNull;
+        EventObj.Null['eventFullLabel'] := jNull;
+        EventObj.Null['eventStartTime'] := jNull;
         Add(EventObj);
         AppData.qryEvent.Next;
       end;
@@ -265,7 +265,7 @@ begin
       SessObj.S['sessionName'] := AppData.qrySession.FieldByName('Caption').AsString;
       dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
       SessObj.S['sessionBeginAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', dt, AFormatSettings);
-      SessObj.Null['sessionEndAt'];
+      SessObj.Null['sessionEndAt'] := jNull;
       with SessObj.A['sessionRaces'] do
       begin
         AppData.qryEvent.First;
@@ -310,10 +310,10 @@ begin
                       seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
                       LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
                     except on E: Exception do
-                      LaneObj.Null['laneSeedTime'];
+                      LaneObj.Null['laneSeedTime'] := jNull;
                     end;
                     LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger);
-                    LaneObj.Null['laneTeamId'];
+                    LaneObj.Null['laneTeamId'] := jNull;
                     Add(LaneObj);
                     AppData.qryINDV.Next;
                   end;
@@ -339,9 +339,9 @@ begin
                       seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
                       LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
                     except on E: Exception do
-                      LaneObj.Null['laneSeedTime'];
+                      LaneObj.Null['laneSeedTime'] := jNull;
                     end;
-                    LaneObj.Null['laneSwimmerId'];
+                    LaneObj.Null['laneSwimmerId'] := jNull;
                     LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
                     Add(LaneObj);
                     AppData.qryTEAM.Next;
@@ -354,7 +354,7 @@ begin
           AppData.qryEvent.Next;
         end;
       end;
-      SessObj.Null['sessionPool'];
+      SessObj.Null['sessionPool'] := jNull;
       SessObj.B['sessionIsCurrent'] := true;
       Add(SessObj);
     end;
@@ -378,7 +378,7 @@ begin
           teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
           teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
           teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
-          teamObj.Null['teamMascot'];
+          teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
           AppData.qryListTeams.Next;
         end;
@@ -524,9 +524,9 @@ begin
         EventObj.I['eventMaxAge'] := GetMAXAge(aEventID, AEventTypeID);
         // Description
         EventObj.S['eventDescription'] := AppData.qryEvent.FieldByName('Caption').AsString;
-        EventObj.Null['eventShortLabel'];
-        EventObj.Null['eventFullLabel'];
-        EventObj.Null['eventStartTime'];
+        EventObj.Null['eventShortLabel'] := jNull;
+        EventObj.Null['eventFullLabel'] := jNull;
+        EventObj.Null['eventStartTime'] := jNull;
 
         (*
         // Records
@@ -624,10 +624,10 @@ begin
                       seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
                       LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
                     except on E: Exception do
-                      LaneObj.Null['laneSeedTime'];
+                      LaneObj.Null['laneSeedTime'] := jNull;
                     end;
                     LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger);
-                    LaneObj.Null['laneTeamId'];
+                    LaneObj.Null['laneTeamId'] := jNull;
                     Add(LaneObj);
                     AppData.qryINDV.Next;
                   end;
@@ -653,9 +653,9 @@ begin
                       seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
                       LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
                     except on E: Exception do
-                      LaneObj.Null['laneSeedTime'];
+                      LaneObj.Null['laneSeedTime'] := jNull;
                     end;
-                    LaneObj.Null['laneSwimmerId'];
+                    LaneObj.Null['laneSwimmerId'] := jNull;
                     LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
                     Add(LaneObj);
                     AppData.qryTEAM.Next;
@@ -704,7 +704,7 @@ begin
           teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
           teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
           teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
-          teamObj.Null['teamMascot'];
+          teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
           AppData.qryListTeams.Next;
         end;
@@ -761,7 +761,7 @@ begin
           teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
           teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
           teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
-          teamObj.Null['teamMascot'];
+          teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
           AppData.qryListTeams.Next;
         end;
@@ -798,7 +798,11 @@ begin
   end;
 
   if Assigned(Settings) then
+  begin
     Settings.RaceNumber := currRaceNumber;
+    // last time the meet program was sent to Time-Drops.
+    Settings.lastMeetProgramDate := Now;
+  end;
   
   X.SaveTo(AFileName);
   Result := True;

@@ -18,6 +18,7 @@ type
     btnedtExportFolder: TButtonedEdit;
     BrowseFolderDlg: TFileOpenDialog;
     BalloonHint1: TBalloonHint;
+    lblInfo: TLabel;
     procedure btnCancelClick(Sender: TObject);
     procedure btnedtExportFolderClick(Sender: TObject);
     procedure btnOkClick(Sender: TObject);

@@ -1683,11 +1683,13 @@ object Main: TMain
                 Items = <
                   item
                     Action = actnExportMeetProgram
+                    Caption = '&Export Time-Drops Meet Program ...'
                     ImageIndex = 1
                     ImageName = 'file_saveAlt'
                   end
                   item
                     Action = actnReConstructTDResultFiles
+                    Caption = '&Re-construct and export Time-Drops Results ...'
                     ImageIndex = 9
                     ImageName = 'build'
                   end>

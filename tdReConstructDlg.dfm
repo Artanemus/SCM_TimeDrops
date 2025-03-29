@@ -24,8 +24,6 @@ object ReConstructDlg: TReConstructDlg
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 272
-    ExplicitWidth = 655
     object btnOk: TButton
       Left = 256
       Top = 6
@@ -54,8 +52,6 @@ object ReConstructDlg: TReConstructDlg
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 655
-    ExplicitHeight = 272
     object lblEventCSV: TLabel
       Left = 3
       Top = 33
@@ -75,6 +71,14 @@ object ReConstructDlg: TReConstructDlg
       ImageName = 'info'
       OnMouseEnter = vimgInfo1MouseEnter
       OnMouseLeave = vimgInfo1MouseLeave
+    end
+    object lblInfo: TLabel
+      Left = 3
+      Top = 95
+      Width = 344
+      Height = 21
+      Caption = '(Export will include a "Timing System" status file.) '
+      Enabled = False
     end
     object btnedtExportFolder: TButtonedEdit
       Left = 3

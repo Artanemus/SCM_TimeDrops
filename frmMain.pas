@@ -143,7 +143,7 @@ type
     procedure UpdateEventDetailsLabel();
     procedure UpdateDTDetailsLabel();
     procedure DeleteFilesWithWildcard(const APath, APattern: string);
-    procedure ReconstructAndExportFiles(fileExtension: string; messageText: string);
+//    procedure ReconstructAndExportFiles(fileExtension: string; messageText: string);
     procedure UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
         dtActiveRT);
 
@@ -1296,6 +1296,7 @@ begin
   Caption := 'SwimClubMeet - Dolphin Timing. ';
 end;
 
+(*
 procedure TMain.ReconstructAndExportFiles(fileExtension: string; messageText:
   string);
 var
@@ -1321,7 +1322,7 @@ begin
     end;
   end;
 end;
-
+*)
 
 procedure TMain.SaveToSettings;
 begin

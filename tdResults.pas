@@ -8,27 +8,6 @@ implementation
 uses
   SysUtils, Classes, System.JSON;
 
-procedure ReadJsonFile(const FileName: string);
-var
-  JSONObj, lanesObj: ISuperObject;
-  FileStream: TFileStream;
-  Iterator1, Iterator2: TSuperEnumerator<IJSONPair>;
-  cast1, cast2: ICast;
-begin
-  FileStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
-  try
-    JSONObj := TSuperObject.ParseStream(FileStream, True);
-    if Assigned(JSONObj) and (JSONObj.DataType = dtObject) then
-    begin
-      // Process the JSON object
-      Writeln(JSONObj.AsJSon);
-
-      // Iterate over the JSON object using enumerator
-      JSONObj.First;
-      Iterator1 := JSONObj.GetEnumerator;
-      while Iterator1.MoveNext do
-      begin
-        cast1 := Iterator1.GetCurrent;
 (*
         {
           "createdAt": "2023-07-31T17:53:00.042-07:00",
@@ -63,56 +42,133 @@ begin
           }
         }
 *)
-        if cast1.Name = 'eventNumber' then
-        begin
-          AppData.tblmEvent.Insert;
-          AppData.tblmEvent.FieldByName('EventNum').AsInteger := cast1.AsInteger;
-          AppData.tblmEvent.Post;
-        end;
-        if cast1.Name = 'heatNumber' then
-        begin
-          AppData.tblmHeat.Insert;
-          AppData.tblmHeat.FieldByName('HeatNum').AsInteger := cast1.AsInteger;
-              AppData.tblmHeat.FieldByName('EventID').AsInteger :=
-                AppData.tblmEvent.FieldByName('EventID').AsInteger;
-          AppData.tblmHeat.Post;
-        end;
 
-        if cast1.Name = 'lanes' then
-        begin
-          lanesObj := TSuperObject.CreateCasted(JSONObj as IJSONAncestor);
-          lanesObj.First;
-          Iterator2 := lanesObj.GetEnumerator;
-          while Iterator2.MoveNext do
+
+procedure ReadJsonFile(const FileName: string);
+var
+  JSONObj, laneObject: ISuperObject;
+  lanesObj: ISuperArray;
+  finalTimeValue: ISuperExpression;
+  FileStream: TFileStream;
+  aIterator: TSuperEnumerator<IJSONAncestor>;
+  laneValue: ICast;
+  aSessionID, aEventID, aEventNum, aHeatID, aHeatNum, laneNum: integer;
+begin
+  FileStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
+  try
+    JSONObj := TSuperObject.ParseStream(FileStream, True);
+    if Assigned(JSONObj) and (JSONObj.DataType = dtObject) then
+    begin
+      // Process the JSON object
+      Writeln(JSONObj.AsJSon);
+      if JSONObj.Contains('sessionId') then
+      begin
+        aSessionID := JSONobj.I['sessionId'];
+        if (aSessionID <> 0) then
+          if not AppData.LocateDTSessionID(aSessionID) then
           begin
-            Cast2 := Iterator2.GetCurrent;
-            if Cast2.Name = 'lane' then
-            begin
-              AppData.tblmLane.Insert;
-              AppData.tblmLane.FieldByName('HeatID').AsInteger :=
-                AppData.tblmHeat.FieldByName('HeatID').AsInteger;
-              AppData.tblmLane.FieldByName('LaneNum').AsInteger := Cast2.AsInteger;
-              AppData.tblmLane.Post;
-            end;
-            if Cast2.Name = 'finalTime' then
-            begin
-              AppData.tblmLane.Edit;
-              AppData.tblmLane.FieldByName('finalTime').AsInteger := Cast2.AsInteger;
-              AppData.tblmLane.Post;
-            end;
-
+            AppData.tblmSession.Insert;
+            AppData.tblmSession.FieldByName('sessionId').AsInteger := aSessionId;
+            AppData.tblmSession.Post;
           end;
+      end;
 
+      AppData.tblmEvent.ApplyMaster;
+      if JSONObj.Contains('eventNumber') then
+      begin
+        aEventNum := JSONobj.I['eventNumber'];
+        if (aEventNum <> 0) then
+        begin
+          if not AppData.LocateDTEventNum(aSessionID, aEventNum, dtPrecFileName) then
+          begin
+            AppData.tblmEvent.Insert;
+            AppData.tblmEvent.FieldByName('EventNum').AsInteger := aEventNum;
+            AppData.tblmEvent.Post;
+          end;
+        end;
+        {TODO -oBSA -cGeneral : Locate EventId}
+        aEventID := AppData.tblmEvent.FieldByName('EventID').AsInteger;
+      end;
+
+      AppData.tblmHeat.ApplyMaster;
+      if JSONObj.Contains('heatNumber') then
+      begin
+        aHeatNum := JSONobj.I['heatNumber'];
+        if (aHeatNum <> 0) then
+        begin
+          if not AppData.LocateDTHeatNum(aEventID, aHeatNum, dtPrecFileName) then
+          begin
+            AppData.tblmHeat.Insert;
+            AppData.tblmHeat.FieldByName('HeatNum').AsInteger := aEventNum;
+            AppData.tblmHeat.Post;
+          end;
+        end;
+        {TODO -oBSA -cGeneral : Locate EventId}
+        aHeatID := AppData.tblmHeat.FieldByName('HeatID').AsInteger;
+      end;
+
+      if JSONObj.Contains('Lanes') then
+      begin
+        lanesObj := JSONObj.A['Lanes']; // Get the array
+        if Assigned(lanesObj) then // Check if it's actually an array
+        begin
+          // Assuming ApplyMaster sets the HeatID filter/parameter correctly
+          AppData.tblmLane.ApplyMaster;
+
+          for laneValue in lanesObj do // Iterate through array elements
+          begin
+            if (laneValue.DataType = dtObject) then // Ensure the array element is an object
+            begin
+              laneObject := laneValue.AsObject; // Get the lane object
+
+              // --- Extract data from laneObject ---
+              laneNum := laneObject.I['lane']; // Assuming 'lane' field exists and is integer
+
+              // --- Locate or Insert/Edit Lane Record ---
+              // You need a function like LocateDTLaneNum(HeatID, LaneNum): Boolean;
+              if AppData.LocateDTLaneNum(laneNum) then // Or however you locate lanes
+              begin
+                AppData.tblmLane.Edit;
+              end
+              else
+              begin
+                AppData.tblmLane.Insert;
+                AppData.tblmLane.FieldByName('HeatID').AsInteger := aHeatID;
+                AppData.tblmLane.FieldByName('LaneNum').AsInteger := laneNum;
+              end;
+
+              // --- Update fields (handle nulls!) ---
+              finalTimeValue := laneObject['finalTime']; // ISuperExpression...
+
+              if Assigned(finalTimeValue) and (finalTimeValue.DataType <> dtNull) then
+              begin
+                {TODO -oBSA -cGeneral : convert 10th of seconds to datetime...}
+                // TTime t := finalTimeValue.AsInteger * 10 ...
+//                AppData.tblmLane.FieldByName('finalTime').AsInteger := finalTimeValue.AsInteger;
+              end
+              else
+                AppData.tblmLane.FieldByName('finalTime').Clear;
+
+              // Add similar checks and assignments for padTime, timer1, isEmpty, isDq, etc.
+              // if they exist in your JSON and database table.
+
+              // ... other fields ...
+
+              AppData.tblmLane.Post; // Post the inserted or edited record
+            end;
+          end;
         end;
       end;
 
+
     end;
+
+
+
   finally
     FileStream.Free;
   end;
 end;
-
-
 
 procedure ReadJsonFileDelphi(const FileName: string);
 var

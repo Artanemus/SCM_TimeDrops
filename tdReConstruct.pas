@@ -45,7 +45,7 @@ interface
 
 uses dmSCM, dmAppData, System.SysUtils, System.Classes, system.Hash,
 DateUtils, variants, SCMDefines, Data.DB, tdSetting, XSuperJSON, XSuperObject,
-FireDAC.Stan.Param;
+FireDAC.Stan.Param, dtTimingSystemStatus;
 
 procedure ReConstructSession(SessionID: integer);
 
@@ -58,7 +58,7 @@ raceNumber: integer;
 laneObj: ISuperObject;
 
 
-function SaveToJSONFile: boolean;
+function SaveToTimeDropResultFile: boolean;
 var
 fn: TFileName;
 begin
@@ -215,11 +215,12 @@ var
   dt: TDateTime;
   fs: TFormatSettings;
   sec: integer;
-  raceObj, splitObj: ISuperObject;
-  ID: integer;
+  splitObj: ISuperObject;
+  ID, LenOfPool, accDist: integer;
   laneIsEmpty: boolean;
 begin
   if ADataSet.IsEmpty then exit;
+  LenOfPool := AppData.qrySwimClub.FieldByName('LenOfPool').AsInteger;
 
   ADataSet.First;
   fs := TFormatSettings.Create;
@@ -254,12 +255,12 @@ begin
 
       if laneIsEmpty then
       begin
-        LaneObj.Null['isEmpty'];
-        LaneObj.Null['finalTime'];
-        RaceObj.Null['padTime'];
-        LaneObj.Null['timer1'];
-        LaneObj.Null['timer2'];
-        LaneObj.Null['timer3'];
+        LaneObj.B['isEmpty'] := true;
+        LaneObj.Null['finalTime'] := jNull; // Assign JSON null if both are missing
+        LaneObj.Null['padTime'] := jNull;
+        LaneObj.Null['timer1'] := jNull;
+        LaneObj.Null['timer2'] := jNull;
+        LaneObj.Null['timer3'] := jNull;
       end
       else
       begin
@@ -273,16 +274,16 @@ begin
           dt := GetMaxSplitTime(ADataSet.FieldByName('TeamID').AsInteger, aEventType);
         // T I M E K E E P E R .
         // not timekeeper 'Time-Drop' given for swimmer in lane.
-        if VarIsNull(vtime) or VarIsEmpty(vtime) or vtime=0 then
+        if VarIsNull(vtime) or VarIsEmpty(vtime) then
         begin
           if dt<> 0 then
             // use padtime as final time
             LaneObj.I['finalTime'] := ConverDateTimeTo100thSeconds(dt)
           else
-            LaneObj.Null['finalTime'];
+            LaneObj.Null['finalTime'] := jNull;
 
-          RaceObj.Null['padTime'];
-          LaneObj.Null['timer1'];
+          LaneObj.Null['padTime'] := jNull;
+          LaneObj.Null['timer1'] := jNull;
         end
         else
         begin
@@ -297,62 +298,79 @@ begin
         end;
         // only present when using pads
         if (dt <> 0) then
-          RaceObj.I['padTime'] := ConverDateTimeTo100thSeconds(dt)
+          LaneObj.I['padTime'] := ConverDateTimeTo100thSeconds(dt)
         else
-          RaceObj.Null['padTime'];
+          LaneObj.Null['padTime'] := jNull;
 
 
 {TODO -oBSA -cGeneral : Add additional debug information to 'Results' file.}
 {$IFDEF DEBUG}
         // calculate a re-construction race-time for timekeeper 2 and 3
-        LaneObj.Null['timer2'];
-        LaneObj.Null['timer3'];
+        LaneObj.Null['timer2'] := jNull;
+        LaneObj.Null['timer3'] := jNull;
 {$ELSE }
         // not used in re-construct...
-        LaneObj.Null['timer2'];
-        LaneObj.Null['timer3'];
+        LaneObj.Null['timer2'] := jNull;
+        LaneObj.Null['timer3'] := jNull;
 {$ENDIF}
 
 
       end;
 
       LaneObj.B['isDq'] := false;  // for relay judging platform
-
       Add(LaneObj);
 
-      {TODO -oBSA -cGeneral : Insert split data into superObject. }
 
+
+      // --- SPLITS --- (Simplified the logic slightly)
       With LaneObj.A['Splits'] do
       begin
-        AppData.qrySplit.Close;
-        AppData.qrySplit.ParamByName('EVENTTYPEID').AsInteger := Ord(aEventType);
-        if aEventType = etINDV then
-        begin
-          ID := AppData.qryINDV.FieldByName('EntrantID').AsInteger;
-          AppData.qrySplit.ParamByName('ID').AsInteger := ID;
-        end
-        else if aEventType = etTEAM then
-        begin
-          ID := AppData.qryTEAM.FieldByName('TeamID').AsInteger;
-          AppData.qrySplit.ParamByName('ID').AsInteger := ID;
-        end;
-        AppData.qrySplit.Prepare;
-        AppData.qrySplit.Open;
-        if AppData.qrySplit.Active then
-        begin
-          AppData.qrySplit.first;
-          while not AppData.qrySplit.eof do
+          AppData.qrySplit.Close;
+          AppData.qrySplit.ParamByName('EVENTTYPEID').AsInteger := Ord(aEventType);
+
+          // Determine ID based on event type only if the lane is NOT empty
+          ID := 0;
+          if not laneIsEmpty then
           begin
-            splitObj := SO();
-            splitObj.I['distance'] := 25;
-            splitObj.I['time'] := ConverDateTimeTo100thSeconds(AppData.qrySplit.FieldByName('RaceTime').AsDateTime);
-            Add(splitObj);
-            AppData.qrySplit.next;
-          end;
-        end;
-      end;
+              if aEventType = etINDV then
+              begin
+                  ID := ADataSet.FieldByName('EntrantID').AsInteger;
+                  AppData.qrySplit.ParamByName('ID').AsInteger := ID;
+              end
+              else if aEventType = etTEAM then
+              begin
+                  ID := ADataSet.FieldByName('TeamID').AsInteger;
+                  AppData.qrySplit.ParamByName('ID').AsInteger := ID;
+              end;
 
-
+              // Only query splits if we have a valid ID
+              if ID > 0 then // Or whatever condition indicates a valid ID
+              begin
+                  AppData.qrySplit.Prepare; // Prepare only if needed
+                  AppData.qrySplit.Open;
+                  if AppData.qrySplit.Active and not AppData.qrySplit.IsEmpty then // Check if query returned rows
+                  begin
+                      accDist := 0; // Start accumulated distance at 0
+                      AppData.qrySplit.First;
+                      while not AppData.qrySplit.Eof do
+                      begin
+                          vtime := AppData.qrySplit.FieldByName('SplitTime').AsVariant;
+                          // Process only if SplitTime is not null/empty/zero
+                          if not (VarIsNull(vtime) or VarIsEmpty(vtime) or (VarIsType(vtime, varDate) and (TDateTime(vtime)=0))) then
+                          begin
+                              splitObj := SO();
+                              accDist := accDist + LenOfPool; // Increment distance *before* adding
+                              splitObj.I['distance'] := accDist;
+                              splitObj.I['time'] := ConverDateTimeTo100thSeconds(TDateTime(vtime)); // Use the valid vtime
+                              Add(splitObj); // Add to LaneObj.A['Splits']
+                          end;
+                          // Always move next, even if split time was invalid, to avoid infinite loop
+                          AppData.qrySplit.Next;
+                      end; // while not Eof
+                  end; // if Active and not IsEmpty
+              end; // if ID > 0
+          end; // if not laneIsEmpty
+      end; // With LaneObj.A['Splits']
 
       ADataSet.Next;
     end;
@@ -361,12 +379,30 @@ end;
 
 
 procedure ReConstructHeat(aEventType: scmEventType);
+var
+dt: TDateTime;
 begin
   AppData.qryHeat.ApplyMaster;
   if AppData.qryHeat.IsEmpty then exit;
   AppData.qryHeat.first;
   while not AppData.qryHeat.eof do
   begin
+
+      // Create the main SuperObject
+    X := SO();
+    // SESSION DATA
+    X.S['type'] := 'Results';
+    X.S['createdAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
+    X.S['protocolVersion'] := '1.1.0';
+    X.I['sessionNumber'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
+    dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
+    X.S['startTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', dt, AFormatSettings);
+
+    // EVENT DATA
+    X.I['eventID'] := AppData.qryEvent.FieldByName('EventID').AsInteger;
+    X.I['eventNumber'] := AppData.qryEvent.FieldByName('EventNum').AsInteger;
+
+    // HEAT DATA
     X.I['heatID'] := AppData.qryHeat.FieldByName('HeatID').AsInteger;
     X.I['heatNumber'] := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
     X.S['startTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
@@ -385,8 +421,12 @@ begin
       ReConstructLanes(AppData.qryTEAM, aEventType);
     end;
     // write out the TSuperObject to a JSON Time-Drops 'Results' file
-    SaveToJSONFile;
-    {TODO -oBSA -cGeneral : write/update 'Timing System Status' }
+    SaveToTimeDropResultFile;
+    // write/update 'Timing System Status' }
+    BuildAndSaveTimingSystemStatus(Settings.ReConstruct,
+      AppData.qrySession.FieldByName('SessionID').AsInteger, X.I['heatNumber'],
+      X.I['eventNumber']);
+
     AppData.qryHeat.Next
   end;
 end;
@@ -400,8 +440,6 @@ begin
   AppData.qryEvent.first;
   while not AppData.qryEvent.eof do
   begin
-    X.I['eventID'] := AppData.qryEvent.FieldByName('EventID').AsInteger;
-    X.I['eventNumber'] := AppData.qryEvent.FieldByName('EventNum').AsInteger;
 
     AppData.qryDistance.ApplyMaster;
     aEventType := scmEventType(AppData.qryDistance.FieldByName('EventTypeID').AsInteger);
@@ -414,7 +452,7 @@ end;
 
 procedure ReConstructSession(SessionID: integer);
 var
-  dt: TDateTime;
+  found: boolean;
 begin
   // Date/Time in ISO 8601 UTC format
   AFormatSettings := TFormatSettings.Create;
@@ -425,20 +463,15 @@ begin
   // Core AppData tables are Master-Detail schema.
   // qrySession is cued, ready to process.
   raceNumber := 0;
+  found := true;
   // check current session
   if AppData.qrySession.FieldByName('SessionID').AsInteger <> SessionID then
-    if AppData.LocateSCMSessionID(SessionID) then
-    begin
-      // Create the main SuperObject
-      X := SO();
-      X.S['type'] := 'Results';
-      X.S['createdAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
-      X.S['protocolVersion'] := '1.1.0';
-      X.I['sessionNumber'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
-      dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
-      X.S['startTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', dt, AFormatSettings);
-      ReConstructEvent(SessionID);
-    end;
+    found := AppData.LocateSCMSessionID(SessionID);
+
+  if found then
+  begin
+    ReConstructEvent(SessionID);
+  end;
 
 
 end;

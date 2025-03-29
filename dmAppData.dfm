@@ -19717,8 +19717,47 @@ object AppData: TAppData
   end
   object qrySplit: TFDQuery
     Connection = SCM.scmConnection
+    SQL.Strings = (
+      'DECLARE @ID INT;'
+      'DECLARE @EventTypeID INT;'
+      ''
+      'SET @ID = :ID;'
+      'SET @EventTypeID = :EVENTTYPEID;'
+      ''
+      'IF @EventTypeID = 1'
+      'BEGIN'
+      'SELECT Split.SplitID,'
+      '    SplitTime '
+      'FROM SwimClubMeet.dbo.Entrant'
+      'LEFT JOIN Split ON Entrant.EntrantID = Split.EntrantID'
+      'WHERE Entrant.EntrantID = @ID'
+      'ORDER BY SplitID ASC;'
+      'END'
+      ''
+      'ELSE'
+      'BEGIN'
+      'SELECT TeamSplit.TeamSplitID,'
+      '    SplitTime '
+      'FROM SwimClubMeet.dbo.Team'
+      'LEFT JOIN TeamSplit ON Team.TeamID = TeamSplit.TeamID'
+      'WHERE Team.TeamID = @ID'
+      'ORDER BY TeamSplitID ASC;'
+      'END')
     Left = 384
     Top = 376
+    ParamData = <
+      item
+        Name = 'ID'
+        DataType = ftInteger
+        ParamType = ptInput
+        Value = 1
+      end
+      item
+        Name = 'EVENTTYPEID'
+        DataType = ftInteger
+        ParamType = ptInput
+        Value = 1
+      end>
   end
   object qryListTeams: TFDQuery
     Connection = SCM.scmConnection
