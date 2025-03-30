@@ -3,7 +3,7 @@ unit uAppUtils;
 interface
 
 uses dmAppData, vcl.ComCtrls, Math, System.Types, System.IOUtils,
-  SysUtils, Windows, StrUtils, System.Classes, SCMDefines;
+  Windows, System.Classes, SCMDefines, System.StrUtils, SysUtils ;
 
 function StripAlphaChars(const InputStr: string): string;
 
@@ -33,39 +33,31 @@ type
     // After prepare the following routines can be called.
     // --------------------------------------------
     { TStringList - HEADER}
-    function sListHeaderSessionNum(): integer;
-    function sListHeaderEventNum(): integer;
-    function sListHeaderHeatNum(): integer;
-    function sListHeaderGenderChar(): char;
+//    function sListHeaderSessionNum(): integer;
+//    function sListHeaderEventNum(): integer;
+//    function sListHeaderHeatNum(): integer;
+//    function sListHeaderGenderChar(): char;
     { TStringList - BODY - ref: fSListIndex }
-    function sListBodyLane(LineIndex: integer): integer;
-    function sListBodyTimeKeepers(LineIndex: integer; var ATimeKeepers: array of double): boolean;
-    function sListBodySplits(LineIndex: integer; var ASplits: array of double): boolean;
+//    function sListBodyLane(LineIndex: integer): integer;
+//    function sListBodyTimeKeepers(LineIndex: integer; var ATimeKeepers: array of double): boolean;
+//    function sListBodySplits(LineIndex: integer; var ASplits: array of double): boolean;
     { TStringList - FOOTER }
-    function sListFooterHashStr(): string;
+//    function sListFooterHashStr(): string;
     { FILENAME EXTRACTION ROUTINES...}
-    function fn_SessionNum(): integer;
-    function fn_EventNum(): integer;
-    function fn_HeatNum(): integer;
-    function fn_RoundChar(): char;
-    function fn_HashStr(): string;
-    function fn_RaceID(): integer;
+//    function fn_SessionNum(): integer;
+//    function fn_EventNum(): integer;
+//    function fn_HeatNum(): integer;
+//    function fn_RoundChar(): char;
+//    function fn_HashStr(): string;
+//    function fn_RaceID(): integer;
 
     // --------------------------------------------
-    // Main Process entry points
-    procedure ProcessDirectory(const ADirectory: string;
-      pBar: TProgressBar);
-    procedure ProcessEvent(SessionID: integer);
-    procedure ProcessHeat(EventID: integer);
-    procedure ProcessEntrant(HeatID: integer);
 
 //    function TryParseCustomTime(const s: string; out ATimeValue: TDateTime): boolean;
     function ConvertSecondsStrToTime(ASecondsStr: string): TTime;
 
   public
     // Sub-routines for Process
-    procedure ProcessFile(const AFileName: string; pBar: TProgressBar);
-    procedure ProcessSession(AFileName: TFileName);
     procedure PrepareTDData();
     procedure PopulateTDData(const ADirectory: string; pBar: TProgressBar);
     procedure AppendTDData(const AFileName: string);
@@ -98,7 +90,7 @@ Example:
 
 implementation
 
-uses System.Character, DateUtils, Data.DB;
+uses System.Character, DateUtils, Data.DB, tdResults;
 
 function StripAlphaChars(const InputStr: string): string;
 var
@@ -201,6 +193,7 @@ begin
     result := dtDO4;
 end;
 
+(*
 function TAppUtils.fn_SessionNum: integer;
 var
   Fields: TArray<string>;
@@ -338,10 +331,11 @@ begin
       result := RoundChar;
   end;
 end;
+*)
 
 procedure TAppUtils.AppendTDData(const AFileName:string);
 Begin
-  ProcessSession(AFileName);
+  ProcessFile(AFileName);
 End;
 
 function TAppUtils.PrepareExtraction(const AFileName: TFileName): boolean;
@@ -414,7 +408,7 @@ begin
 
   // NOTE: ProcessDirectory will disabled/enabled Master-Detail.
   // Necessary to calculate table Primary keys, etc.
-  ProcessDirectory(ADirectory, pBar);
+  ProcessDirectory(ADirectory);
 
   AppData.tblmSession.First;
   AppData.tblmEvent.ApplyMaster;
@@ -430,389 +424,7 @@ begin
 
   end;
 
-procedure TAppUtils.ProcessFile(const AFileName: string; pBar: TProgressBar);
-begin
-  if Assigned(pBar) then pBar.Position := 0;
-  if FileExists(AFileName) then
-  begin
-    // =====================================================
-    // De-attach from Master-Detail. Create flat files.
-    // Necessary to calculate table Primary keys.
-    AppData.DisableDTMasterDetail;
-    // =====================================================
-    ProcessSession(AFileName);
-    // =====================================================
-    // Re-attach Master-Detail.
-    AppData.EnableDTMasterDetail;
-    // =====================================================
-  end;
-end;
-
-
-
-procedure TAppUtils.ProcessDirectory(const ADirectory: string; pBar: TProgressBar);
-var
-  LList, LListDO3, LListDO4: TStringDynArray;
-  LSearchOption: TSearchOption;
-  I: integer;
-begin
-{
-NOTE: The pattern '*.DO?' will match any file with a .DO extension followed
-by any single character. This means it will match *.DO3, *.DO4, *.DO5, etc.
-.. but to future proof the following method was chosen.
-}
-  if Assigned(pBar) then pBar.Position := 0;
-  { Select the search option }
-  // do not do recursive extract into subfolders
-  LSearchOption := TSearchOption.soTopDirectoryOnly;
-
-  // clear all datasets of records.
-  AppData.tblmSession.EmptyDataSet;
-  AppData.tblmEvent.EmptyDataSet;
-  AppData.tblmHeat.EmptyDataSet;
-  AppData.tblmLane.EmptyDataSet;
-  AppData.tblmNoodle.EmptyDataSet;
-
-  // =====================================================
-  // De-attach from Master-Detail. Create flat files.
-  // Necessary to calculate table Primary keys.
-  AppData.DisableDTMasterDetail;
-  // =====================================================
-
-  try
-    { For files use GetFiles method }
-    LListDO3 := TDirectory.GetFiles(ADirectory, '*.DO3', LSearchOption);
-    LListDO4 := TDirectory.GetFiles(ADirectory, '*.DO4', LSearchOption);
-
-    { Combine the lists }
-    SetLength(LList, Length(LListDO3) + Length(LListDO4));
-    if Length(LListDO3) > 0 then
-      Move(LListDO3[0], LList[0], Length(LListDO3) * SizeOf(string));
-    if Length(LListDO4) > 0 then
-      Move(LListDO4[0], LList[Length(LListDO3)], Length(LListDO4) * SizeOf(string));
-
-    { Extract DATA and Populate the memory table. }
-    for I := 0 to Length(LList) - 1 do
-    begin
-      { Calls - PrepareExtraction, ProcessEvent, ProcessHeat, ProcessEntrant }
-      ProcessSession(LList[I]);
-      // update progress bar.
-      if Assigned(pBar) then
-      begin
-        pBar.Position := Trunc(Ceil((I + 1) / Length(LList) * 100));
-        pBar.RePaint;
-      end;
-    end;
-  except
-    { Catch the possible exceptions }
-    MessageBox(0, PChar('Incorrect path or search mask'),
-      PChar('Extract Dolphin .DO3 and .DO4 Files'), MB_ICONERROR or MB_OK);
-  end;
-
-  // =====================================================
-  // Re-attach Master-Detail.
-  AppData.EnableDTMasterDetail;
-  // =====================================================
-
-end;
-
-procedure TAppUtils.ProcessSession(AFileName: TFileName);
-var
-  i, id: integer;
-  s: string;
-  fCreationDT: TDateTime;
-  fs: TFormatSettings;
-  Found: boolean;
-begin
-  // NOTE: Assumption - FileExists!
-  { Preparation of filename extraction must succeed.
-    On ERR - skip file - silent.}
-  if not (PrepareExtraction(AFileName)) then exit;
-  // DEFAULT Precedence dtPrecHeader - use the SessionNum given in the
-  // 'Header' (TStringList sList : line one : SplitString - field[0])
-  if (FPrecedence = dtPrecFileName) then
-    i := fn_SessionNum()
-  else
-    i := sListHeaderSessionNum();
-  // DOES THIS SESSION PK AREADY EXSIST?
-  Found := AppData.LocateDTSessionNum(i, FPrecedence);
-  if Found then
-  begin
-    // assign this id to ProcessEvent.
-    id := AppData.tblmSession.FieldByName('SessionID').AsInteger;
-  end
-  else
-  begin
-    // ID isn't AutoInc - calc manually.
-    id := AppData.MaxID_Session + 1;
-    // Get the creation time of the specified file
-    fCreationDT := TFile.GetCreationTime(AFileName);
-    AppData.tblmSession.Append;
-    // Primary Key
-    AppData.tblmSession.FieldByName('SessionID').AsInteger := id;
-    // Derived from line one ('Header') within the DT file.
-    AppData.tblmSession.fieldbyName('SessionNum').AsInteger := sListHeaderSessionNum();
-    // Derived from filename : Last three digits of SCM qrySession.SessionID.
-    AppData.tblmSession.fieldbyName('fnSessionNum').AsInteger := fn_SessionNum();
-    // Creation date of file - by Dolphin Timing system.
-    AppData.tblmSession.fieldbyName('SessionStart').AsDateTime := fCreationDT;
-    // TimeStamp
-    AppData.tblmSession.fieldbyName('CreatedOn').AsDateTime := Now;
-    // Create a session caption.
-    fs := TFormatSettings.Create;
-    fs.DateSeparator := '_';
-    s := 'Session: ' + IntToStr(fn_SessionNum()) + ' Date: ' + DatetoStr(fCreationDT, fs);
-    AppData.tblmSession.fieldbyName('Caption').AsString := s;
-    // FINALIZE - POST NEW RECORD.
-    AppData.tblmSession.Post;
-  end;
-  // process event >> heat >> entrant.
-  ProcessEvent(id);
-end;
-
-procedure TAppUtils.ProcessEvent(SessionID: integer);
-var
-  i,j, id: integer;
-  Found: boolean;
-begin
-  id := 0;
-  // NOTE: Assumption - FileExists!
-  // DEFAULT Precedence dtPrecHeader
-  if (FPrecedence = dtPrecFileName) then
-    i := fn_EventNum()
-  else
-    i := sListHeaderEventNum();
-
-  // DOES THIS EVENT PK AREADY EXSIST?
-  Found := AppData.LocateDTEventNum(SessionID, i, FPrecedence);
-
-
-  if Found then
-    // assign this id to ProcessHeat.
-    id := AppData.tblmEvent.FieldByName('EventID').AsInteger
-  else
-  begin
-    if not fSList.IsEmpty then
-    begin
-      // calculate the Primary Key : IDENTIFIER.
-      // ID isn't AutoInc - calc manually.
-      id := AppData.MaxID_Event + 1;
-      // NEW RECORD.
-      AppData.tblmEvent.Append;
-      // Primary Key.
-      AppData.tblmEvent.fieldbyName('EventID').AsInteger := id;
-      // master - detail. Also Index Field.
-      AppData.tblmEvent.fieldbyName('SessionID').AsInteger := SessionID;
-      // Derived from DT filename.
-      AppData.tblmEvent.fieldbyName('fnEventNum').AsInteger := fn_EventNum();
-      // Derived from TStringList - 'HEADER' - SplitString Field[1]
-      j := sListHeaderEventNum();
-      AppData.tblmEvent.fieldbyName('EventNum').AsInteger := j;
-      // CAPTION for Event :
-      AppData.tblmEvent.fieldbyName('Caption').AsString :=
-        'Event: ' +  IntToStr(j);
-      // DO4 A=boys, B=girls, X=any.
-      AppData.tblmEvent.fieldbyName('GenderStr').AsString := sListHeaderGenderChar;
-      // Derived from FileName
-      // Round – “A” for all, “P” for prelim or “F” for final
-      AppData.tblmEvent.fieldbyName('fnRoundStr').AsString := fn_RoundChar();
-      // POST
-      AppData.tblmEvent.Post;
-//      AppData.dsmEvent.ApplyUpdates();
-    end;
-  end;
-  // CORE DATA - TimeStamp, Record Creation Date, Heat Number, etc.
-  ProcessHeat(id);
-end;
-
-procedure TAppUtils.ProcessHeat(EventID: integer);
-var
-  i, id: integer;
-  Found: boolean;
-begin
-  id := 0;
-
-  if (FPrecedence = dtPrecFileName) then
-    i := fn_HeatNum()
-  else
-    i := sListHeaderHeatNum();
-
-  // HAS THIS HEAT AREADY been processed?
-  Found := AppData.LocateDTHeatNum(EventID, i, FPrecedence);
-  if Found then
-    // use this id to call process entrant.
-    id := AppData.tblmHeat.FieldByName('HeatID').AsInteger
-  else
-  begin
-    // read header and lane information (Racetimes x3).
-    if not fSList.IsEmpty then
-    begin
-      // calculate the IDENTIFIER.
-      // ID isn't AutoInc - calc manually.
-      id := AppData.MaxID_Heat() + 1;
-      // NEW RECORD.
-      AppData.tblmHeat.Append;
-      // PK
-      AppData.tblmHeat.fieldbyName('HeatID').AsInteger := id;
-      // master - detail.
-      AppData.tblmHeat.fieldbyName('EventID').AsInteger := EventID;
-      // TIME STAMP
-      AppData.tblmHeat.fieldbyName('TimeStampDT').AsDateTime := Now;
-      // Derived from Dolphin filename.
-      AppData.tblmHeat.fieldbyName('fnHeatNum').AsInteger := fn_HeatNum;
-      // Derived from TStringList HEADER - first line of text - common
-      i := sListHeaderHeatNum();
-      AppData.tblmHeat.fieldbyName('HeatNum').AsInteger := i;
-      AppData.tblmHeat.fieldbyName('Caption').AsString := 'Heat: ' + IntToStr(i);
-      // Time stamp of file - created by Dolphin Timing system on write of file.
-      AppData.tblmHeat.fieldbyName('CreatedDT').AsDateTime := fCreatedDT;
-      // FileName includes file extension.    (.DO3, .DO4)
-      // determines dtFileType dtDO3, dtDO4.
-      AppData.tblmHeat.fieldbyName('FileName').AsString := fFileName;
-      // CHECKSUM - last line of text - common
-      // Max of 16 characters
-      AppData.tblmHeat.fieldbyName('CheckSum').AsString := sListFooterHashStr();
-      // Filename doesn't match header info ...
-      AppData.tblmHeat.fieldbyName('fnBadFN').AsBoolean := false;
-      // DO3 - SplitString Field[2] hash number (alpha-numerical).
-      // DO4 - SplitString Field[3] hash number (numerical - sequence).
-      // NOTE: MAX of 8 characters.
-      AppData.tblmHeat.fieldbyName('fnHashStr').AsString := fn_HashStr;
-      // CONVERT DO4 - SplitString Field[3]
-      // A sequential number for each file (within the DT Session?)
-      if fFileType = dtDO4 then
-        AppData.tblmHeat.fieldbyName('fnRaceID').AsInteger:= fn_RaceID;
-      AppData.tblmHeat.Post;
-    end;
-  end;
-  // DON'T process heats we have already done...
-  if not Found then
-    ProcessEntrant(id);
-end;
-
-procedure TAppUtils.ProcessEntrant(HeatID: integer);
-var
-  id, I, j, k, lane: integer;
-  s: string;
-  Found: boolean;
-begin
-  if HeatID = 0 then exit;
-
-  Found := AppData.tblmLane.Locate('HeatID', HeatID, []);
-  if Found then
-    // This heat has been process of all it's lane data ...
-    exit;
-
-  // dtfrmExec has a grid linked to this datasource.
-  AppData.tblmLane.DisableControls;
-  // ID isn't AutoInc - calc manually.
-  // NOTE: Master-Detail relationships have been disabled at this point.
-  id := AppData.MaxID_Entrant + 1;
-  { TStringList FIRST LINE = HEADER INFO.
-   TStringList FIRST LINE + 1 to LAST LINE - 1 = LANES INFORMATION.
-   TStringList LAST LINE  = FOOTER - CHECKSUM.
-  }
-  // Process lanes...
-  for I := 1 to (fSList.Count - 2) do
-  begin
-    lane := sListBodyLane(I);
-    id := id + 1;
-
-    AppData.tblmLane.Append;
-    // primary key
-    AppData.tblmLane.fieldbyName('EntrantID').AsInteger := id;
-    // master.detail.
-    AppData.tblmLane.fieldbyName('HeatID').AsInteger := HeatID;
-    // SYNC with SwimClubMeet - INDV or TEAM lane
-    AppData.tblmLane.fieldbyName('Lane').AsInteger := lane;
-    // Should read 'Lane: #Lane#'
-    s := 'Lane: ' + IntToStr(lane);
-    AppData.tblmLane.fieldbyName('Caption').AsString := s;
-
-    AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := false;
-
-    // Swimmers calculated racetime for post.
-    AppData.tblmLane.fieldbyName('RaceTime').Clear;
-    // A user entered race-time.
-    AppData.tblmLane.fieldbyName('RaceTimeUser').Clear;
-    // The Automatic race-time. Calculated on load of DT file.
-    AppData.tblmLane.fieldbyName('RaceTimeA').Clear;
-    // dtActiveRT = (artAutomatic, artManual, artUser, artSplit, artNone);
-    AppData.tblmLane.fieldbyName('ActiveRT').AsInteger := ORD(artAutoMatic);
-
-    // graphic used in column[6] - GRID IMAGES AppData.vimglistDTCell .
-    // image index 1 indicts - dtTimeKeeperMode = dtAutomatic.
-    AppData.tblmLane.fieldbyName('imgActiveRT').AsInteger := -1;
-
-    // graphic used in column[1] - for noodle drawing...
-    AppData.tblmLane.fieldbyName('imgPatch').AsInteger := 0;
-
-    // gather up the timekeepers 1-3 recorded race times for this lane.
-    sListBodyTimeKeepers(I, fTimeKeepers);
-
-    for k := 0 to 2 do
-    begin
-      if (fTimeKeepers[k] = 0) then
-      begin
-        // The user's manual watch-time is disabled.
-        s := Format('T%dM', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsBoolean := false;
-        // Initialize - The Automatic watch-time is invalid.
-        s := Format('T%dA', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsBoolean := false;
-        AppData.tblmLane.fieldbyName(s).Clear;
-      end
-      else
-      begin
-        // The user's manual watch-time is enabled.
-        s := Format('T%dM', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsBoolean := true;
-        // Initialize - The Automatic watch-time is valid.
-        // (vertified later in procedure)
-        s := Format('T%dA', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsBoolean := true;
-        // Place watch-time in manual time field.
-        s := Format('Time%d', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsDateTime := TimeOf(fTimeKeepers[k]);
-      end;
-    end;
-
-    // D e v i a t i o n  --- initialization
-    // The watch-times, min-mid and mid-max, are within accepted deviation.
-    // (verified later in procedure)
-    AppData.tblmLane.fieldbyName('TDev1').AsBoolean := true;
-    AppData.tblmLane.fieldbyName('TDev2').AsBoolean := true;
-
-    // gather up the timekeepers 1-3 recorded race times for this lane.
-    sListBodySplits(I, fSplits);
-    for j := low(fSplits)  to High(fSplits) do
-    begin
-      if (fSplits[j] > 0) then
-      begin
-        s := 'Split' + IntTostr((j+1));
-        AppData.tblmLane.FieldByName(s).AsDateTime := TDateTime(fSplits[j]);
-      end;
-    end;
-    AppData.tblmLane.Post;
-
-    // Main form assigns value. ASSERT - avoid division by zero.
-    if fAcceptedDeviation = 0 then
-      fAcceptedDeviation := 0.3; // Dolphin Timing's default.
-
-    // Cacluate RaceTimeA for the ActiveRT. (artAutomatic)
-    // AND verify deviaiton AND assert fields [T1A, T2A, T3A]
-    AppData.CalcRaceTimeA(AppData.tblmLane, fAcceptedDeviation, fCalcMode);
-
-    // FINALLY place values into manual and automatic watch time fields.
-    AppData.tblmLane.Edit;
-    AppData.tblmLane.fieldbyName('RaceTime').AsVariant :=
-      AppData.tblmLane.fieldbyName('RaceTimeA').AsVariant;
-    AppData.tblmLane.post;
-
-  end;
-  AppData.tblmLane.EnableControls;
-end;
-
+(*
 function TAppUtils.sListHeaderEventNum: integer;
 var
   Fields: TArray<string>;
@@ -894,6 +506,8 @@ begin
   end;
 end;
 
+*)
+
 {
 function TAppUtils.TryParseCustomTime(const s: string; out ATimeValue: TDateTime): boolean;
 var
@@ -956,7 +570,7 @@ begin
   Result := True;
 end;
 }
-
+(*
 function TAppUtils.sListBodySplits(LineIndex: integer; var ASplits: array of double): boolean;
 var
   Fields: TArray<string>;
@@ -1086,7 +700,7 @@ begin
   if Found then
     result := true;
 end;
-
+*)
 
 
 end.

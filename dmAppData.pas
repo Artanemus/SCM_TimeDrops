@@ -127,8 +127,8 @@ type
     // loading of the DO file.
     // --------------------------------------------
     procedure CalcRaceTimeM(ADataSet: TDataSet);
-    procedure DisableDTMasterDetail();
-    procedure EnableDTMasterDetail();
+    procedure DisableTDMasterDetail();
+    procedure EnableTDMasterDetail();
     // MISC SCM ROUTINES/FUNCTIONS
     function GetSCMNumberOfHeats(AEventID: integer): integer;
     function GetSCMRoundABBREV(AEventID: integer): string;
@@ -170,7 +170,7 @@ type
     // These routines are needed as there is no AutoInc on Primary Key.
     // WARNING : DisableDTMasterDetail() before calling MaxID routines.
     // .......................................................
-    function MaxID_Entrant: integer;
+    function MaxID_Lane: integer;
     function MaxID_Event(): integer;
     function MaxID_Heat(): integer;
     function MaxID_Session():integer;
@@ -653,7 +653,7 @@ begin
   fSCMDataIsActive := false; // activated later once FConnection is assigned.
   // Assign all the params to create the Master-Detail relationships
   // between TIME-DROPS memory tables.
-  EnableDTMasterDetail();
+  EnableTDMasterDetail();
   // Makes 'Active' the TIME-DROPS tables.
   ActivateDataDT;
   msgHandle := 0;
@@ -682,7 +682,7 @@ begin
   end;
 end;
 
-procedure TAppData.DisableDTMasterDetail();
+procedure TAppData.DisableTDMasterDetail();
 begin
   // ASSERT Master - Detail
   tblmSession.IndexFieldNames := 'SessionID';
@@ -721,7 +721,7 @@ begin
   fDTMasterDetailActive := false;
 end;
 
-procedure TAppData.EnableDTMasterDetail();
+procedure TAppData.EnableTDMasterDetail();
 begin
   // Master - index field.
   tblmSession.IndexFieldNames := 'SessionID';
@@ -977,7 +977,7 @@ begin
       result := dsSession.DataSet.Locate('SessionID', ASessionID, SearchOptions);
 end;
 
-function TAppData.MaxID_Entrant: integer;
+function TAppData.MaxID_Lane: integer;
 var
 max, id: integer;
 begin
@@ -986,7 +986,7 @@ begin
   tblmLane.First;
   while not tblmLane.eof do
   begin
-    id := tblmLane.FieldByName('EntrantID').AsInteger;
+    id := tblmLane.FieldByName('LaneID').AsInteger;
     if (id > max) then
       max := id;
     tblmLane.Next;

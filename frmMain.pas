@@ -95,7 +95,7 @@ type
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearReScanMeetsExecute(Sender: TObject);
-    procedure actnImportAppendDOExecute(Sender: TObject);
+    procedure actnImportDTResultExecute(Sender: TObject);
     procedure actnPostExecute(Sender: TObject);
     procedure actnPostUpdate(Sender: TObject);
     procedure actnPreferencesExecute(Sender: TObject);
@@ -174,7 +174,7 @@ implementation
 
 uses UITypes, DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
-  tdMeetProgramPick;
+  tdMeetProgramPick, tdResults;
 
 const
   MSG_CONFIRM_RECONSTRUCT =
@@ -261,10 +261,9 @@ begin
         end;
     end;
   end;
-
 end;
 
-procedure TMain.actnImportAppendDOExecute(Sender: TObject);
+procedure TMain.actnImportDTResultExecute(Sender: TObject);
 var
   AFile: string;
 begin
@@ -273,18 +272,18 @@ begin
     // =====================================================
     // De-attach from Master-Detail. Create flat files.
     // Necessary to calculate table Primary keys.
-    AppData.DisableDTMasterDetail;
+    AppData.DisableTDMasterDetail;
     // =====================================================
     try
       for AFile in DTAppendFile.Files do
       begin
         { Calls - PrepareExtraction, ProcessEvent, ProcessHeat, ProcessEntrant }
-        AppUtils.ProcessSession(AFile);
+        tdResults.ProcessFile(AFile);
       end;
     finally
       // =====================================================
       // Re-attach Master-Detail.
-      AppData.EnableDTMasterDetail;
+      AppData.EnableTDMasterDetail;
       // =====================================================
     end;
   end;
@@ -1285,7 +1284,7 @@ begin
     if s.Contains('SESSION') then
     begin
       ShowMessage('A new results file was added to the directory: ' + FileName);
-      AppUtils.ProcessFile(FileName, PBar);
+      tdResults.ProcessFile(FileName);
     end;
   end;
 end;

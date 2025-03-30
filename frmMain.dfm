@@ -1673,7 +1673,6 @@ object Main: TMain
                   end
                   item
                     Action = actnImportAppendDO
-                    Caption = '&Import and append DO[3..4] file(s) ...'
                     ImageIndex = 0
                     ImageName = 'file_open'
                   end>
@@ -1812,10 +1811,10 @@ object Main: TMain
     end
     object actnImportAppendDO: TAction
       Category = 'Import'
-      Caption = 'Import and append DO[3..4] file(s) ...'
+      Caption = 'Import Time Drops Result file(s) ...'
       ImageIndex = 0
       ImageName = 'file_open'
-      OnExecute = actnImportAppendDOExecute
+      OnExecute = actnImportDTResultExecute
     end
     object actnClearReScanMeets: TAction
       Category = 'Import'
