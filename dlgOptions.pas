@@ -12,8 +12,8 @@ type
   TOptions = class(TForm)
     btnClose: TButton;
     btnedtAppData: TButtonedEdit;
-    btnedtEventCSV: TButtonedEdit;
-    btnedtMeetFolder: TButtonedEdit;
+    btnedtMeetProgram: TButtonedEdit;
+    btnedtResults: TButtonedEdit;
     btnedtReConstruct: TButtonedEdit;
     chkbxRenameSession: TCheckBox;
     lblAppCaption1: TLabel;
@@ -32,14 +32,17 @@ type
     tabsheetPaths: TTabSheet;
     vimgDT: TVirtualImage;
     BrowseFolderDlg: TFileOpenDialog;
-    rgrpPrecedence: TRadioGroup;
     rgrpSwimmerAge: TRadioGroup;
     dtpickSwimmerAge: TDateTimePicker;
     lblSwimmerAge: TLabel;
+    chkbxFinalTime: TCheckBox;
+    chkbxPadTime: TCheckBox;
+    lblInfoFinalTime: TLabel;
+    lblInfoPadTime: TLabel;
     procedure btnCloseClick(Sender: TObject);
     procedure btnedtAppDataRightButtonClick(Sender: TObject);
-    procedure btnedtEventCSVRightButtonClick(Sender: TObject);
-    procedure btnedtMeetFolderRightButtonClick(Sender: TObject);
+    procedure btnedtMeetProgramRightButtonClick(Sender: TObject);
+    procedure btnedtResultsRightButtonClick(Sender: TObject);
     procedure btnedtReConstructRightButtonClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -83,13 +86,13 @@ begin
   end;
 end;
 
-procedure TOptions.btnedtEventCSVRightButtonClick(Sender: TObject);
+procedure TOptions.btnedtMeetProgramRightButtonClick(Sender: TObject);
 var
 ft: TFileTypeItem;
 begin
   // browse for DT events CSV export folder.
   BrowseFolderDlg.DefaultFolder :=
-    IncludeTrailingPathDelimiter(btnedtEventCSV.Text) ;
+    IncludeTrailingPathDelimiter(btnedtMeetProgram.Text) ;
   BrowseFolderDlg.DefaultExtension := '.JSON';
   BrowseFolderDlg.OkButtonLabel := 'Select Folder';
   BrowseFolderDlg.FileTypes.Clear;
@@ -99,17 +102,17 @@ begin
   BrowseFolderDlg.Title := 'Select SCM_TimeDrops program folder.';
   if BrowseFolderDlg.Execute then
   begin
-    btnedtEventCSV.Text := BrowseFolderDlg.FileName;
+    btnedtMeetProgram.Text := BrowseFolderDlg.FileName;
   end;
 end;
 
-procedure TOptions.btnedtMeetFolderRightButtonClick(Sender: TObject);
+procedure TOptions.btnedtResultsRightButtonClick(Sender: TObject);
 var
 ft: TFileTypeItem;
 begin
   // browse for meets folder.
   BrowseFolderDlg.DefaultFolder :=
-    IncludeTrailingPathDelimiter(btnedtMeetFolder.Text) ;
+    IncludeTrailingPathDelimiter(btnedtResults.Text) ;
   BrowseFolderDlg.DefaultExtension := '.JSON';
   BrowseFolderDlg.OkButtonLabel := 'Select Folder';
   BrowseFolderDlg.FileTypes.Clear;
@@ -119,7 +122,7 @@ begin
   BrowseFolderDlg.Title := 'Select SCM_TimeDrops results folder.';
   if BrowseFolderDlg.Execute then
   begin
-    btnedtMeetFolder.Text := BrowseFolderDlg.FileName;
+    btnedtResults.Text := BrowseFolderDlg.FileName;
   end;
 end;
 
@@ -161,23 +164,15 @@ end;
 
 procedure TOptions.LoadFromSettings;
 begin
-  btnedtMeetFolder.Text := Settings.MeetsFolder;
-  btnedtEventCSV.Text := Settings.ProgramFolder;
+  btnedtResults.Text := Settings.MeetsFolder;
+  btnedtMeetProgram.Text := Settings.ProgramFolder;
   btnedtAppData.Text := Settings.AppData;
   btnedtReConstruct.Text := Settings.ReConstruct;
-  case Settings.Precedence of
-  dtPrecHeader:
-    rgrpPrecedence.ItemIndex := 0;
-  dtPrecFileName:
-    rgrpPrecedence.ItemIndex := 1;
-  end;
+
   case Settings.CalcRTMethod of
   1:
     // extended SCM method.
     rgrpMeanTimeMethod.ItemIndex := 1;
-  2:
-    // Use TimeDrops 'finalTime' field.
-    rgrpMeanTimeMethod.ItemIndex := 2;
   else
     // default DT method (default).
     rgrpMeanTimeMethod.ItemIndex := 0;
@@ -205,16 +200,10 @@ end;
 
 procedure TOptions.SaveToSettings;
 begin
-  Settings.MeetsFolder := btnedtMeetFolder.Text;
-  Settings.ProgramFolder := btnedtEventCSV.Text;
+  Settings.MeetsFolder := btnedtResults.Text;
+  Settings.ProgramFolder := btnedtMeetProgram.Text;
   Settings.AppData := btnedtAppData.Text;
   Settings.ReConstruct := btnedtReConstruct.Text;
-  case rgrpPrecedence.ItemIndex of
-    1:
-    Settings.Precedence := dtPrecFileName;
-    else
-    Settings.Precedence := dtPrecHeader;
-  end;
   Settings.CalcRTMethod := rgrpMeanTimeMethod.ItemIndex;
   try
     Settings.AcceptedDeviation := strToFloat(lbledtDeviation.Text);

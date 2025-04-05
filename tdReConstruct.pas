@@ -58,6 +58,7 @@ raceNumber: integer;
 laneObj: ISuperObject;
 
 
+
 function SaveToTimeDropResultFile: boolean;
 var
 fn: TFileName;

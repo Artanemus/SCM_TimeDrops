@@ -65,7 +65,7 @@ type
     btnPickSCMTreeView: TButton;
     btnPickDTTreeView: TButton;
     btnDataDebug: TButton;
-    lblDTDetails: TLabel;
+    lblEventDetailsTD: TLabel;
     DTAppendFile: TFileOpenDialog;
     sbtnAutoPatch: TSpeedButton;
     sbtnSyncSCMtoDT: TSpeedButton;
@@ -85,12 +85,12 @@ type
     actnSaveSession: TAction;
     actnLoadSession: TAction;
     actnAbout: TAction;
-    actnSyncDT: TAction;
+    actnSyncTD: TAction;
     actnConnect: TAction;
     actnPost: TAction;
     actnReportSCMSession: TAction;
     actnReportSCMEvent: TAction;
-    actnReportDT: TAction;
+    actnReportTD: TAction;
     actnSyncSCM: TAction;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
@@ -104,7 +104,7 @@ type
     procedure actnRefreshExecute(Sender: TObject);
     procedure actnSelectSessionExecute(Sender: TObject);
     procedure actnSetDTMeetsFolderExecute(Sender: TObject);
-    procedure actnSyncDTExecute(Sender: TObject);
+    procedure actnSyncTDExecute(Sender: TObject);
     procedure actnSyncSCMExecute(Sender: TObject);
     procedure btnDataDebugClick(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
@@ -126,8 +126,6 @@ type
     { Private declarations }
     FConnection: TFDConnection;
     fDolphinMeetsFolder: string;
-    // dtPrecedence = (dtPrecHeader, dtPrecFileName);
-    fPrecedence: dmAppData.dtPrecedence;
     fDirectoryWatcher: TDirectoryWatcher;
     { On FormShow - prompt user to select session.
       Default value : FALSE     }
@@ -141,9 +139,8 @@ type
     procedure UpdateCaption();
     procedure UpdateSessionStartLabel();
     procedure UpdateEventDetailsLabel();
-    procedure UpdateDTDetailsLabel();
+    procedure UpdateEventDetailsTD;
     procedure DeleteFilesWithWildcard(const APath, APattern: string);
-//    procedure ReconstructAndExportFiles(fileExtension: string; messageText: string);
     procedure UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
         dtActiveRT);
 
@@ -254,7 +251,7 @@ begin
         begin
           AppUtils.PrepareTDData;
           AppUtils.PopulateTDData(Settings.MeetsFolder, pBar);
-          // Update lblDTDetails.
+          // Update lblEventDetailsTD.
           PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
           // Paint cell icons.
           PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
@@ -298,7 +295,7 @@ var
   s: string;
 begin
   // Establish if SCM AND DT are syncronized.
-  if not AppData.SyncCheck(fPrecedence) then
+  if not AppData.SyncCheck() then
   begin
     s := '''
       SCM and DT are not synronized. (Based on Session ID, event and heat number.)
@@ -484,14 +481,14 @@ begin
   // SavePreferencesToJSON.
 end;
 
-procedure TMain.actnSyncDTExecute(Sender: TObject);
+procedure TMain.actnSyncTDExecute(Sender: TObject);
 var
 found: boolean;
 begin
   DTGrid.BeginUpdate;
-  found := AppData.SyncDTtoSCM(fPrecedence); // data event - scroll.
+  found := AppData.SyncDTtoSCM(); // data event - scroll.
   DTGrid.EndUpdate;
-  UpdateDTDetailsLabel;
+  UpdateEventDetailsTD;
   if not found then
   begin
     StatBar.SimpleText := 'Syncronization of Dolphin Timing to SwimClubMeet failed. '
@@ -502,7 +499,7 @@ end;
 
 procedure TMain.actnSyncSCMExecute(Sender: TObject);
 begin
-  if not AppData.SyncCheckSession(fPrecedence) then
+  if not AppData.SyncCheckSession() then
   begin
     StatBar.SimpleText := 'The SwimClubMeet session cannot be synced to the DT data. '
     +   'Load the correct session and try again.';
@@ -511,7 +508,7 @@ begin
   end;
 
   SCMGrid.BeginUpdate;
-  AppData.SyncSCMtoDT(fPrecedence);
+  AppData.SyncSCMtoDT();
   SCMGrid.EndUpdate;
   UpdateEventDetailsLabel;
 end;
@@ -586,7 +583,7 @@ begin
       AppData.dsmHeat.DataSet.next;
     end;
   end;
-  // Update lblDTDetails.
+  // Update lblEventDetailsTD.
   PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
   // paint cell icons into grid
   PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
@@ -667,7 +664,7 @@ begin
     // Attempt to cue-to-data in Dolphin Timing tables.
     if (dlg.SelectedSessionID > 0) then
     begin
-      found := AppData.LocateDTSessionID(dlg.SelectedSessionID);
+      found := AppData.LocateTSessionID(dlg.SelectedSessionID);
       if not found then
         AppData.tblmSession.First;
       AppData.tblmEvent.ApplyMaster;
@@ -677,7 +674,7 @@ begin
     end;
     if (dlg.SelectedEventID > 0) then
     begin
-      found := AppData.LocateDTEventID(dlg.SelectedEventID);
+      found := AppData.LocateTEventID(dlg.SelectedEventID);
       if not found then
         AppData.tblmEvent.First;
       AppData.tblmHeat.ApplyMaster;
@@ -688,7 +685,7 @@ begin
     end;
     if (dlg.SelectedHeatID > 0) then
     begin
-      found := AppData.LocateDTHeatID(dlg.SelectedHeatID);
+      found := AppData.LocateTHeatID(dlg.SelectedHeatID);
       if not found then
         AppData.tblmHeat.First;
     end;
@@ -758,16 +755,10 @@ var
   evNum, htNum: integer;
 begin
 
-  if fPrecedence = dtPrecFileName then
-  begin
-    evNum := AppData.dsmEvent.DataSet.FieldByName('fnEventNum').AsInteger;
-    htNum := AppData.dsmHeat.DataSet.FieldByName('fnHeatNum').AsInteger;
-  end
-  else
-  begin
-    evNum := AppData.dsmEvent.DataSet.FieldByName('EventNum').AsInteger;
-    htNum := AppData.dsmHeat.DataSet.FieldByName('HeatNum').AsInteger;
-  end;
+
+  evNum := AppData.dsmEvent.DataSet.FieldByName('EventNum').AsInteger;
+  htNum := AppData.dsmHeat.DataSet.FieldByName('HeatNum').AsInteger;
+
 
   // CNTRL+SHIFT - quick key to move to previous session.
   if (GetKeyState(VK_CONTROL) < 0) and (GetKeyState(VK_SHIFT) < 0) then
@@ -1083,7 +1074,7 @@ begin
     // Assert UI display is up-to-date.
     PostMessage(Self.Handle, SCM_UPDATEUI, 0 , 0 );
 
-  // Update lblDTDetails.
+  // Update lblEventDetailsTD.
   PostMessage(Self.Handle, SCM_UPDATEUI2, 0 , 0 );
   // paint cell icons into grid.
   PostMessage(Self.Handle, SCM_UPDATEUI3, 0 , 0 );
@@ -1092,7 +1083,6 @@ end;
 procedure TMain.LoadFromSettings;
 begin
   fDolphinMeetsFolder := Settings.MeetsFolder;
-  fPrecedence := Settings.Precedence;
 end;
 
 procedure TMain.LoadSettings;
@@ -1184,7 +1174,7 @@ end;
 
 procedure TMain.MSG_UpdateUI2(var Msg: TMessage);
 begin
-    UpdateDTDetailsLabel;
+    UpdateEventDetailsTD;
 end;
 
 procedure TMain.MSG_UpdateUI3(var Msg: TMessage);
@@ -1515,45 +1505,36 @@ begin
 
 end;
 
-procedure TMain.UpdateDTDetailsLabel;
+procedure TMain.UpdateEventDetailsTD;
 var
 i: integer;
 s: string;
 begin
-  lblDTDetails.caption := '';
+  lblEventDetailsTD.caption := '';
 
   if AppData.tblmSession.IsEmpty then exit;
   s := 'Session : ';
-  if fPrecedence = dtPrecFileName then
-    i := AppData.tblmSession.FieldByName('fnSessionNum').AsInteger
-  else
-    i := AppData.tblmSession.FieldByName('SessionNum').AsInteger;
+  i := AppData.tblmSession.FieldByName('SessionNum').AsInteger;
   s := s + IntToStr(i);
 
   if AppData.tblmEvent.IsEmpty then
   begin
-    lblDTDetails.caption := s;
+    lblEventDetailsTD.caption := s;
     exit;
   end;
   s := s + '  Event : ';
-  if fPrecedence = dtPrecFileName then
-    i := AppData.tblmEvent.FieldByName('fnEventNum').AsInteger
-  else
-    i := AppData.tblmEvent.FieldByName('EventNum').AsInteger;
+  i := AppData.tblmEvent.FieldByName('EventNum').AsInteger;
   s := s + IntToStr(i);
 
   if AppData.tblmHeat.IsEmpty then
   begin
-    lblDTDetails.caption := s;
+    lblEventDetailsTD.caption := s;
     exit;
   end;
   s := s + ' - Heat : ';
-  if fPrecedence = dtPrecFileName then
-    i := AppData.tblmHeat.FieldByName('fnHeatNum').AsInteger
-  else
-    i := AppData.tblmHeat.FieldByName('HeatNum').AsInteger;
+  i := AppData.tblmHeat.FieldByName('HeatNum').AsInteger;
   s := s + IntToStr(i);
-  lblDTDetails.caption := s;
+  lblEventDetailsTD.caption := s;
 
 end;
 

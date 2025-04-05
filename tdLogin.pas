@@ -180,8 +180,16 @@ begin
 
     if Assigned(AppData) then
     begin
+      { Start up SCM.}
       AppData.Connection := SCM.scmConnection;
       AppData.ActivateDataSCM; // ... and cue-to most recent session.
+      { Start up TimeDrops.}
+      // Assign all the params for the Master-Detail relationships
+      // within the TIME-DROPS memory tables.
+      AppData.EnableTDMasterDetail();
+      // Makes 'Active' the TIME-DROPS tables.
+      AppData.ActivateDataDT;
+      { Start up MAIN FORM.}
       dlg := TMain.Create(Self);
       { Init connection.}
       dlg.Prepare(SCM.scmConnection);
@@ -225,7 +233,7 @@ begin
 
     if Assigned(AppData) then
     begin
-      AppData.Connection := SCM.scmConnection;
+//      AppData.Connection := SCM.scmConnection;
       AppData.BuildAppData;
     end;
 

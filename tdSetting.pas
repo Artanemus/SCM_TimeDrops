@@ -29,7 +29,7 @@ type
     ProgramFolder: string;
     AppData: string;
     ReConstruct: string;
-    Precedence: dtPrecedence;
+//    Precedence: dtPrecedence;
     AcceptedDeviation: double;
     CalcRTMethod: integer;
     CalcSwimmerAge: integer;
@@ -66,7 +66,7 @@ begin
   ProgramFolder := 'c:\TimeDrops\Meets';
   AppData := 'c:\TimeDrops\AppData';
   ReConstruct := 'c:\TimeDrops\ReConstruct';
-  Precedence := dtPrecHeader;
+//  Precedence := dtPrecHeader;
   AcceptedDeviation := 0.3;
   RaceNumber := 0;
   // 0 = default DT method : 1 = extended SCM method.

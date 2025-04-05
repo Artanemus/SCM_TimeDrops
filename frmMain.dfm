@@ -843,10 +843,10 @@ object Main: TMain
         Font.Style = []
         ParentFont = False
       end
-      object lblDTDetails: TLabel
+      object lblEventDetailsTD: TLabel
         Left = 16
         Top = 56
-        Width = 553
+        Width = 597
         Height = 36
         Hint = 
           'Dolphin Timing Filename. (DO3, DO4)'#13#10'2nd line - Session : Event ' +
@@ -1497,7 +1497,7 @@ object Main: TMain
           Images = AppData.vimglistMenu
           ParentShowHint = False
           ShowHint = True
-          OnClick = actnSyncDTExecute
+          OnClick = actnSyncTDExecute
         end
         object spbtnPost: TSpeedButton
           Left = 0
@@ -1650,13 +1650,13 @@ object Main: TMain
               end
               item
                 Action = actnSaveSession
-                Caption = 'S&ave SCM-DT Session ...'
+                Caption = 'S&ave SCM-TD Session ...'
                 ImageIndex = 1
                 ImageName = 'file_saveAlt'
               end
               item
                 Action = actnLoadSession
-                Caption = '&Load SCM-DT Session ...'
+                Caption = '&Load SCM-TD Session ...'
                 ImageIndex = 0
                 ImageName = 'file_open'
               end
@@ -1667,12 +1667,13 @@ object Main: TMain
                 Items = <
                   item
                     Action = actnClearReScanMeets
-                    Caption = '&Clear and re-scan DT meets folder ...'
+                    Caption = '&Clear and re-scan TD meets folder ...'
                     ImageIndex = 10
                     ImageName = 'scan'
                   end
                   item
                     Action = actnImportAppendDO
+                    Caption = '&Import Time Drops Result file(s) ...'
                     ImageIndex = 0
                     ImageName = 'file_open'
                   end>
@@ -1699,14 +1700,14 @@ object Main: TMain
           item
             Items = <
               item
-                Action = actnSyncDT
-                Caption = '&Sync DT to SCM'
+                Action = actnSyncTD
+                Caption = '&Sync TD to SCM'
                 ImageIndex = 11
                 ImageName = 'arrow_back'
               end
               item
                 Action = actnSyncSCM
-                Caption = 'S&ync SCM to DT'
+                Caption = 'S&ync SCM to TD'
                 ImageIndex = 15
                 ImageName = 'arrow_forward'
               end
@@ -1742,8 +1743,8 @@ object Main: TMain
                 ImageName = 'file_report'
               end
               item
-                Action = actnReportDT
-                Caption = '&Dolphin Timing Report...'
+                Action = actnReportTD
+                Caption = '&Time Drops Report...'
                 ImageIndex = 12
                 ImageName = 'file_report'
               end>
@@ -1753,7 +1754,7 @@ object Main: TMain
             Items = <
               item
                 Action = actnAbout
-                Caption = '&About SCM Dolphin Timing ...'
+                Caption = '&About SCM TimeDrops ...'
                 ImageIndex = 8
                 ImageName = 'Help'
               end>
@@ -1818,37 +1819,37 @@ object Main: TMain
     end
     object actnClearReScanMeets: TAction
       Category = 'Import'
-      Caption = 'Clear and re-scan DT meets folder ...'
+      Caption = 'Clear and re-scan TD meets folder ...'
       ImageIndex = 10
       ImageName = 'scan'
       OnExecute = actnClearReScanMeetsExecute
     end
     object actnSaveSession: TAction
       Category = 'File'
-      Caption = 'Save SCM-DT Session ...'
+      Caption = 'Save SCM-TD Session ...'
       Enabled = False
       ImageIndex = 1
       ImageName = 'file_saveAlt'
     end
     object actnLoadSession: TAction
       Category = 'File'
-      Caption = 'Load SCM-DT Session ...'
+      Caption = 'Load SCM-TD Session ...'
       Enabled = False
       ImageIndex = 0
       ImageName = 'file_open'
     end
     object actnAbout: TAction
       Category = 'Help'
-      Caption = 'About SCM Dolphin Timing ...'
+      Caption = 'About SCM TimeDrops ...'
       ImageIndex = 8
       ImageName = 'Help'
     end
-    object actnSyncDT: TAction
+    object actnSyncTD: TAction
       Category = 'Edit'
-      Caption = 'Sync DT to SCM'
+      Caption = 'Sync TD to SCM'
       ImageIndex = 11
       ImageName = 'arrow_back'
-      OnExecute = actnSyncDTExecute
+      OnExecute = actnSyncTDExecute
     end
     object actnConnect: TAction
       Category = 'Edit'
@@ -1876,15 +1877,15 @@ object Main: TMain
       ImageIndex = 12
       ImageName = 'file_report'
     end
-    object actnReportDT: TAction
+    object actnReportTD: TAction
       Category = 'Reports'
-      Caption = 'Dolphin Timing Report...'
+      Caption = 'Time Drops Report...'
       ImageIndex = 12
       ImageName = 'file_report'
     end
     object actnSyncSCM: TAction
       Category = 'Edit'
-      Caption = 'Sync SCM to DT'
+      Caption = 'Sync SCM to TD'
       ImageIndex = 15
       ImageName = 'arrow_forward'
       OnExecute = actnSyncSCMExecute

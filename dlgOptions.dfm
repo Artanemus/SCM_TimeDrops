@@ -3,7 +3,7 @@ object Options: TOptions
   Top = 0
   BorderStyle = bsDialog
   Caption = 'Application Options ...'
-  ClientHeight = 510
+  ClientHeight = 524
   ClientWidth = 661
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -8403,12 +8403,13 @@ object Options: TOptions
   end
   object pnlFooter: TPanel
     Left = 0
-    Top = 469
+    Top = 483
     Width = 661
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 2
+    ExplicitTop = 469
     object btnClose: TButton
       Left = 574
       Top = 6
@@ -8423,32 +8424,54 @@ object Options: TOptions
     Left = 0
     Top = 67
     Width = 661
-    Height = 402
+    Height = 416
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitHeight = 402
     object pgcntrl: TPageControl
       Left = 0
       Top = 0
       Width = 661
-      Height = 402
-      ActivePage = tabSettings
+      Height = 416
+      ActivePage = tabsheetPaths
       Align = alClient
       TabOrder = 0
+      ExplicitHeight = 402
       object tabSettings: TTabSheet
         Caption = 'Settings'
         ImageIndex = 1
         object lblSwimmerAge: TLabel
-          Left = 397
-          Top = 224
-          Width = 101
+          Left = 427
+          Top = 339
+          Width = 71
           Height = 21
           Alignment = taRightJustify
           Caption = 'Seed date.'
           Enabled = False
         end
+        object lblInfoFinalTime: TLabel
+          Left = 48
+          Top = 120
+          Width = 450
+          Height = 21
+          Caption = 
+            '(Instead of SCM AutoCalc race time - use Time Drops '#39'finalTime'#39'.' +
+            ')'
+          Enabled = False
+        end
+        object lblInfoPadTime: TLabel
+          Left = 48
+          Top = 178
+          Width = 445
+          Height = 21
+          Caption = 
+            '(Instead of '#39'last split time recorded'#39' - use Time Drops '#39'padTime' +
+            #39'.)'
+          Enabled = False
+        end
         object lbledtDeviation: TLabeledEdit
-          Left = 22
+          Left = 20
           Top = 16
           Width = 48
           Height = 29
@@ -8463,17 +8486,15 @@ object Options: TOptions
         end
         object rgrpMeanTimeMethod: TRadioGroup
           Left = 20
-          Top = 89
+          Top = 237
           Width = 269
-          Height = 152
-          Caption = 'Calculate race times ...'
+          Height = 92
+          Caption = 'AutoCalc entrant'#39's race times ...'
           Enabled = False
           ItemIndex = 0
           Items.Strings = (
             'Standard behaviour'
-            'SCM method'
-            'Use Time Drops '#39'finalTime'#39
-            'Use TimeDrops '#39'padTime'#39)
+            'SCM method')
           TabOrder = 1
         end
         object chkbxRenameSession: TCheckBox
@@ -8485,42 +8506,46 @@ object Options: TOptions
           Enabled = False
           TabOrder = 2
         end
-        object rgrpPrecedence: TRadioGroup
-          Left = 20
-          Top = 255
-          Width = 613
-          Height = 97
-          Caption = 'Precedence '
-          Enabled = False
-          ItemIndex = 1
-          Items.Strings = (
-            'Use  the JSON data for Session, Event, Heat && Race data.'
-            'Use the filename to extract Session, Event, Heat && Race  data.')
-          TabOrder = 3
-        end
         object rgrpSwimmerAge: TRadioGroup
-          Left = 352
-          Top = 89
-          Width = 281
-          Height = 125
-          Caption = 'Calculate swimmer age ...'
+          Left = 328
+          Top = 237
+          Width = 305
+          Height = 92
+          Caption = 'Calculate swimmer'#39's age ...'
           Enabled = False
           ItemIndex = 0
           Items.Strings = (
-            'Start of session (meet). '
-            'Start of season. (SCM options).'
+            'As assigned in SCM options.'
             'Pick a seed date for age. ')
-          TabOrder = 4
+          TabOrder = 3
         end
         object dtpickSwimmerAge: TDateTimePicker
           Left = 504
-          Top = 220
+          Top = 335
           Width = 129
           Height = 29
           Date = 45738.000000000000000000
           Time = 0.546796909722616000
           Enabled = False
+          TabOrder = 4
+        end
+        object chkbxFinalTime: TCheckBox
+          Left = 20
+          Top = 89
+          Width = 301
+          Height = 25
+          Caption = 'Use Time Drops '#39'Final Time'#39'.'
+          Enabled = False
           TabOrder = 5
+        end
+        object chkbxPadTime: TCheckBox
+          Left = 20
+          Top = 147
+          Width = 301
+          Height = 25
+          Caption = 'Use Time Drops '#39'Pad Time'#39'.'
+          Enabled = False
+          TabOrder = 6
         end
       end
       object tabsheetPaths: TTabSheet
@@ -8569,7 +8594,7 @@ object Options: TOptions
           Font.Style = [fsUnderline]
           ParentFont = False
         end
-        object btnedtEventCSV: TButtonedEdit
+        object btnedtMeetProgram: TButtonedEdit
           Left = 3
           Top = 92
           Width = 647
@@ -8580,7 +8605,7 @@ object Options: TOptions
           RightButton.Visible = True
           TabOrder = 1
           Text = 'c:\TimeDrops\Meets\'
-          OnRightButtonClick = btnedtEventCSVRightButtonClick
+          OnRightButtonClick = btnedtMeetProgramRightButtonClick
         end
         object btnedtAppData: TButtonedEdit
           Left = 3
@@ -8595,7 +8620,7 @@ object Options: TOptions
           Text = 'c:\TimeDrops\AppData\'
           OnRightButtonClick = btnedtAppDataRightButtonClick
         end
-        object btnedtMeetFolder: TButtonedEdit
+        object btnedtResults: TButtonedEdit
           Left = 3
           Top = 30
           Width = 647
@@ -8606,7 +8631,7 @@ object Options: TOptions
           RightButton.Visible = True
           TabOrder = 0
           Text = 'c:\TimeDrops\Meets'
-          OnRightButtonClick = btnedtMeetFolderRightButtonClick
+          OnRightButtonClick = btnedtResultsRightButtonClick
         end
         object btnedtReConstruct: TButtonedEdit
           Left = 3

@@ -58,7 +58,7 @@ type
     FSelectedEventID: integer;
     FSelectedHeatID: integer;
     FSelectedFileName: string;
-    fPrecedence: dmAppData.dtPrecedence;
+//    fPrecedence: dmAppData.dtPrecedence;
 
     // Snapshot of the current position in the Application Data tables.
     // NOTE: lane is ignored.
@@ -358,7 +358,7 @@ end;
 
 procedure TTreeViewData.LoadSettings;
 begin
-  fPrecedence := Settings.Precedence;
+//  fPrecedence := Settings.Precedence;
 end;
 
 procedure TTreeViewData.LocateTVEventID(AEventID: integer);
@@ -486,10 +486,7 @@ begin
   while not AppData.tblmSession.Eof do
   begin
     s := AppData.tblmSession.FieldByName('Caption').AsString;
-    if fPrecedence = dtPrecFileName then
-      i := AppData.tblmSession.FieldByName('fnSessionNum').AsInteger
-    else
-      i := AppData.tblmSession.FieldByName('SessionNum').AsInteger;
+    i := AppData.tblmSession.FieldByName('SessionNum').AsInteger;
     idsess := AppData.tblmSession.FieldByName('SessionID').AsInteger;
 
     { CREATE NodeSess : EventID, EventNum. }
@@ -506,10 +503,7 @@ begin
     while not AppData.tblmEvent.Eof do
     begin
       sev := AppData.tblmEvent.FieldByName('Caption').AsString;
-      if fPrecedence = dtPrecFileName then
-        i := AppData.tblmEvent.FieldByName('fnEventNum').AsInteger
-      else
-        i := AppData.tblmEvent.FieldByName('EventNum').AsInteger;
+      i := AppData.tblmEvent.FieldByName('EventNum').AsInteger;
       idev := AppData.tblmEvent.FieldByName('EventID').AsInteger;
 
       { CREATE nodeEv : EventID, EventNum. }
@@ -539,10 +533,7 @@ begin
       while not AppData.tblmHeat.Eof do
       begin
         sht := AppData.tblmHeat.FieldByName('Caption').AsString;
-        if fPrecedence = dtPrecFileName then
-          i := AppData.tblmHeat.FieldByName('fnHeatNum').AsInteger
-        else
-          i := AppData.tblmHeat.FieldByName('HeatNum').AsInteger;
+        i := AppData.tblmHeat.FieldByName('HeatNum').AsInteger;
         idht := AppData.tblmHeat.FieldByName('HeatID').AsInteger;
 
         { CREATE nodeHt : HeatID, HeatNum. }
@@ -566,13 +557,13 @@ begin
 
   // Master-Detail enabled - order is important ...
   // Restore Record positions for DT tables.
-  if AppData.LocateDTSessionID(storeSessID) then
+  if AppData.LocateTSessionID(storeSessID) then
   begin
     AppData.tblmEvent.ApplyMaster;
-    if AppData.LocateDTEventID(storeEvID) then
+    if AppData.LocateTEventID(storeEvID) then
     begin
       AppData.tblmHeat.ApplyMaster;
-      AppData.LocateDTHeatID(storeHtID);
+      AppData.LocateTHeatID(storeHtID);
     end;
   end;
 
