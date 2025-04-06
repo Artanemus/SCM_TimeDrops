@@ -140,7 +140,6 @@ type
     procedure UpdateSessionStartLabel();
     procedure UpdateEventDetailsLabel();
     procedure UpdateEventDetailsTD;
-    procedure DeleteFilesWithWildcard(const APath, APattern: string);
     procedure UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
         dtActiveRT);
 
@@ -377,23 +376,6 @@ begin
   UpdateCaption;
 end;
 
-procedure TMain.DeleteFilesWithWildcard(const APath, APattern: string);
-var
-  SR: TSearchRec;
-  FullPath: string;
-begin
-  FullPath := IncludeTrailingPathDelimiter(APath) + APattern;
-  if FindFirst(FullPath, faAnyFile, SR) = 0 then
-  try
-    repeat
-      // Build the full filename
-      if (SR.Attr and faDirectory) = 0 then
-        DeleteFile(IncludeTrailingPathDelimiter(APath) + SR.Name);
-    until FindNext(SR) <> 0;
-  finally
-    FindClose(SR);
-  end;
-end;
 
 procedure TMain.actnReConstructTDResultFilesExecute(Sender: TObject);
 var

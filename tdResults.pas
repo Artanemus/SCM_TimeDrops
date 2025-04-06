@@ -2,7 +2,8 @@ unit tdResults;
 
 interface
 
-uses XSuperJSON, XSuperObject, dmAppData, System.Types, System.StrUtils;
+uses XSuperJSON, XSuperObject, dmAppData, System.Types, System.StrUtils,
+  uAppUtils;
 
   // Main Process entry points
 
@@ -16,95 +17,176 @@ uses
   SysUtils, Classes, System.JSON, System.IOUtils, Windows,
   Vcl.Dialogs, DateUtils;
 
-function StripNonNumeric(const AStr: string): string;
-var
-  Ch: Char;
-
-begin
-  Result := '';
-  for Ch in AStr do
-  begin
-    if CharInSet(Ch, ['0'..'9']) then
-      Result := Result + Ch;
-  end;
-end;
-
-
-function Convert100thSecondsToDateTime(AHundredths: Integer): TDateTime;
-var
-  ms: Integer;
-begin
-  // Convert hundredths of a second to milliseconds
-  ms := AHundredths * 10;
-
-  // Create a TDateTime from the milliseconds since midnight
-  Result := IncMilliSecond(0, ms);
-end;
-
-
 (*
-        {
-          "createdAt": "2023-07-31T17:53:00.042-07:00",
-          "protocolVersion": "1.1.0",
-          "sessionNumber": 123, // from program
-          "sessionId": "67251", // from program
-          "eventNumber": "1",
-          "heatNumber": 2,
-          "raceNumber": 2,
-          "startTime": "2023-07-31T17:52:11.234-07:00",
-          "lanes": [
-            {
-              "lane": 1,
-              “finalTime”: 4883, // combination of the pad and button times. Meet Management program
-              may prefer to calculate this time themselves
-              "padTime": 4883, // only present when using pads
-              "timer1": 4942, // in 1/100th of seconds
-              "timer2": 4925,
-              "timer3": 4904,
-              "isEmpty": false, // lane declared empty by timing operator, may still have times in case of
-              operator error
-              "isDq": false, // for relay judging platform
-              "splits": [
-                {
-                "distance": 25,
-                "time": 1686
-                }
-              ]
-              },
-              …… more lanes to follow
-            ]
+  {
+    "createdAt": "2023-07-31T17:53:00.042-07:00",
+    "protocolVersion": "1.1.0",
+    "sessionNumber": 123, // from program
+    "sessionId": "67251", // from program
+    "eventNumber": "1",
+    "heatNumber": 2,
+    "raceNumber": 2,
+    "startTime": "2023-07-31T17:52:11.234-07:00",
+    "lanes": [
+      {
+        "lane": 1,
+        “finalTime”: 4883, // combination of the pad and button times. Meet Management program
+        may prefer to calculate this time themselves
+        "padTime": 4883, // only present when using pads
+        "timer1": 4942, // in 1/100th of seconds
+        "timer2": 4925,
+        "timer3": 4904,
+        "isEmpty": false, // lane declared empty by timing operator, may still have times in case of
+        operator error
+        "isDq": false, // for relay judging platform
+        "splits": [
+          {
+          "distance": 25,
+          "time": 1686
           }
-        }
+        ]
+        },
+        …… more lanes to follow
+      ]
+    }
+  }
 *)
 
 
+procedure ReadJsonSplits(laneObject: ISuperObject; PK_LaneID: integer);
+var
+  splitObject: ISuperObject;
+  splitsObj: ISuperArray;
+  splitValue: ICast;
+  iter: integer;
+  fldname: string;
+begin
+    if LaneObject.Contains('Splits') then
+    begin
+      splitsObj := LaneObject.A['splits']; // Get the array
+      if Assigned(splitsObj) then // Check if it's actually an array
+      begin
+        // Assuming ApplyMaster sets the HeatID filter/parameter correctly
+        AppData.tblmLane.ApplyMaster;
+        iter := 1;
+        {TODO -oBSA -cGeneral : Remove all split-times from tblmLane}
+        for splitValue in splitsObj do // Iterate through array elements
+        begin
+          if (splitValue.DataType = dtObject) then // Ensure the array element is an object
+          begin
+            splitObject := splitValue.AsObject; // Get the split-time object
+            // --- Locate or Insert/Edit Lane Record ---
+            if AppData.LocateTLaneNum(laneObject.I['lane']) then 
+              AppData.tblmLane.Edit
+            else
+              AppData.tblmLane.Insert;
+            
+            fldname := 'split' + intToStr(iter); // generate the field name
+            AppData.tblmLane.FieldByName(fldName).AsDateTime := ConvertCentiSecondsToDateTime(splitObject.I['split']);
+            Inc(iter); // next field Name
+            {TODO -oBSA -cGeneral : JSON Split object 'distance' isn't assigned in tblmLane }
+          end;
+        end;
+      end; // END SPLIT.
+    end; // END SPLITS.
+end;
 
+
+procedure ReadJsonLanes(JSONObj: ISuperObject; PK_HeatID: integer);
+var
+  laneObject: ISuperObject;
+  lanesObj: ISuperArray;
+  laneValue: ICast;
+  PK_LaneID: integer;
+begin
+  lanesObj := JSONObj.A['Lanes']; // Get the array
+  if Assigned(lanesObj) then // Check if it's actually an array
+  begin
+    // Assuming ApplyMaster sets the HeatID filter/parameter correctly
+    AppData.tblmLane.ApplyMaster;
+
+    for laneValue in lanesObj do // Iterate through array elements
+    begin
+      if (laneValue.DataType = dtObject) then // Ensure the array element is an object
+      begin
+        laneObject := laneValue.AsObject; // Get the lane object
+
+        // --- Locate or Insert/Edit Lane Record ---
+        // Check if lane exsists.
+        if AppData.LocateTLaneNum(laneObject.I['lane']) then 
+          AppData.tblmLane.Edit
+        else
+          AppData.tblmLane.Insert;
+
+        // primary key
+        PK_LaneID := AppData.MaxID_Lane + 1;
+        AppData.tblmLane.fieldbyName('LaneID').AsInteger := PK_LaneID;
+        // master.detail.
+        AppData.tblmLane.FieldByName('HeatID').AsInteger := PK_HeatID;
+        AppData.tblmLane.FieldByName('LaneNum').AsInteger := laneObject.I['lane'];
+        AppData.tblmLane.fieldbyName('Caption').AsString := 'Lane: ' + IntToStr(laneObject.I['lane']);
+        AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := false;
+
+
+        AppData.tblmLane.FieldByName('finalTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['finalTime']);
+        AppData.tblmLane.FieldByName('padTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['padTime']);
+        AppData.tblmLane.FieldByName('time1').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer1']);
+        AppData.tblmLane.FieldByName('time2').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer2']);
+        AppData.tblmLane.FieldByName('time3').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer3']);
+        AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := laneObject.B['isEmpty'];
+        AppData.tblmLane.fieldbyName('isDq').AsBoolean := laneObject.B['isDq'];
+
+        // Swimmers calculated racetime for post.
+        AppData.tblmLane.fieldbyName('RaceTime').Clear;
+        // A user entered race-time.
+        AppData.tblmLane.fieldbyName('RaceTimeUser').Clear;
+        // The Automatic race-time. Calculated on load of DT file.
+        AppData.tblmLane.fieldbyName('RaceTimeA').Clear;
+        // dtActiveRT = (artAutomatic, artManual, artUser, artSplit, artNone);
+        AppData.tblmLane.fieldbyName('ActiveRT').AsInteger := ORD(artAutoMatic);
+        // graphic used in column[6] - GRID IMAGES AppData.vimglistDTCell .
+        // image index 1 indicts - dtTimeKeeperMode = dtAutomatic.
+        AppData.tblmLane.fieldbyName('imgActiveRT').AsInteger := -1;
+        // graphic used in column[1] - for noodle drawing...
+        AppData.tblmLane.fieldbyName('imgPatch').AsInteger := 0;
+
+        // Init misc fields
+        AppData.tblmLane.fieldbyName('TDev1').AsBoolean := true;
+        AppData.tblmLane.fieldbyName('TDev2').AsBoolean := true;
+
+        AppData.tblmLane.Post; // Post the inserted or edited record.
+
+        ReadJsonSplits(laneObject, PK_LaneID);
+        
+      end;
+    end;
+  end;
+end;
 
 procedure ReadJsonFile(const FileName: string; SessionID, EventNum, HeatNum, RaceNum: integer);
 var
-  JSONObj, laneObject, splitObject: ISuperObject;
-  lanesObj, splitsObj: ISuperArray;
-  finalTimeValue: ISuperExpression;
+  JSONObj: ISuperObject;
   FileStream: TFileStream;
-  laneValue, splitValue: ICast;
-  aSessionID, aEventID, aEventNum, aHeatID, aHeatNum, laneNum: integer;
+  PK_SessionID, PK_EventID, PK_HeatID: integer;
   fs: TFormatSettings;
-  str, fldname: string;
-  iter: integer;
+  str: string;
   fCreationDT: TDateTime;
 begin
-
-
+  PK_SessionID := 0;
+  
   FileStream := TFileStream.Create(FileName, fmOpenRead or fmShareDenyWrite);
   try
     JSONObj := TSuperObject.ParseStream(FileStream, True);
     if Assigned(JSONObj) and (JSONObj.DataType = dtObject) then
     begin
       // Process the JSON object
-      Writeln(JSONObj.AsJSon);
+      //      Writeln(JSONObj.AsJSon);
       if JSONObj.Contains('sessionId') then
       begin
-        if not AppData.LocateTSessionID(JSONobj.I['sessionId']) then
+        // Primary Key - NOTE: matches to SCM SessionID.
+        PK_SessionID := JSONobj.I['sessionId'];
+        // ignore if found...
+        if not AppData.LocateTSessionID(PK_SessionID) then
         begin
           // add the newly discovered session
           AppData.tblmSession.Insert;
@@ -112,32 +194,34 @@ begin
           fCreationDT := Now;
           // wit: the start of recording of race data from TimeDrops.
           AppData.tblmSession.FieldByName('createdOn').AsDateTime := fCreationDT;
-          // Primary Key
-          AppData.tblmSession.FieldByName('sessionId').AsInteger := JSONobj.I['sessionId'];
+          // Primary Key.
+          AppData.tblmSession.FieldByName('sessionId').AsInteger := PK_SessionID;
           // Session Number.
           AppData.tblmSession.FieldByName('sessionNum').AsInteger := JSONobj.I['sessionNumber'];
           // Create a basic session caption.
           fs := TFormatSettings.Create;
           fs.DateSeparator := '_';
           fs.ShortDateFormat := 'yyyy-mm-dd';
-          str := 'Session: ' + IntToStr(JSONobj.I['sessionId']) + ' Date: ' + DatetoStr(fCreationDT, fs);
+          str := 'Session: ' + IntToStr(PK_SessionID) + ' Date: ' + DatetoStr(fCreationDT, fs);
           AppData.tblmSession.fieldbyName('Caption').AsString := str;
           AppData.tblmSession.Post;
         end;
       end;
-
+      // SYNC
       AppData.tblmEvent.ApplyMaster;
       if JSONObj.Contains('eventNumber') then
       begin
-        if not AppData.LocateTEventNum(SessionID, JSONobj.I['eventNumber']) then
+        // ignore if found...
+        if not AppData.LocateTEventNum(PK_SessionID, JSONobj.I['eventNumber']) then
         begin
+          // create new event
           AppData.tblmEvent.Insert;
           AppData.tblmEvent.FieldByName('EventNum').AsInteger := JSONobj.I['eventNumber'];
           // Calculate the Primary Key : IDENTIFIER.
           // ID isn't AutoInc. the primary key is calculated manually.
           AppData.tblmEvent.fieldbyName('EventID').AsInteger := AppData.MaxID_Event + 1;
           // master - detail. Also Index Field.
-          AppData.tblmEvent.fieldbyName('SessionID').AsInteger := JSONobj.I['sessionId'];
+          AppData.tblmEvent.fieldbyName('SessionID').AsInteger := PK_SessionID;
           // CAPTION for Event :
           str := 'Event: ' +  IntToStr(JSONobj.I['eventNumber']);
           AppData.tblmEvent.fieldbyName('Caption').AsString := str;
@@ -145,12 +229,13 @@ begin
         end;
       end;
 
-      aEventID := AppData.tblmEvent.FieldByName('EventID').AsInteger;
-
+      PK_EventID := AppData.tblmEvent.FieldByName('EventID').AsInteger;
+      // SYNC
       AppData.tblmHeat.ApplyMaster;
       if JSONObj.Contains('heatNumber') then
       begin
-        if not AppData.LocateTHeatNum(aEventID, aHeatNum) then
+        // ignore if found...
+        if not AppData.LocateTHeatNum(PK_EventID, JSONobj.I['heatNumber']) then
         begin
           AppData.tblmHeat.Insert;
           AppData.tblmHeat.FieldByName('HeatNum').AsInteger := JSONobj.I['heatNumber'];
@@ -158,115 +243,25 @@ begin
           // ID isn't AutoInc - calc manually.
           AppData.tblmHeat.fieldbyName('HeatID').AsInteger := AppData.MaxID_Heat() + 1;
           // master - detail.
-          AppData.tblmHeat.fieldbyName('EventID').AsInteger := aEventID;
+          AppData.tblmHeat.fieldbyName('EventID').AsInteger := PK_EventID;
           // TIME STAMP.
           AppData.tblmHeat.fieldbyName('startTime').AsDateTime := ISO8601ToDate(JSONobj.S['startTime']);
           AppData.tblmHeat.fieldbyName('Caption').AsString := 'Heat: ' + IntToStr(JSONobj.I['heatNumber']);
           // A unique sequential number for each heat.
           AppData.tblmHeat.fieldbyName('RaceNum').AsInteger:= JSONobj.I['raceNumber'];;
-          // Get the creation time of the specified file
-          fCreationDT := TFile.GetCreationTime(FileName);
           // TimeStamp of TimeDrops Results file.
           AppData.tblmSession.fieldbyName('CreatedOn').AsDateTime := ISO8601ToDate(JSONobj.s['createdAt']);
           AppData.tblmHeat.Post;
           end;
       end;
-
-      aHeatID := AppData.tblmHeat.FieldByName('HeatID').AsInteger;
-
-      if JSONObj.Contains('Lanes') then
-      begin
-        lanesObj := JSONObj.A['Lanes']; // Get the array
-        if Assigned(lanesObj) then // Check if it's actually an array
-        begin
-          // Assuming ApplyMaster sets the HeatID filter/parameter correctly
-          AppData.tblmLane.ApplyMaster;
-
-          for laneValue in lanesObj do // Iterate through array elements
-          begin
-            if (laneValue.DataType = dtObject) then // Ensure the array element is an object
-            begin
-              laneObject := laneValue.AsObject; // Get the lane object
-
-              // --- Extract data from laneObject ---
-              laneNum := laneObject.I['lane']; // Assuming 'lane' field exists and is integer
-
-              // --- Locate or Insert/Edit Lane Record ---
-              // You need a function like LocateDTLaneNum(HeatID, LaneNum): Boolean;
-              if AppData.LocateTLaneNum(laneNum) then // Or however you locate lanes
-              begin
-                AppData.tblmLane.Edit;
-              end
-              else
-              begin
-                AppData.tblmLane.Insert;
-                // primary key
-                AppData.tblmLane.fieldbyName('LaneID').AsInteger := AppData.MaxID_Lane + 1;
-                // master.detail.
-                AppData.tblmLane.FieldByName('HeatID').AsInteger := aHeatID;
-                AppData.tblmLane.FieldByName('LaneNum').AsInteger := laneObject.I['lane'];
-                AppData.tblmLane.fieldbyName('Caption').AsString := 'Lane: ' + IntToStr(laneNum);
-                AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := false;
-
-
-                AppData.tblmLane.FieldByName('finalTime').AsDateTime := Convert100thSecondsToDateTime(laneObject.I['finalTime']);
-                AppData.tblmLane.FieldByName('padTime').AsDateTime := Convert100thSecondsToDateTime(laneObject.I['padTime']);
-                AppData.tblmLane.FieldByName('time1').AsDateTime := Convert100thSecondsToDateTime(laneObject.I['timer1']);
-                AppData.tblmLane.FieldByName('time2').AsDateTime := Convert100thSecondsToDateTime(laneObject.I['timer2']);
-                AppData.tblmLane.FieldByName('time3').AsDateTime := Convert100thSecondsToDateTime(laneObject.I['timer3']);
-                AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := laneObject.B['isEmpty'];
-                AppData.tblmLane.fieldbyName('isDq').AsBoolean := laneObject.B['isDq'];
-
-
-                // Swimmers calculated racetime for post.
-                AppData.tblmLane.fieldbyName('RaceTime').Clear;
-                // A user entered race-time.
-                AppData.tblmLane.fieldbyName('RaceTimeUser').Clear;
-                // The Automatic race-time. Calculated on load of DT file.
-                AppData.tblmLane.fieldbyName('RaceTimeA').Clear;
-                // dtActiveRT = (artAutomatic, artManual, artUser, artSplit, artNone);
-                AppData.tblmLane.fieldbyName('ActiveRT').AsInteger := ORD(artAutoMatic);
-                // graphic used in column[6] - GRID IMAGES AppData.vimglistDTCell .
-                // image index 1 indicts - dtTimeKeeperMode = dtAutomatic.
-                AppData.tblmLane.fieldbyName('imgActiveRT').AsInteger := -1;
-                // graphic used in column[1] - for noodle drawing...
-                AppData.tblmLane.fieldbyName('imgPatch').AsInteger := 0;
-
-              end;
-              AppData.tblmLane.Post; // Post the inserted or edited record.
-
-              if LaneObject.Contains('Splits') then
-              begin
-                splitsObj := JSONObj.A['splits']; // Get the array
-                if Assigned(splitsObj) then // Check if it's actually an array
-                begin
-                  iter := 1;
-                  for splitValue in splitsObj do // Iterate through array elements
-                  begin
-                    if (splitValue.DataType = dtObject) then // Ensure the array element is an object
-                    begin
-                      splitObject := splitValue.AsObject; // Get the split-time object
-                      fldname := 'split' + intToStr(iter); // generate the field name
-                      AppData.tblmLane.FieldByName(fldName).AsDateTime := Convert100thSecondsToDateTime(splitObject.I['split']);
-                      Inc(iter); // next field Name
-                    end;
-                  end;
-                end;
-              end;
-
-
-            end;
-          end;
-        end;
-      end;
+      PK_HeatID := AppData.tblmHeat.FieldByName('HeatID').AsInteger;
+      ReadJsonLanes(JSONObj, PK_HeatID);
     end;
 
   finally
     FileStream.Free;
   end;
 end;
-
-
 
 procedure ProcessDirectory(const ADirectory: string);
 var
@@ -299,9 +294,6 @@ begin
   AppData.tblmHeat.EmptyDataSet;
   AppData.tblmLane.EmptyDataSet;
   AppData.tblmNoodle.EmptyDataSet;
-
-  // De-attach from Master-Detail. Create flat files. Necessary to calculate table Primary keys.
-  AppData.DisableTDMasterDetail;
 
   try
     // For files use GetFiles method
@@ -356,13 +348,11 @@ begin
       ProcessSession(LList, SessionIds[I]);
   end;
 
-  // Re-attach Master-Detail
-  AppData.EnableTDMasterDetail;
 end;
 
 procedure ProcessFile(const AFileName: string);
 var
-  SessionID, SessionNum, EventNum, HeatNum, RaceNum: integer;
+  SessionID, EventNum, HeatNum, RaceNum: integer;
   Fields: TArray<string>;
 begin
   if FileExists(AFileName) then
@@ -372,43 +362,45 @@ begin
     // Necessary to calculate table Primary keys.
     AppData.DisableTDMasterDetail;
     // =====================================================
-
-    Fields := SplitString(AFileName, '_');
-    if Length(Fields) > 1 then
-    begin
-      // Strip non-numeric characters from Fields[1]
-      Fields[1] := StripNonNumeric(Fields[1]);
-      SessionID := StrToIntDef(Fields[1], 0);
-      if (SessionID <> 0) then
+    try
       begin
-        // init
-        SessionNum := 0;
-        EventNum := 0;
-        HeatNum := 0;
-        RaceNum := 0;
-        // Filename syntax used by Time Drops: SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
-        if Length(Fields) > 2 then
-          EventNum := StrToIntDef(StripNonNumeric(Fields[1]), 0);
-        if Length(Fields) > 3 then
-          HeatNum := StrToIntDef(StripNonNumeric(Fields[2]), 0);
-        if Length(Fields) > 4 then
-          RaceNum := StrToIntDef(StripNonNumeric(Fields[3]), 0);
-        ReadJsonFile(AFileName, SessionID, EventNum, HeatNum, RaceNum);
+        Fields := SplitString(AFileName, '_');
+        if Length(Fields) > 1 then
+        begin
+          // Strip non-numeric characters from Fields[1]
+          Fields[1] := StripNonNumeric(Fields[1]);
+          SessionID := StrToIntDef(Fields[1], 0);
+          if (SessionID <> 0) then
+          begin
+            // init
+            EventNum := 0;
+            HeatNum := 0;
+            RaceNum := 0;
+            // Filename syntax used by Time Drops: SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
+            if Length(Fields) > 2 then
+              EventNum := StrToIntDef(StripNonNumeric(Fields[1]), 0);
+            if Length(Fields) > 3 then
+              HeatNum := StrToIntDef(StripNonNumeric(Fields[2]), 0);
+            if Length(Fields) > 4 then
+              RaceNum := StrToIntDef(StripNonNumeric(Fields[3]), 0);
+            ReadJsonFile(AFileName, SessionID, EventNum, HeatNum, RaceNum);
+          end;
+        end;      
       end;
+    finally
+    
+      // =====================================================
+      // Re-attach Master-Detail.
+      AppData.EnableTDMasterDetail;
+      // =====================================================
     end;
-
-    // =====================================================
-    // Re-attach Master-Detail.
-    AppData.EnableTDMasterDetail;
-    // =====================================================
   end;
 end;
 
 procedure ProcessSession(AList: TStringDynArray; ASessionID: integer);
 var
-  i, EventNum, HeatNum, RaceNum: integer;
-//  s: string;
   Fields: TArray<string>;
+  I: integer;
 begin
   // iterate over the filenames.
   for I := 0 to Length(AList) - 1 do
@@ -419,18 +411,7 @@ begin
     begin
       if Fields[0].Contains(IntToStr(ASessionID)) then
       begin
-        // init
-        EventNum := 0;
-        HeatNum := 0;
-        RaceNum := 0;
-        // Filename syntax used by Time Drops: SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
-        if Length(Fields) > 2 then
-          EventNum := StrToIntDef(StripNonNumeric(Fields[1]), 0);
-        if Length(Fields) > 3 then
-          HeatNum := StrToIntDef(StripNonNumeric(Fields[2]), 0);
-        if Length(Fields) > 4 then
-          RaceNum := StrToIntDef(StripNonNumeric(Fields[3]), 0);
-        ReadJsonFile(AList[I], ASessionID, EventNum, HeatNum, RaceNum);
+        ProcessFile(AList[I]);
       end;
     end;
   end;
@@ -510,11 +491,7 @@ end;
       end;
     end;
 
-    // D e v i a t i o n  --- initialization
-    // The watch-times, min-mid and mid-max, are within accepted deviation.
-    // (verified later in procedure)
-    AppData.tblmLane.fieldbyName('TDev1').AsBoolean := true;
-    AppData.tblmLane.fieldbyName('TDev2').AsBoolean := true;
+
 
     // gather up the timekeepers 1-3 recorded race times for this lane.
     sListBodySplits(I, fSplits);
@@ -528,9 +505,6 @@ end;
     end;
     AppData.tblmLane.Post;
 
-    // Main form assigns value. ASSERT - avoid division by zero.
-    if fAcceptedDeviation = 0 then
-      fAcceptedDeviation := 0.3; // Dolphin Timing's default.
 
     // Cacluate RaceTimeA for the ActiveRT. (artAutomatic)
     // AND verify deviaiton AND assert fields [T1A, T2A, T3A]

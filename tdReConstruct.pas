@@ -45,7 +45,7 @@ interface
 
 uses dmSCM, dmAppData, System.SysUtils, System.Classes, system.Hash,
 DateUtils, variants, SCMDefines, Data.DB, tdSetting, XSuperJSON, XSuperObject,
-FireDAC.Stan.Param, dtTimingSystemStatus;
+FireDAC.Stan.Param, dtTimingSystemStatus, uAppUtils;
 
 procedure ReConstructSession(SessionID: integer);
 
@@ -87,18 +87,6 @@ begin
     end;
   except on E: Exception do
   end;
-end;
-
-function ConverDateTimeTo100thSeconds(ADateTime:TDateTime): integer;
-var
-dt: TTime;
-seedTimeInCentiseconds: integer;
-begin
-  dt := TimeOf(ADateTime);
-  // seed time in 1/100 of a second.
-  seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
-  // Assign to laneSeedTime
-  result := seedTimeInCentiseconds;
 end;
 
 function GetMaxSplitTime(aID: integer; aEventType: scmEventType): TDateTime;
@@ -279,7 +267,7 @@ begin
         begin
           if dt<> 0 then
             // use padtime as final time
-            LaneObj.I['finalTime'] := ConverDateTimeTo100thSeconds(dt)
+            LaneObj.I['finalTime'] := ConverDateTimeToCentiSeconds(dt)
           else
             LaneObj.Null['finalTime'] := jNull;
 
@@ -289,17 +277,17 @@ begin
         else
         begin
           // in 1/100th of seconds
-          sec := ConverDateTimeTo100thSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
+          sec := ConverDateTimeToCentiSeconds(ADataSet.FieldByName('RaceTime').AsDateTime);
           // Settings : use padtime instead of racetime - else ...
           if Settings.CalcRTMethod = 3 then
-            LaneObj.I['finalTime'] := ConverDateTimeTo100thSeconds(dt)
+            LaneObj.I['finalTime'] := ConverDateTimeToCentiSeconds(dt)
           else
             LaneObj.I['finalTime'] := sec;
           LaneObj.I['timer1'] := sec;
         end;
         // only present when using pads
         if (dt <> 0) then
-          LaneObj.I['padTime'] := ConverDateTimeTo100thSeconds(dt)
+          LaneObj.I['padTime'] := ConverDateTimeToCentiSeconds(dt)
         else
           LaneObj.Null['padTime'] := jNull;
 
@@ -362,7 +350,7 @@ begin
                               splitObj := SO();
                               accDist := accDist + LenOfPool; // Increment distance *before* adding
                               splitObj.I['distance'] := accDist;
-                              splitObj.I['time'] := ConverDateTimeTo100thSeconds(TDateTime(vtime)); // Use the valid vtime
+                              splitObj.I['time'] := ConverDateTimeToCentiSeconds(TDateTime(vtime)); // Use the valid vtime
                               Add(splitObj); // Add to LaneObj.A['Splits']
                           end;
                           // Always move next, even if split time was invalid, to avoid infinite loop
@@ -395,6 +383,7 @@ begin
     X.S['type'] := 'Results';
     X.S['createdAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
     X.S['protocolVersion'] := '1.1.0';
+    X.I['sessionId'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
     X.I['sessionNumber'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
     dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
     X.S['startTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', dt, AFormatSettings);

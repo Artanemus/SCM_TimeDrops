@@ -6,6 +6,11 @@ uses dmAppData, vcl.ComCtrls, Math, System.Types, System.IOUtils,
   Windows, System.Classes, SCMDefines, System.StrUtils, SysUtils ;
 
 function StripAlphaChars(const InputStr: string): string;
+function ConverDateTimeToCentiSeconds(ADateTime:TDateTime): integer;
+function ConvertCentiSecondsToDateTime(AHundredths: Integer): TDateTime;
+function StripNonNumeric(const AStr: string): string;
+procedure DeleteFilesWithWildcard(const APath, APattern: string);
+
 
 type
   TAppUtils = record
@@ -52,6 +57,31 @@ implementation
 
 uses System.Character, DateUtils, Data.DB, tdResults;
 
+function StripNonNumeric(const AStr: string): string;
+var
+  Ch: Char;
+begin
+  Result := '';
+  for Ch in AStr do
+  begin
+    if CharInSet(Ch, ['0'..'9']) then
+      Result := Result + Ch;
+  end;
+end;
+
+
+function ConvertCentiSecondsToDateTime(AHundredths: Integer): TDateTime;
+var
+  ms: Integer;
+begin
+  // Convert hundredths of a second to milliseconds
+  ms := AHundredths * 10;
+
+  // Create a TDateTime from the milliseconds since midnight
+  Result := IncMilliSecond(0, ms);
+end;
+
+
 function StripAlphaChars(const InputStr: string): string;
 var
   Achar: Char;
@@ -61,6 +91,39 @@ begin
     if Achar.IsDigit then
       Result := Result + Achar;
 end;
+
+
+function ConverDateTimeToCentiSeconds(ADateTime:TDateTime): integer;
+var
+dt: TTime;
+seedTimeInCentiseconds: integer;
+begin
+  dt := TimeOf(ADateTime);
+  // seed time in 1/100 of a second.
+  seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
+  // Assign to laneSeedTime
+  result := seedTimeInCentiseconds;
+end;
+
+
+procedure DeleteFilesWithWildcard(const APath, APattern: string);
+var
+  SR: TSearchRec;
+  FullPath: string;
+begin
+  FullPath := IncludeTrailingPathDelimiter(APath) + APattern;
+  if FindFirst(FullPath, faAnyFile, SR) = 0 then
+  try
+    repeat
+      // Build the full filename
+      if (SR.Attr and faDirectory) = 0 then
+        DeleteFile(IncludeTrailingPathDelimiter(APath) + SR.Name);
+    until FindNext(SR) <> 0;
+  finally
+    FindClose(SR);
+  end;
+end;
+
 
 (*
 function TAppUtils.ConvertSecondsStrToTime(ASecondsStr: string): TTime;
@@ -142,31 +205,6 @@ begin
   end;
 end;
 
-(*
-procedure TAppUtils.AppendTDData(const AFileName:string);
-Begin
-  ProcessFile(AFileName);
-End;
-*)
-
-(*
-function TAppUtils.PrepareExtraction(const AFileName: TFileName): boolean;
-begin
-  { Called by ProcessSession for each Time-Drops 'Results' TFileName }
-  result := false;
-  if FileExists(AFileName) then
-  begin
-    fFileName := ExtractFileName(AFileName);
-    // Time stamp of file. Created On DateTime.
-    fCreatedDT :=TFile.GetCreationTime(AFileName);
-    result := true;
-  end
-  else
-  begin
-    fFileName := '';
-  end;
-end;
-*)
 
 procedure TAppUtils.PrepareTDData();
 begin
