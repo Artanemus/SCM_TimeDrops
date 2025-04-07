@@ -141,11 +141,11 @@ type
     function LocateTSessionID(ASessionID: integer): boolean;
     function LocateTSessionNum(ASessionNum: integer): boolean;
     function LocateTEventID(AEventID: integer): boolean;
-    function LocateTEventNum(SessionID, AEventNum: integer): boolean;
+    function LocateTEventNum(ASessionID, AEventNum: integer): boolean;
     function LocateTHeatID(AHeatID: integer): boolean;
-    function LocateTHeatNum(EventID, AHeatNum: integer): boolean;
+    function LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
     function LocateTLaneID(ALaneID: integer): boolean;
-    function LocateTLaneNum(ALaneNum: integer): boolean;
+    function LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
 
     // L O C A T E S   F O R   S W I M C L U B M E E T   D A T A.
     // WARNING : Master-Detail enabled...
@@ -473,6 +473,8 @@ begin
   tblmLane.FieldDefs.Add('RaceTimeUser', ftTime);
   // dtAutomatic - calc on load. Read-Only.
   tblmLane.FieldDefs.Add('RaceTimeA', ftTime);
+  // lane is disqualified - used by TimeDrops in relays?
+  tblmLane.FieldDefs.Add('isDq', ftBoolean);
 
   // dtActiveRT = (artAutomatic, artManual, artUser, artSplit, artNone);
   // ----------------------------------------------------------------
@@ -521,16 +523,28 @@ begin
   tblmLane.FieldDefs.Add('TDev2', ftBoolean);
 
   // TIME-DROPS - stores MAX 10 splits.
-  tblmLane.FieldDefs.Add('Split1', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split2', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split3', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split4', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split5', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split6', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split7', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split8', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split9', ftTime); // DO4.
-  tblmLane.FieldDefs.Add('Split10', ftTime); // DO4.
+  tblmLane.FieldDefs.Add('Split1', ftTime);
+  tblmLane.FieldDefs.Add('Split2', ftTime);
+  tblmLane.FieldDefs.Add('Split3', ftTime);
+  tblmLane.FieldDefs.Add('Split4', ftTime);
+  tblmLane.FieldDefs.Add('Split5', ftTime);
+  tblmLane.FieldDefs.Add('Split6', ftTime);
+  tblmLane.FieldDefs.Add('Split7', ftTime);
+  tblmLane.FieldDefs.Add('Split8', ftTime);
+  tblmLane.FieldDefs.Add('Split9', ftTime);
+  tblmLane.FieldDefs.Add('Split10', ftTime);
+
+  tblmLane.FieldDefs.Add('SplitDist1', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist2', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist3', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist4', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist5', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist6', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist7', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist8', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist9', ftTime);
+  tblmLane.FieldDefs.Add('SplitDist10', ftTime);
+
 
   tblmLane.CreateDataSet;
 {$IFDEF DEBUG}
@@ -780,7 +794,7 @@ begin
     dsmHeat.DataSet.Refresh;
 end;
 
-function TAppData.LocateTEventNum(SessionID, AEventNum: integer): boolean;
+function TAppData.LocateTEventNum(ASessionID, AEventNum: integer): boolean;
 var
   indexStr: string;
 begin
@@ -793,7 +807,7 @@ begin
   // Store the original index field names
   indexStr := tblmEvent.IndexFieldNames;
   tblmEvent.IndexFieldNames := 'EventID';
-  result := tblmEvent.Locate('SessionID;EventNum', VarArrayOf([SessionID, AEventNum]), []);
+  result := tblmEvent.Locate('SessionID;EventNum', VarArrayOf([ASessionID, AEventNum]), []);
   // Restore the original index field names
   tblmEvent.IndexFieldNames := indexStr;
 end;
@@ -809,7 +823,7 @@ begin
   result := dsmHeat.DataSet.Locate('HeatID', AHeatID, SearchOptions);
 end;
 
-function TAppData.LocateTHeatNum(EventID, AHeatNum: integer): boolean;
+function TAppData.LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
 var
   indexStr: string;
 begin
@@ -822,7 +836,7 @@ begin
   // Store the original index field names
   indexStr := tblmHeat.IndexFieldNames;
   tblmHeat.IndexFieldNames := 'HeatID';
-  result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([EventID, AHeatNum]), []);
+  result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([AEventID, AHeatNum]), []);
   // Restore the original index field names
   tblmHeat.IndexFieldNames := indexStr;
 end;
@@ -835,10 +849,22 @@ begin
   result := tblmLane.Locate('LaneID', ALaneID, []);
 end;
 
-function TAppData.LocateTLaneNum(ALaneNum: integer): boolean;
+function TAppData.LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
+var
+  indexStr: string;
 begin
-  // IGNORES SYNC STATE...
-  result := tblmLane.Locate('LaneNum', ALaneNum, []);
+  // WARNING : DisableDTMasterDetail() before calling here.
+  // USED ONLY BY TdtUtils.ProcessHeat.
+  result := false;
+  // Exit if the table is not active or if AHeatNum is 0
+  if not tblmLane.Active then exit;
+  if ALaneNum = 0 then exit;
+  // Store the original index field names
+  indexStr := tblmLane.IndexFieldNames;
+  tblmLane.IndexFieldNames := 'LaneID';
+  result := tblmLane.Locate('HeatID;LaneNum', VarArrayOf([AHeatID, ALaneNum]), []);
+  // Restore the original index field names
+  tblmLane.IndexFieldNames := indexStr;
 end;
 
 function TAppData.LocateTSessionID(ASessionID: integer): boolean;
@@ -1073,7 +1099,7 @@ begin
   tblmLane.DisableControls;
   AEventType := scmEventType(qryDistance.FieldByName('EventTypeID').AsInteger);
   // SYNC to ROW ...
-  b1 := LocateTLaneNum(ALane);
+  b1 := LocateTLaneNum(tblmHeat.FieldByName('HeatID').AsInteger, ALane);
   b2 := LocateSCMLaneNum(ALane, AEventType);
   if (b1 and b2) then
   begin

@@ -58,33 +58,29 @@ var
   splitObject: ISuperObject;
   splitsObj: ISuperArray;
   splitValue: ICast;
-  iter: integer;
+  indxLane: integer;
   fldname: string;
 begin
     if LaneObject.Contains('Splits') then
     begin
       splitsObj := LaneObject.A['splits']; // Get the array
-      if Assigned(splitsObj) then // Check if it's actually an array
+      if Assigned(splitsObj) then
       begin
-        // Assuming ApplyMaster sets the HeatID filter/parameter correctly
-        AppData.tblmLane.ApplyMaster;
-        iter := 1;
+        indxLane := 1;
         {TODO -oBSA -cGeneral : Remove all split-times from tblmLane}
         for splitValue in splitsObj do // Iterate through array elements
         begin
           if (splitValue.DataType = dtObject) then // Ensure the array element is an object
           begin
             splitObject := splitValue.AsObject; // Get the split-time object
-            // --- Locate or Insert/Edit Lane Record ---
-            if AppData.LocateTLaneNum(laneObject.I['lane']) then 
-              AppData.tblmLane.Edit
-            else
-              AppData.tblmLane.Insert;
-            
-            fldname := 'split' + intToStr(iter); // generate the field name
+            AppData.tblmLane.Edit;
+            fldname := 'split' + intToStr(indxLane); // generate the field name
             AppData.tblmLane.FieldByName(fldName).AsDateTime := ConvertCentiSecondsToDateTime(splitObject.I['split']);
-            Inc(iter); // next field Name
-            {TODO -oBSA -cGeneral : JSON Split object 'distance' isn't assigned in tblmLane }
+            fldname := 'splitDist' + intToStr(indxLane); // generate the field name
+            AppData.tblmLane.FieldByName(fldName).AsInteger := splitObject.I['distance'];
+            AppData.tblmLane.Post;
+            Inc(indxLane); // next field Name
+            if (indxLane > 10) then break;
           end;
         end;
       end; // END SPLIT.
@@ -102,32 +98,30 @@ begin
   lanesObj := JSONObj.A['Lanes']; // Get the array
   if Assigned(lanesObj) then // Check if it's actually an array
   begin
-    // Assuming ApplyMaster sets the HeatID filter/parameter correctly
-    AppData.tblmLane.ApplyMaster;
-
+    // SYNC ... AppData.tblmLane.Refresh;
     for laneValue in lanesObj do // Iterate through array elements
     begin
       if (laneValue.DataType = dtObject) then // Ensure the array element is an object
       begin
         laneObject := laneValue.AsObject; // Get the lane object
-
-        // --- Locate or Insert/Edit Lane Record ---
-        // Check if lane exsists.
-        if AppData.LocateTLaneNum(laneObject.I['lane']) then 
+        // Find lane number within heat.
+        if AppData.LocateTLaneNum(PK_HeatID, laneObject.I['lane']) then
+        begin
+          PK_LaneID := AppData.tblmLane.FieldByName('LaneID').AsInteger;
           AppData.tblmLane.Edit
+        end
         else
+        begin
+          // Calculate a new unique primary key.
+          PK_LaneID := AppData.MaxID_Lane + 1;
           AppData.tblmLane.Insert;
+          AppData.tblmLane.fieldbyName('LaneID').AsInteger := PK_LaneID;
+          AppData.tblmLane.FieldByName('HeatID').AsInteger := PK_HeatID; // master.detail.
+          AppData.tblmLane.FieldByName('LaneNum').AsInteger := laneObject.I['lane'];
+        end;
 
-        // primary key
-        PK_LaneID := AppData.MaxID_Lane + 1;
-        AppData.tblmLane.fieldbyName('LaneID').AsInteger := PK_LaneID;
-        // master.detail.
-        AppData.tblmLane.FieldByName('HeatID').AsInteger := PK_HeatID;
-        AppData.tblmLane.FieldByName('LaneNum').AsInteger := laneObject.I['lane'];
         AppData.tblmLane.fieldbyName('Caption').AsString := 'Lane: ' + IntToStr(laneObject.I['lane']);
         AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := false;
-
-
         AppData.tblmLane.FieldByName('finalTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['finalTime']);
         AppData.tblmLane.FieldByName('padTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['padTime']);
         AppData.tblmLane.FieldByName('time1').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer1']);
@@ -167,7 +161,7 @@ procedure ReadJsonFile(const FileName: string; SessionID, EventNum, HeatNum, Rac
 var
   JSONObj: ISuperObject;
   FileStream: TFileStream;
-  PK_SessionID, PK_EventID, PK_HeatID: integer;
+  PK_SessionID, PK_EventID, PK_HeatID, PK: integer;
   fs: TFormatSettings;
   str: string;
   fCreationDT: TDateTime;
@@ -179,8 +173,6 @@ begin
     JSONObj := TSuperObject.ParseStream(FileStream, True);
     if Assigned(JSONObj) and (JSONObj.DataType = dtObject) then
     begin
-      // Process the JSON object
-      //      Writeln(JSONObj.AsJSon);
       if JSONObj.Contains('sessionId') then
       begin
         // Primary Key - NOTE: matches to SCM SessionID.
@@ -207,10 +199,11 @@ begin
           AppData.tblmSession.Post;
         end;
       end;
-      // SYNC
-      AppData.tblmEvent.ApplyMaster;
+      // SYNC ? ... AppData.tblmEvent.Refresh;
       if JSONObj.Contains('eventNumber') then
       begin
+        // Calc a primary key.
+        PK := AppData.MaxID_Event + 1;
         // ignore if found...
         if not AppData.LocateTEventNum(PK_SessionID, JSONobj.I['eventNumber']) then
         begin
@@ -219,7 +212,7 @@ begin
           AppData.tblmEvent.FieldByName('EventNum').AsInteger := JSONobj.I['eventNumber'];
           // Calculate the Primary Key : IDENTIFIER.
           // ID isn't AutoInc. the primary key is calculated manually.
-          AppData.tblmEvent.fieldbyName('EventID').AsInteger := AppData.MaxID_Event + 1;
+          AppData.tblmEvent.fieldbyName('EventID').AsInteger := PK;
           // master - detail. Also Index Field.
           AppData.tblmEvent.fieldbyName('SessionID').AsInteger := PK_SessionID;
           // CAPTION for Event :
@@ -230,10 +223,10 @@ begin
       end;
 
       PK_EventID := AppData.tblmEvent.FieldByName('EventID').AsInteger;
-      // SYNC
-      AppData.tblmHeat.ApplyMaster;
+      // SYNC ? ... AppData.tblmHeat.Refresh;
       if JSONObj.Contains('heatNumber') then
       begin
+        PK := AppData.MaxID_Heat() + 1;
         // ignore if found...
         if not AppData.LocateTHeatNum(PK_EventID, JSONobj.I['heatNumber']) then
         begin
@@ -241,7 +234,7 @@ begin
           AppData.tblmHeat.FieldByName('HeatNum').AsInteger := JSONobj.I['heatNumber'];
           // calculate the IDENTIFIER.
           // ID isn't AutoInc - calc manually.
-          AppData.tblmHeat.fieldbyName('HeatID').AsInteger := AppData.MaxID_Heat() + 1;
+          AppData.tblmHeat.fieldbyName('HeatID').AsInteger := PK;
           // master - detail.
           AppData.tblmHeat.fieldbyName('EventID').AsInteger := PK_EventID;
           // TIME STAMP.
@@ -250,7 +243,7 @@ begin
           // A unique sequential number for each heat.
           AppData.tblmHeat.fieldbyName('RaceNum').AsInteger:= JSONobj.I['raceNumber'];;
           // TimeStamp of TimeDrops Results file.
-          AppData.tblmSession.fieldbyName('CreatedOn').AsDateTime := ISO8601ToDate(JSONobj.s['createdAt']);
+          AppData.tblmHeat.fieldbyName('CreatedOn').AsDateTime := ISO8601ToDate(JSONobj.s['createdAt']);
           AppData.tblmHeat.Post;
           end;
       end;
