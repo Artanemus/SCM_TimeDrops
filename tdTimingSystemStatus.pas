@@ -1,4 +1,4 @@
-unit dtTimingSystemStatus;
+unit tdTimingSystemStatus;
 
 interface
 uses

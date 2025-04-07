@@ -191,11 +191,12 @@
             <Form>MeetProgramPick</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="dtTimingSystemStatus.pas"/>
+        <DCCReference Include="tdTimingSystemStatus.pas"/>
         <DCCReference Include="tdReConstructDlg.pas">
             <Form>ReConstructDlg</Form>
             <FormType>dfm</FormType>
         </DCCReference>
+        <DCCReference Include="uAutoCalc.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

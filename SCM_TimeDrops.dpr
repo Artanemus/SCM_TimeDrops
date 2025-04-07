@@ -28,8 +28,9 @@ uses
   dlgSessionPicker in 'dlgSessionPicker.pas' {SessionPicker},
   tdResults in 'tdResults.pas',
   tdMeetProgramPick in 'tdMeetProgramPick.pas' {MeetProgramPick},
-  dtTimingSystemStatus in 'dtTimingSystemStatus.pas',
-  tdReConstructDlg in 'tdReConstructDlg.pas' {ReConstructDlg};
+  tdTimingSystemStatus in 'tdTimingSystemStatus.pas',
+  tdReConstructDlg in 'tdReConstructDlg.pas' {ReConstructDlg},
+  uAutoCalc in 'uAutoCalc.pas';
 
 {$R *.res}
 

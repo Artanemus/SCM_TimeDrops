@@ -45,7 +45,7 @@ interface
 
 uses dmSCM, dmAppData, System.SysUtils, System.Classes, system.Hash,
 DateUtils, variants, SCMDefines, Data.DB, tdSetting, XSuperJSON, XSuperObject,
-FireDAC.Stan.Param, dtTimingSystemStatus, uAppUtils;
+FireDAC.Stan.Param, tdTimingSystemStatus, uAppUtils;
 
 procedure ReConstructSession(SessionID: integer);
 
