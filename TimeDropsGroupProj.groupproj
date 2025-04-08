@@ -1,6 +1,6 @@
 ﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
-        <ProjectGuid>{C4B19143-5370-44DF-B524-649A06D58C89}</ProjectGuid>
+        <ProjectGuid>{DD2A69F7-3085-4614-AF2E-DC6071C3354C}</ProjectGuid>
     </PropertyGroup>
     <ItemGroup>
         <Projects Include="SCM_TimeDrops.dproj">

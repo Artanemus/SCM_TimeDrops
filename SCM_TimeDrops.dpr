@@ -30,7 +30,7 @@ uses
   tdMeetProgramPick in 'tdMeetProgramPick.pas' {MeetProgramPick},
   tdTimingSystemStatus in 'tdTimingSystemStatus.pas',
   tdReConstructDlg in 'tdReConstructDlg.pas' {ReConstructDlg},
-  uAutoCalc in 'uAutoCalc.pas';
+  uWatchTime in 'uWatchTime.pas';
 
 {$R *.res}
 

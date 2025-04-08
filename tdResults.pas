@@ -15,7 +15,7 @@ uses XSuperJSON, XSuperObject, dmAppData, System.Types, System.StrUtils,
 implementation
 uses
   SysUtils, Classes, System.JSON, System.IOUtils, Windows,
-  Vcl.Dialogs, DateUtils;
+  Vcl.Dialogs, DateUtils, uWatchTime;
 
 (*
   {
@@ -94,6 +94,7 @@ var
   lanesObj: ISuperArray;
   laneValue: ICast;
   PK_LaneID: integer;
+  aWatchTime: TWatchTime;
 begin
   lanesObj := JSONObj.A['Lanes']; // Get the array
   if Assigned(lanesObj) then // Check if it's actually an array
@@ -121,12 +122,53 @@ begin
         end;
 
         AppData.tblmLane.fieldbyName('Caption').AsString := 'Lane: ' + IntToStr(laneObject.I['lane']);
-        AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := false;
-        AppData.tblmLane.FieldByName('finalTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['finalTime']);
-        AppData.tblmLane.FieldByName('padTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['padTime']);
-        AppData.tblmLane.FieldByName('time1').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer1']);
-        AppData.tblmLane.FieldByName('time2').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer2']);
-        AppData.tblmLane.FieldByName('time3').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer3']);
+
+        // ASSERT the state of all JSON 'times'.
+        if laneObject.Contains('finalTime') then
+          begin
+            if (laneObject.Null['finalTime'] in [jUnAssigned, jNull]) then
+              AppData.tblmLane.FieldByName('finalTime').Clear
+            else
+              AppData.tblmLane.FieldByName('finalTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['finalTime']);
+          end
+        else  AppData.tblmLane.FieldByName('finalTime').Clear;
+
+        if laneObject.Contains('padTime') then
+          begin
+            if (laneObject.Null['padTime'] in [jUnAssigned, jNull]) then
+              AppData.tblmLane.FieldByName('padTime').Clear
+            else
+              AppData.tblmLane.FieldByName('padTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['padTime']);
+          end
+        else  AppData.tblmLane.FieldByName('padTime').Clear;
+
+        if laneObject.Contains('timer1') then
+          begin
+            if (laneObject.Null['timer1'] in [jUnAssigned, jNull]) then
+              AppData.tblmLane.FieldByName('time1').Clear
+            else
+              AppData.tblmLane.FieldByName('time1').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer1']);
+          end
+        else  AppData.tblmLane.FieldByName('time1').Clear;
+
+        if laneObject.Contains('timer2') then
+          begin
+            if (laneObject.Null['timer2'] in [jUnAssigned, jNull]) then
+              AppData.tblmLane.FieldByName('time2').Clear
+            else
+              AppData.tblmLane.FieldByName('time2').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer2']);
+          end
+        else  AppData.tblmLane.FieldByName('time2').Clear;
+
+        if laneObject.Contains('timer3') then
+          begin
+            if (laneObject.Null['timer3'] in [jUnAssigned, jNull]) then
+              AppData.tblmLane.FieldByName('time3').Clear
+            else
+              AppData.tblmLane.FieldByName('time3').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer3']);
+          end
+        else  AppData.tblmLane.FieldByName('time3').Clear;
+
         AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := laneObject.B['isEmpty'];
         AppData.tblmLane.fieldbyName('isDq').AsBoolean := laneObject.B['isDq'];
 
@@ -151,7 +193,15 @@ begin
         AppData.tblmLane.Post; // Post the inserted or edited record.
 
         ReadJsonSplits(laneObject, PK_LaneID);
-        
+
+        // Calculate the Auto-RaceTime for the lane.....
+        aWatchTime := TWatchTime.Create(AppData.tblmLane.fieldbyName('Time1').AsVariant,
+          AppData.tblmLane.fieldbyName('Time2').AsVariant,
+          AppData.tblmLane.fieldbyName('Time3').AsVariant);
+        aWatchTime.ExecCalcRaceTime;
+        aWatchTime.SyncData(AppData.tblmLane);
+        aWatchTime.free;
+
       end;
     end;
   end;

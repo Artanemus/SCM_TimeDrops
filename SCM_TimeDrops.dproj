@@ -196,7 +196,7 @@
             <Form>ReConstructDlg</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="uAutoCalc.pas"/>
+        <DCCReference Include="uWatchTime.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
