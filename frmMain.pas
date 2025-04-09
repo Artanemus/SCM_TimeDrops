@@ -265,11 +265,6 @@ var
 begin
   if DTAppendFile.Execute() then
   begin
-    // =====================================================
-    // De-attach from Master-Detail. Create flat files.
-    // Necessary to calculate table Primary keys.
-    AppData.DisableTDMasterDetail;
-    // =====================================================
     try
       for AFile in DTAppendFile.Files do
       begin
@@ -278,8 +273,6 @@ begin
       end;
     finally
       // =====================================================
-      // Re-attach Master-Detail.
-      AppData.EnableTDMasterDetail;
       // =====================================================
     end;
   end;

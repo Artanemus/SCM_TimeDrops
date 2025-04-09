@@ -17,6 +17,11 @@ uses
   SysUtils, Classes, System.JSON, System.IOUtils, Windows,
   Vcl.Dialogs, DateUtils, uWatchTime;
 
+//var
+//  doSafeMethod: boolean;
+const
+  DO_SAFE: boolean = true;
+
 (*
   {
     "createdAt": "2023-07-31T17:53:00.042-07:00",
@@ -194,20 +199,12 @@ begin
 
         ReadJsonSplits(laneObject, PK_LaneID);
 
-        // Calculate the Auto-RaceTime for the lane.....
-        aWatchTime := TWatchTime.Create(AppData.tblmLane.fieldbyName('Time1').AsVariant,
-          AppData.tblmLane.fieldbyName('Time2').AsVariant,
-          AppData.tblmLane.fieldbyName('Time3').AsVariant);
-        aWatchTime.ExecCalcRaceTime;
-        aWatchTime.SyncData(AppData.tblmLane);
-        aWatchTime.free;
-
       end;
     end;
   end;
 end;
 
-procedure ReadJsonFile(const FileName: string; SessionID, EventNum, HeatNum, RaceNum: integer);
+procedure ReadJsonFile(const FileName: string; out aRaceNum: integer );
 var
   JSONObj: ISuperObject;
   FileStream: TFileStream;
@@ -290,8 +287,16 @@ begin
           // TIME STAMP.
           AppData.tblmHeat.fieldbyName('startTime').AsDateTime := ISO8601ToDate(JSONobj.S['startTime']);
           AppData.tblmHeat.fieldbyName('Caption').AsString := 'Heat: ' + IntToStr(JSONobj.I['heatNumber']);
+
           // A unique sequential number for each heat.
-          AppData.tblmHeat.fieldbyName('RaceNum').AsInteger:= JSONobj.I['raceNumber'];;
+          AppData.tblmHeat.fieldbyName('RaceNum').AsInteger:= JSONobj.I['raceNumber'];
+
+          if JSONobj.Null['raceNumber'] in [jUnAssigned, jNull] then
+            aRaceNum := 0
+          else
+            aRaceNum := JSONobj.I['raceNumber'];
+
+
           // TimeStamp of TimeDrops Results file.
           AppData.tblmHeat.fieldbyName('CreatedOn').AsDateTime := ISO8601ToDate(JSONobj.s['createdAt']);
           AppData.tblmHeat.Post;
@@ -395,8 +400,10 @@ end;
 
 procedure ProcessFile(const AFileName: string);
 var
-  SessionID, EventNum, HeatNum, RaceNum: integer;
+  SessionID, EventNum, HeatNum, RaceNum, aHeatID: integer;
   Fields: TArray<string>;
+  aWatchTime: TWatchTime;
+  aRaceNum: integer;
 begin
   if FileExists(AFileName) then
   begin
@@ -426,19 +433,55 @@ begin
               HeatNum := StrToIntDef(StripNonNumeric(Fields[2]), 0);
             if Length(Fields) > 4 then
               RaceNum := StrToIntDef(StripNonNumeric(Fields[3]), 0);
-            ReadJsonFile(AFileName, SessionID, EventNum, HeatNum, RaceNum);
+            ReadJsonFile(AFileName, aRaceNum);
           end;
         end;      
       end;
     finally
-    
+      {TODO -oBSA -cGeneral : Use racenum to locate record in tblmHeat}
+      if DO_SAFE then
+      begin
+        // much safer method to find.
+        // locate the JSON heat placed into tblmHeat
+        if appData.LocateTSessionID(SessionID) then
+        begin
+          appData.tblmEvent.ApplyMaster;
+          if appData.LocateTEventNum(SessionID, EventNum) then
+          begin
+            appData.tblmHeat.ApplyMaster;
+            if appData.LocateTHeatNum(appData.tblmEvent.FieldByName('EventID').AsInteger, HeatNum) then
+            begin
+              // Calculate the Auto-RaceTime for the lane.....
+              aWatchTime := TWatchTime.Create();
+              aWatchTime.CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
+              aWatchTime.free;
+            end;
+          end;
+        end;
+
+      end
+
+      else if appData.LocateTRaceNum(aRaceNum) then
+      begin
+        // Calculate the Auto-RaceTime for the lane.....
+        aWatchTime := TWatchTime.Create();
+        aWatchTime.CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
+        aWatchTime.free;
+      end;
+
+
+    end;
+
       // =====================================================
       // Re-attach Master-Detail.
       AppData.EnableTDMasterDetail;
       // =====================================================
-    end;
+
+
+
   end;
 end;
+
 
 procedure ProcessSession(AList: TStringDynArray; ASessionID: integer);
 var
@@ -494,75 +537,6 @@ begin
 end;
 *)
 
-(*
-
-  // Process lanes...
-  for I := 1 to (fSList.Count - 2) do
-  begin
-    lane := sListBodyLane(I);
-    id := id + 1;
-
-    AppData.tblmLane.Append;
-
-    // gather up the timekeepers 1-3 recorded race times for this lane.
-    sListBodyTimeKeepers(I, fTimeKeepers);
-
-    for k := 0 to 2 do
-    begin
-      if (fTimeKeepers[k] = 0) then
-      begin
-        // The user's manual watch-time is disabled.
-        s := Format('T%dM', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsBoolean := false;
-        // Initialize - The Automatic watch-time is invalid.
-        s := Format('T%dA', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsBoolean := false;
-        AppData.tblmLane.fieldbyName(s).Clear;
-      end
-      else
-      begin
-        // The user's manual watch-time is enabled.
-        s := Format('T%dM', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsBoolean := true;
-        // Initialize - The Automatic watch-time is valid.
-        // (vertified later in procedure)
-        s := Format('T%dA', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsBoolean := true;
-        // Place watch-time in manual time field.
-        s := Format('Time%d', [k + 1]);
-        AppData.tblmLane.fieldbyName(s).AsDateTime := TimeOf(fTimeKeepers[k]);
-      end;
-    end;
-
-
-
-    // gather up the timekeepers 1-3 recorded race times for this lane.
-    sListBodySplits(I, fSplits);
-    for j := low(fSplits)  to High(fSplits) do
-    begin
-      if (fSplits[j] > 0) then
-      begin
-        s := 'Split' + IntTostr((j+1));
-        AppData.tblmLane.FieldByName(s).AsDateTime := TDateTime(fSplits[j]);
-      end;
-    end;
-    AppData.tblmLane.Post;
-
-
-    // Cacluate RaceTimeA for the ActiveRT. (artAutomatic)
-    // AND verify deviaiton AND assert fields [T1A, T2A, T3A]
-    AppData.CalcRaceTimeA(AppData.tblmLane, fAcceptedDeviation, fCalcMode);
-
-    // FINALLY place values into manual and automatic watch time fields.
-    AppData.tblmLane.Edit;
-    AppData.tblmLane.fieldbyName('RaceTime').AsVariant :=
-      AppData.tblmLane.fieldbyName('RaceTimeA').AsVariant;
-    AppData.tblmLane.post;
-
-  end;
-  AppData.tblmLane.EnableControls;
-
-*)
 
 
 end.

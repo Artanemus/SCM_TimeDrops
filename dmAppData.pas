@@ -144,6 +144,7 @@ type
     function LocateTEventNum(ASessionID, AEventNum: integer): boolean;
     function LocateTHeatID(AHeatID: integer): boolean;
     function LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
+    function LocateTRaceNum(aRaceNum: integer): boolean;
     function LocateTLaneID(ALaneID: integer): boolean;
     function LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
 
@@ -865,6 +866,15 @@ begin
   result := tblmLane.Locate('HeatID;LaneNum', VarArrayOf([AHeatID, ALaneNum]), []);
   // Restore the original index field names
   tblmLane.IndexFieldNames := indexStr;
+end;
+
+function TAppData.LocateTRaceNum(aRaceNum: integer): boolean;
+begin
+  result := false;
+  if not tblmHeat.Active then exit;
+  if (aRaceNum = 0) then exit;
+  result := tblmHeat.Locate('RaceNum', aRaceNum, []);
+  if result then dsmLane.DataSet.Refresh;
 end;
 
 function TAppData.LocateTSessionID(ASessionID: integer): boolean;

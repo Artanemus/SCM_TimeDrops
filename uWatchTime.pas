@@ -23,13 +23,17 @@ type
     procedure SortWatchTimes();
     procedure CheckDeviation();
     procedure LoadFromSettings();
+    procedure AssignAutoRaceTimeToData(ADataSet: TDataSet);
   protected
 
   public
-    constructor Create(aVar1, aVar2, aVar3: variant);
+    constructor Create();
     destructor Destroy; override;
-    procedure ExecCalcRaceTime;
-    procedure SyncData(ADataSet: TDataSet);
+
+    procedure CalcAutoWatchTimeLane(aLaneID: integer);
+    procedure CalcAutoWatchTimeHeat(aHeatID: integer);
+    procedure CalcAutoWatchTimeEvent(aEventID: integer);
+    procedure CalcAutoWatchTimeSession(aSessionID: integer);
 
   end;
 
@@ -139,6 +143,99 @@ begin
 
 end;
 
+procedure TWatchTime.CalcAutoWatchTimeEvent(aEventID: integer);
+var
+found: boolean;
+begin
+  if appData.tblmEvent.FieldByName('EventID').AsInteger <> aEventID then
+    found := appData.LocateTEventID(aEventID)
+  else
+    found := true;
+
+  if found then
+  begin
+    appData.tblmHeat.ApplyMaster;
+    while not appData.tblmHeat.Eof do
+    begin
+      if appData.tblmHeat.FieldByName('EventID').AsInteger = aEventID then
+        CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
+      appData.tblmHeat.Next;
+    end;
+  end;
+end;
+
+procedure TWatchTime.CalcAutoWatchTimeHeat(aHeatID: integer);
+var
+found: boolean;
+begin
+  if appData.tblmHeat.FieldByName('HeatID').AsInteger <> aHeatID then
+    found := appData.LocateTHeatID(aHeatID)
+  else
+    found := true;
+
+  if found then
+  begin
+    appData.tblmLane.ApplyMaster;
+    while not appData.tblmLane.Eof do
+    begin
+      if appData.tblmLane.FieldByName('HeatID').AsInteger = aHeatID then
+        CalcAutoWatchTimeLane(appData.tblmLane.FieldByName('LaneID').AsInteger);
+      appData.tblmLane.Next;
+    end;
+  end;
+end;
+
+procedure TWatchTime.CalcAutoWatchTimeLane(aLaneID: integer);
+var
+found: boolean;
+begin
+  if appData.tblmLane.FieldByName('LaneID').AsInteger <> aLaneID then
+    found := appData.LocateTLaneID(aLaneID)
+  else
+    found := true;
+
+  if found then
+  begin
+
+    Times[1] := appData.tblmLane.FieldByName('Time1').AsVariant;
+    Times[2] := appData.tblmLane.FieldByName('Time1').AsVariant;
+    Times[3] := appData.tblmLane.FieldByName('Time1').AsVariant;
+    Indices[1] := 1;
+    Indices[2] := 2;
+    Indices[3] := 3;
+    DevOk[1] := false;
+    DevOk[2] := false;
+
+    LoadFromSettings; // loads the accepted deviation gap for watch times.
+    fAccptDevMsec := fAcceptedDeviation * 1000;
+    SortWatchTimes;
+    CheckDeviation;
+    fRaceTime := CalcRaceTime;
+    AssignAutoRaceTimeToData(appData.tblmLane);
+  end;
+end;
+
+procedure TWatchTime.CalcAutoWatchTimeSession(aSessionID: integer);
+var
+found: boolean;
+begin
+  if appData.tblmSession.FieldByName('SessionID').AsInteger <> aSessionID then
+    found := appData.LocateTSessionID(aSessionID)
+  else
+    found := true;
+
+  if found then
+  begin
+    appData.tblmEvent.ApplyMaster;
+    while not appData.tblmEvent.Eof do
+    begin
+      if appData.tblmEvent.FieldByName('SessionID').AsInteger = aSessionID then
+        CalcAutoWatchTimeEvent(appData.tblmEvent.FieldByName('EventID').AsInteger);
+      appData.tblmEvent.Next;
+    end;
+  end;
+end;
+
 procedure TWatchTime.CheckDeviation;
 var
 I, j, count: integer;
@@ -219,12 +316,12 @@ end;
 
 
 
-constructor TWatchTime.Create(aVar1, aVar2, aVar3: variant);
+constructor TWatchTime.Create();
 begin
   inherited Create;
-  Times[1] := aVar1;
-  Times[2] := aVar2;
-  Times[3] := aVar3;
+  Times[1] := null;
+  Times[2] := null;
+  Times[3] := null;
   Indices[1] := 1;
   Indices[2] := 2;
   Indices[3] := 3;
@@ -276,15 +373,6 @@ begin
   end;
 end;
 
-procedure TWatchTime.ExecCalcRaceTime;
-begin
-  LoadFromSettings; // loads the accepted deviation gap for watch times.
-  fAccptDevMsec := fAcceptedDeviation * 1000;
-  SortWatchTimes;
-  CheckDeviation;
-  fRaceTime := CalcRaceTime;
-end;
-
 procedure TWatchTime.SortWatchTimes;
 var
 I, J: integer;
@@ -311,7 +399,7 @@ begin
   end;
 end;
 
-procedure TWatchTime.SyncData(ADataSet: TDataSet);
+procedure TWatchTime.AssignAutoRaceTimeToData(ADataSet: TDataSet);
 var
   I, J: integer;
 begin
@@ -340,7 +428,6 @@ begin
       ADataSet.FieldByName('RaceTimeA').Clear
     else
     begin
-      fRaceTime := CalcRaceTime;
       if VarIsNull(fRaceTime)  then
         ADataSet.FieldByName('RaceTimeA').Clear
       else
