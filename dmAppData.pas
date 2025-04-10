@@ -113,10 +113,13 @@ type
     procedure DeActivateDataSCM();
 
   public
-    procedure ActivateDataDT();
+    procedure ActivateDataTD;
     procedure ActivateDataSCM();
     procedure BuildCSVEventData(AFileName: string);
     procedure BuildAppData;
+    procedure EmptyAllTDDataSets;
+    procedure DisableAllTDControls;
+    procedure EnableAllTDControls;
     // --------------------------------------------
     // Routines ONLY for ActiveRT = dtAutomatic
     // on called on loading of DT file ...
@@ -227,7 +230,7 @@ end;
 // Example Usage:
 // ShowMessage('Documents folder: ' + GetDocumentDir_TPath);
 
-procedure TAppData.ActivateDataDT;
+procedure TAppData.ActivateDataTD;
 begin
   fSCMDataIsActive := false;
   // MAKE LIVE THE TIME-DROPS TABLES
@@ -640,11 +643,6 @@ begin
   fDTMasterDetailActive := false;
   FConnection := nil;
   fSCMDataIsActive := false; // activated later once FConnection is assigned.
-
-  { These actions occur when TimeDrops Button is pressed. See tdLogin}
-  //  EnableTDMasterDetail();
-  //  ActivateDataDT;
-
   msgHandle := 0;
 end;
 
@@ -669,6 +667,15 @@ begin
     qrySessionList.Close; // Query used by pick session dialogue.
     qrySwimClub.Close;  // GRAND MASTER.
   end;
+end;
+
+procedure TAppData.DisableAllTDControls;
+begin
+  tblmSession.DisableControls;
+  tblmEvent.DisableControls;
+  tblmHeat.DisableControls;
+  tblmLane.DisableControls;
+  tblmNoodle.DisableControls;
 end;
 
 procedure TAppData.DisableTDMasterDetail();
@@ -708,6 +715,25 @@ begin
   tblmNoodle.First;
 
   fDTMasterDetailActive := false;
+end;
+
+procedure TAppData.EmptyAllTDDataSets;
+begin
+   // clear all data records - cannot be performed on a closed table.
+  tblmSession.EmptyDataSet;
+  tblmEvent.EmptyDataSet;
+  tblmHeat.EmptyDataSet;
+  tblmLane.EmptyDataSet;
+  tblmNoodle.EmptyDataSet;
+end;
+
+procedure TAppData.EnableAllTDControls;
+begin
+  tblmSession.EnableControls;
+  tblmEvent.EnableControls;
+  tblmHeat.EnableControls;
+  tblmLane.EnableControls;
+  tblmNoodle.EnableControls;
 end;
 
 procedure TAppData.EnableTDMasterDetail();

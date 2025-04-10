@@ -188,7 +188,7 @@ begin
       // within the TIME-DROPS memory tables.
       AppData.EnableTDMasterDetail();
       // Makes 'Active' the TIME-DROPS tables.
-      AppData.ActivateDataDT;
+      AppData.ActivateDataTD;
       { Start up MAIN FORM.}
       dlg := TMain.Create(Self);
       { Init connection.}

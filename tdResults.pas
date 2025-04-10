@@ -20,7 +20,7 @@ uses
 //var
 //  doSafeMethod: boolean;
 const
-  DO_SAFE: boolean = true;
+  DO_SAFE_ASSIGN: boolean = true;
 
 (*
   {
@@ -99,7 +99,6 @@ var
   lanesObj: ISuperArray;
   laneValue: ICast;
   PK_LaneID: integer;
-  aWatchTime: TWatchTime;
 begin
   lanesObj := JSONObj.A['Lanes']; // Get the array
   if Assigned(lanesObj) then // Check if it's actually an array
@@ -110,6 +109,8 @@ begin
       if (laneValue.DataType = dtObject) then // Ensure the array element is an object
       begin
         laneObject := laneValue.AsObject; // Get the lane object
+
+        AppData.tblmLane.ApplyMaster; // Redundant?
         // Find lane number within heat.
         if AppData.LocateTLaneNum(PK_HeatID, laneObject.I['lane']) then
         begin
@@ -224,6 +225,11 @@ begin
       begin
         // Primary Key - NOTE: matches to SCM SessionID.
         PK_SessionID := JSONobj.I['sessionId'];
+        // ApplyMaster : in the case where master-detail has be nullified
+        // calling here may be redundant. Or it may ensure all records are
+        // held in memory?
+        {TODO -oBSA -cGeneral : Trace Delphi DB ApplyMaster procedure.}
+        AppData.tblmSession.ApplyMaster;
         // ignore if found...
         if not AppData.LocateTSessionID(PK_SessionID) then
         begin
@@ -249,6 +255,7 @@ begin
       // SYNC ? ... AppData.tblmEvent.Refresh;
       if JSONObj.Contains('eventNumber') then
       begin
+        AppData.tblmEvent.ApplyMaster; // Redundant?
         // Calc a primary key.
         PK := AppData.MaxID_Event + 1;
         // ignore if found...
@@ -274,6 +281,7 @@ begin
       if JSONObj.Contains('heatNumber') then
       begin
         PK := AppData.MaxID_Heat() + 1;
+        AppData.tblmHeat.ApplyMaster; // Redundant?
         // ignore if found...
         if not AppData.LocateTHeatNum(PK_EventID, JSONobj.I['heatNumber']) then
         begin
@@ -400,11 +408,15 @@ end;
 
 procedure ProcessFile(const AFileName: string);
 var
-  SessionID, EventNum, HeatNum, RaceNum, aHeatID: integer;
+  SessionID, EventNum, HeatNum, RaceNum: integer;
   Fields: TArray<string>;
   aWatchTime: TWatchTime;
-  aRaceNum: integer;
 begin
+  // init
+  SessionID := 0;
+  EventNum := 0;
+  HeatNum := 0;
+  RaceNum := 0;
   if FileExists(AFileName) then
   begin
     // =====================================================
@@ -422,10 +434,6 @@ begin
           SessionID := StrToIntDef(Fields[1], 0);
           if (SessionID <> 0) then
           begin
-            // init
-            EventNum := 0;
-            HeatNum := 0;
-            RaceNum := 0;
             // Filename syntax used by Time Drops: SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
             if Length(Fields) > 2 then
               EventNum := StrToIntDef(StripNonNumeric(Fields[1]), 0);
@@ -433,22 +441,24 @@ begin
               HeatNum := StrToIntDef(StripNonNumeric(Fields[2]), 0);
             if Length(Fields) > 4 then
               RaceNum := StrToIntDef(StripNonNumeric(Fields[3]), 0);
-            ReadJsonFile(AFileName, aRaceNum);
+            ReadJsonFile(AFileName, RaceNum);
           end;
         end;      
       end;
     finally
-      {TODO -oBSA -cGeneral : Use racenum to locate record in tblmHeat}
-      if DO_SAFE then
+      // Note: Assumes TimeDrops 'results' filename parameters matches the
+      // file's JSON object values.
+      if DO_SAFE_ASSIGN then
       begin
         // much safer method to find.
         // locate the JSON heat placed into tblmHeat
+        appData.tblmSession.ApplyMaster; // Redundant?
         if appData.LocateTSessionID(SessionID) then
         begin
-          appData.tblmEvent.ApplyMaster;
+          appData.tblmEvent.ApplyMaster; // Redundant?
           if appData.LocateTEventNum(SessionID, EventNum) then
           begin
-            appData.tblmHeat.ApplyMaster;
+            appData.tblmHeat.ApplyMaster; // Redundant?
             if appData.LocateTHeatNum(appData.tblmEvent.FieldByName('EventID').AsInteger, HeatNum) then
             begin
               // Calculate the Auto-RaceTime for the lane.....
@@ -458,27 +468,24 @@ begin
             end;
           end;
         end;
-
       end
-
-      else if appData.LocateTRaceNum(aRaceNum) then
+      // quick access but dependant on Time-Drops to assign unique PK - RaceNum
+      else
       begin
-        // Calculate the Auto-RaceTime for the lane.....
-        aWatchTime := TWatchTime.Create();
-        aWatchTime.CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
-        aWatchTime.free;
+        appData.tblmHeat.ApplyMaster; // Redundant?
+        if appData.LocateTRaceNum(RaceNum) then
+        begin
+          // Calculate the Auto-RaceTime for the lane.....
+          aWatchTime := TWatchTime.Create();
+          aWatchTime.CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
+          aWatchTime.free;
+        end;
       end;
-
-
     end;
-
-      // =====================================================
-      // Re-attach Master-Detail.
-      AppData.EnableTDMasterDetail;
-      // =====================================================
-
-
-
+    // =====================================================
+    // Re-attach Master-Detail.
+    AppData.EnableTDMasterDetail;
+    // =====================================================
   end;
 end;
 

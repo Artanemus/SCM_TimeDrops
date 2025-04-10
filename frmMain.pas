@@ -238,7 +238,7 @@ begin
     Any posted racetimes, made to SwimClubMeet, will remain intact. There is no undo.
     (HINT: use ''Save SCM-DT Session'' to store all work prior to calling here.)
     Do you really want to rescan?
-  ''';
+    ''';
   mr := MessageBox(0, PChar(s), PChar('Clear and Rescan Meets Folder. '),
     MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
   if IsPositiveResult(mr) then
@@ -246,15 +246,24 @@ begin
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
     begin
-        if AppUtils.DirHasResultFiles(Settings.MeetsFolder) then
-        begin
-          AppUtils.PrepareTDData;
-          AppUtils.PopulateTDData(Settings.MeetsFolder, pBar);
+      if AppUtils.DirHasResultFiles(Settings.MeetsFolder) then
+      begin
+        AppData.DisableAllTDControls;
+        dtGrid.BeginUpdate;
+        try
+          // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
+          // Necessary to manually calculate Primary keys in each memory table.
+          ProcessDirectory(Settings.MeetsFolder);
+          dtGrid.EndUpdate;
           // Update lblEventDetailsTD.
-          PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
+          PostMessage(self.Handle, SCM_UPDATEUI2, 0, 0);
           // Paint cell icons.
-          PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+          PostMessage(self.Handle, SCM_UPDATEUI3, 0, 0);
+        finally
+          AppData.EnableAllTDControls;
+          dtGrid.EndUpdate;
         end;
+      end;
     end;
   end;
 end;
@@ -269,7 +278,9 @@ begin
       for AFile in DTAppendFile.Files do
       begin
         { Calls - PrepareExtraction, ProcessEvent, ProcessHeat, ProcessEntrant }
+        dtGrid.BeginUpdate;
         tdResults.ProcessFile(AFile);
+        dtGrid.EndUpdate;
       end;
     finally
       // =====================================================
@@ -951,18 +962,31 @@ begin
 
   AppUtils.AcceptedDeviation := Settings.AcceptedDeviation;
 
+  // Empty data in TFDMemTables.
+  appData.EmptyAllTDDataSets;
+  // Attaches mater-detail.
+  appData.EnableTDMasterDetail;
+
   FDirectoryWatcher := nil;
   // Test DT directory exists...
   if DirectoryExists(Settings.MeetsFolder) then
   begin
       if AppUtils.DirHasResultFiles(Settings.MeetsFolder) then
       begin
-        AppUtils.PrepareTDData;
-        AppUtils.PopulateTDData(Settings.MeetsFolder, pBar);
-        // Update UI controls ...
-        PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
-        // Paint cell icons.
-        PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+        dtGrid.BeginUpdate;
+        appdata.DisableAllTDControls;
+        try
+          // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
+          // Necessary to manually calculate Primary keys in each memory table.
+          ProcessDirectory(Settings.MeetsFolder);
+          // Update UI controls ...
+          PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
+          // Paint cell icons.
+          PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+        finally
+          appdata.EnableAllTDControls;
+          dtGrid.EndUpdate;
+        end;
       end;
     // Set up the file system watcher
     FDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
@@ -1040,7 +1064,7 @@ begin
   begin
     AppData.MSG_Handle := Self.Handle;
     // Assert Master - Detail ...
-    AppData.ActivateDataDT;
+    AppData.ActivateDataTD;
   end;
   if fFlagSelectSession then
     // Prompt user to select session. (... and update UI.)
@@ -1249,7 +1273,9 @@ begin
     if s.Contains('SESSION') then
     begin
       ShowMessage('A new results file was added to the directory: ' + FileName);
+      dtGrid.BeginUpdate;
       tdResults.ProcessFile(FileName);
+      dtGrid.EndUpdate;
     end;
   end;
 end;

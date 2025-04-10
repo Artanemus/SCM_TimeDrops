@@ -38,9 +38,6 @@ type
 //    function ConvertSecondsStrToTime(ASecondsStr: string): TTime;
 
   public
-    procedure PrepareTDData();
-    procedure PopulateTDData(const ADirectory: string; pBar: TProgressBar);
-//    procedure AppendTDData(const AFileName: string);
     function DirHasResultFiles(const ADirectory: string): boolean;
 
     class operator Initialize(out Dest: TAppUtils);
@@ -205,67 +202,6 @@ begin
   end;
 end;
 
-
-procedure TAppUtils.PrepareTDData();
-begin
-
-  // clear all data records ....
-  AppData.tblmSession.EmptyDataSet;
-  AppData.tblmEvent.EmptyDataSet;
-  AppData.tblmHeat.EmptyDataSet;
-  AppData.tblmLane.EmptyDataSet;
-  AppData.tblmNoodle.EmptyDataSet;
-
-  // re-establish Master Detail ...
-  AppData.tblmEvent.MasterSource := AppData.dsmSession;
-  AppData.tblmEvent.MasterFields := 'SessionID';
-  AppData.tblmEvent.DetailFields := 'SessionID';
-  AppData.tblmEvent.IndexFieldNames := 'SessionID';
-
-  AppData.tblmHeat.MasterSource := AppData.dsmEvent;
-  AppData.tblmHeat.MasterFields := 'EventID';
-  AppData.tblmHeat.DetailFields := 'EventID';
-  AppData.tblmHeat.IndexFieldNames := 'EventID';
-
-  AppData.tblmLane.MasterSource := AppData.dsmHeat;
-  AppData.tblmLane.MasterFields := 'HeatID';
-  AppData.tblmLane.DetailFields := 'HeatID';
-  AppData.tblmLane.IndexFieldNames := 'HeatID';
-
-  AppData.tblmNoodle.MasterSource := AppData.dsmHeat;
-  AppData.tblmNoodle.MasterFields := 'HeatID';
-  AppData.tblmNoodle.DetailFields := 'HeatID';
-  AppData.tblmNoodle.IndexFieldNames := 'HeatID';
-
-end;
-
-Procedure TAppUtils.PopulateTDData(const ADirectory: string; pBar: TProgressBar);
-begin
-  AppData.tblmSession.DisableControls;
-  AppData.tblmEvent.DisableControls;
-  AppData.tblmHeat.DisableControls;
-  AppData.tblmLane.DisableControls;
-  AppData.tblmNoodle.DisableControls;
-
-  if Assigned(pBar) then pBar.Position := 0;
-
-  // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
-  // Necessary to manually calculate Primary keys in each memory table.
-  ProcessDirectory(ADirectory);
-
-  AppData.tblmSession.First;
-  AppData.tblmEvent.ApplyMaster;
-  AppData.tblmEvent.First;
-  AppData.tblmHeat.ApplyMaster;
-  AppData.tblmHeat.First;
-
-  AppData.tblmSession.EnableControls;
-  AppData.tblmEvent.EnableControls;
-  AppData.tblmHeat.EnableControls;
-  AppData.tblmLane.EnableControls;
-  AppData.tblmNoodle.EnableControls;
-
-  end;
 
 end.
 
