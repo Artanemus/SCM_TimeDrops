@@ -19824,4 +19824,9 @@ object AppData: TAppData
         Value = 0
       end>
   end
+  object dsmNoodle: TDataSource
+    DataSet = tblmNoodle
+    Left = 960
+    Top = 664
+  end
 end

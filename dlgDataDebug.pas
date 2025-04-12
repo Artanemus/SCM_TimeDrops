@@ -13,13 +13,14 @@ type
     grid: TTabSheet;
     tabsheetEvent: TTabSheet;
     tabsheetHeat: TTabSheet;
-    tabsheetEntrant: TTabSheet;
+    tabsheetLane: TTabSheet;
     tabsheetNoodle: TTabSheet;
     dbgridSession: TDBGrid;
     dbgridEvent: TDBGrid;
     dbgridHeat: TDBGrid;
-    dbgridEntrant: TDBGrid;
+    dbgridLane: TDBGrid;
     dbgridNoodle: TDBGrid;
+    procedure FormShow(Sender: TObject);
   private
     { Private declarations }
   public
@@ -32,5 +33,16 @@ var
 implementation
 
 {$R *.dfm}
+
+procedure TDataDebug.FormShow(Sender: TObject);
+begin
+  // ASSERT connection
+  dbgridSession.DataSource := appData.dsmSession;
+  dbgridEvent.DataSource := appData.dsmEvent;
+  dbgridHeat.DataSource := appData.dsmHeat;
+  dbgridLane.DataSource := appData.dsmLane;
+  dbgridNoodle.DataSource := appData.dsmNoodle;
+
+end;
 
 end.

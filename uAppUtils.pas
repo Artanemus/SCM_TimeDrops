@@ -2,57 +2,23 @@ unit uAppUtils;
 
 interface
 
-uses dmAppData, vcl.ComCtrls, Math, System.Types, System.IOUtils,
-  Windows, System.Classes, SCMDefines, System.StrUtils, SysUtils ;
+uses vcl.ComCtrls, Math, System.Types, System.IOUtils,
+  Windows, System.Classes, System.StrUtils, SysUtils ;
 
 function StripAlphaChars(const InputStr: string): string;
 function ConverDateTimeToCentiSeconds(ADateTime:TDateTime): integer;
 function ConvertCentiSecondsToDateTime(AHundredths: Integer): TDateTime;
 function StripNonNumeric(const AStr: string): string;
 procedure DeleteFilesWithWildcard(const APath, APattern: string);
+function DirHasResultFiles(const ADirectory: string): boolean;
 
-
-type
-  TAppUtils = record
-  private
-    type
-      PTime = ^TTime;
-    var
-//      fSplits: array[0..9] of double;
-//      fTimeKeepers: array[0..2] of double;
-      fFileName: string; // Filename + EXTENSION. NO PATH.
-//      fCreatedDT: TDateTime;
-      fAcceptedDeviation: double;
-      fCalcMode: integer; // 0 = DT Method. (Default) 1 = SCM Method.
-
-    // --------------------------------------------
-    { Routine to :
-      - Extract Filename+Ext to dtUtils.fFileName. (EXCLUDES PATH)
-      - load dtUtils.fStrList with TFilename.
-      - store dtUtils.fFileType with dtFileType.
-     }
-//    function PrepareExtraction(const AFileName: TFileName): boolean;
-
-    // --------------------------------------------
-
-//    function ConvertSecondsStrToTime(ASecondsStr: string): TTime;
-
-  public
-    function DirHasResultFiles(const ADirectory: string): boolean;
-
-    class operator Initialize(out Dest: TAppUtils);
-    class operator Finalize(var Dest: TAppUtils);
-
-    property AcceptedDeviation: double read FAcceptedDeviation write FAcceptedDeviation;
-
-  end;
 
 // ---------------------------------------------------
 
 
 implementation
 
-uses System.Character, DateUtils, Data.DB, tdResults;
+uses System.Character, DateUtils, Data.DB, tdResults, dmAppData;
 
 function StripNonNumeric(const AStr: string): string;
 var
@@ -123,7 +89,7 @@ end;
 
 
 (*
-function TAppUtils.ConvertSecondsStrToTime(ASecondsStr: string): TTime;
+function ConvertSecondsStrToTime(ASecondsStr: string): TTime;
 var
   TotalSeconds: Double;
   Hours, Minutes, Seconds, Milliseconds: Word;
@@ -155,17 +121,9 @@ begin
 end;
 *)
 
-class operator TAppUtils.Finalize(var Dest: TAppUtils);
-begin
-end;
 
-class operator TAppUtils.Initialize(out Dest: TAppUtils);
-begin
-  Dest.fFileName := '';
-  Dest.fCalcMode := 0;
-end;
 
-function TAppUtils.DirHasResultFiles(const ADirectory: string): boolean;
+function DirHasResultFiles(const ADirectory: string): boolean;
 var
   LList: TStringDynArray;
   LSearchOption: TSearchOption;

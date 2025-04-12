@@ -11,13 +11,14 @@ object DataDebug: TDataDebug
   Font.Name = 'Segoe UI'
   Font.Style = []
   Position = poDesktopCenter
+  OnShow = FormShow
   TextHeight = 17
   object pgcntrlData: TPageControl
     Left = 0
     Top = 0
     Width = 971
     Height = 635
-    ActivePage = grid
+    ActivePage = tabsheetLane
     Align = alClient
     TabOrder = 0
     object grid: TTabSheet
@@ -28,7 +29,6 @@ object DataDebug: TDataDebug
         Width = 963
         Height = 603
         Align = alClient
-        DataSource = AppData.dsDTSession
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
@@ -44,9 +44,8 @@ object DataDebug: TDataDebug
         Left = 0
         Top = 0
         Width = 963
-        Height = 605
+        Height = 603
         Align = alClient
-        DataSource = AppData.dsDTEvent
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
@@ -62,9 +61,8 @@ object DataDebug: TDataDebug
         Left = 0
         Top = 0
         Width = 963
-        Height = 605
+        Height = 603
         Align = alClient
-        DataSource = AppData.dsDTHeat
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText
@@ -73,16 +71,15 @@ object DataDebug: TDataDebug
         TitleFont.Style = []
       end
     end
-    object tabsheetEntrant: TTabSheet
-      Caption = 'Entrant'
+    object tabsheetLane: TTabSheet
+      Caption = 'Lane'
       ImageIndex = 3
-      object dbgridEntrant: TDBGrid
+      object dbgridLane: TDBGrid
         Left = 0
         Top = 0
         Width = 963
-        Height = 605
+        Height = 603
         Align = alClient
-        DataSource = AppData.dsDTEntrant
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText

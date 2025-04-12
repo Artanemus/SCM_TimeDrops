@@ -4,7 +4,9 @@ interface
 
 uses vcl.ComCtrls, Math, System.Types, System.IOUtils,
   Windows, System.Classes,System.StrUtils, SysUtils, Data.DB,
-  System.Variants, System.DateUtils, tdSetting, dmAppData;
+  System.Variants,
+  System.DateUtils,
+  uAppUtils;
 type
 
   TWatchTime = class(TObject)
@@ -14,7 +16,7 @@ type
     DevOk: array[1..2] of boolean; // Array to store min-mid, mid-max deviations
     fAcceptedDeviation, fAccptDevMsec: double;
     fCalcRTMethod: integer;
-    fRaceTime: variant;
+    fCalcRT: variant;
 
     function LaneIsEmpty: boolean;
     function IsValidWatchTime(ATime: variant): boolean;
@@ -23,21 +25,26 @@ type
     procedure SortWatchTimes();
     procedure CheckDeviation();
     procedure LoadFromSettings();
-    procedure AssignAutoRaceTimeToData(ADataSet: TDataSet);
+    procedure AssignDataWTToLane(flds: TFields);
+    procedure AssignDataLaneToWT(flds: TFields);
+    procedure CalcAutoWatchTimeLane(aLaneID: integer);
+    procedure CalcAutoWatchTimeHeat(aHeatID: integer);
+    procedure CalcAutoWatchTimeEvent(aEventID: integer);
+    procedure CalcAutoWatchTimeSession(aSessionID: integer);
+
   protected
 
   public
     constructor Create();
     destructor Destroy; override;
 
-    procedure CalcAutoWatchTimeLane(aLaneID: integer);
-    procedure CalcAutoWatchTimeHeat(aHeatID: integer);
-    procedure CalcAutoWatchTimeEvent(aEventID: integer);
-    procedure CalcAutoWatchTimeSession(aSessionID: integer);
+    procedure ProcessHeat(aHeatID: integer);
 
   end;
 
 implementation
+
+uses dmAppData, tdSetting;
 
 
 
@@ -143,6 +150,114 @@ begin
 
 end;
 
+procedure TWatchTime.AssignDataLaneToWT(flds: TFields);
+var
+I: integer;
+dt: TDateTime;
+fld: TField;
+begin
+  fld := flds.FindField('Time1');
+  if Assigned(fld) and (not fld.IsNull) then
+  begin
+    dt := fld.AsDateTime;
+    I := ConverDateTimeToCentiSeconds(dt);
+    Times[1] := I;
+  end else Times[1] := null;
+
+  fld := flds.FindField('Time2');
+  if Assigned(fld) and (not fld.IsNull) then
+  begin
+    dt := fld.AsDateTime;
+    I := ConverDateTimeToCentiSeconds(dt);
+    Times[2] := I;
+  end else Times[2] := null;
+
+  fld := flds.FindField('Time3');
+  if Assigned(fld) and (not fld.IsNull) then
+  begin
+    dt := fld.AsDateTime;
+    I := ConverDateTimeToCentiSeconds(dt);
+    Times[3] := I;
+  end else Times[3] := null;
+
+  Indices[1] := 1;
+  Indices[2] := 2;
+  Indices[3] := 3;
+
+  DevOk[1] := false;
+  DevOk[2] := false;
+
+end;
+
+procedure TWatchTime.AssignDataWTToLane(flds: TFields);
+var
+  indx: integer;
+  fld: TField;
+
+  function findIndx(luIndx: integer): integer;
+  begin
+    var j: integer;
+    result := 1;
+    // locate the correct index
+    for j := 1 to 3 do
+    begin
+      if Indices[j] = luIndx then
+      begin
+          result := j;
+          break;
+      end;
+    end;
+  end;
+
+begin
+ if flds.DataSet.State in [dsEdit] then
+ begin
+    fld := flds.FindField('LaneIsEmpty');
+    if Assigned(fld) then  fld.AsBoolean := LaneIsEmpty;
+
+    // Array Times has been sorted .. indices points to the correct
+    // array item to assign.
+    // ------------------------------------------------------------
+    fld := flds.FindField('T1A');
+    if Assigned(fld) then
+    begin
+      indx := findIndx(1);
+      fld.AsBoolean := IsValidWatchTime(Times[indx]);
+    end;
+
+    fld := flds.FindField('T2A');
+    if Assigned(fld) then
+    begin
+      indx := findIndx(2);
+      fld.AsBoolean := IsValidWatchTime(Times[indx]);
+    end;
+
+    fld := flds.FindField('T3A');
+    if Assigned(fld) then
+    begin
+      indx := findIndx(3);
+      fld.AsBoolean := IsValidWatchTime(Times[indx]);
+    end;
+
+    fld := flds.FindField('TDev1');
+    if Assigned(fld) then  fld.AsBoolean := DevOk[1];
+
+    fld := flds.FindField('TDev2');
+    if Assigned(fld) then  fld.AsBoolean := DevOk[2];
+
+    fld := flds.FindField('RaceTimeA');
+    if Assigned(fld) then
+    begin
+      if VarIsNull(fCalcRT) then
+        fld.Clear
+      else
+        fld.AsDateTime := ConvertCentiSecondsToDateTime(fCalcRT); // the auto-calculated racetime.
+    end;
+
+ end;
+
+end;
+
 procedure TWatchTime.CalcAutoWatchTimeEvent(aEventID: integer);
 var
 found: boolean;
@@ -189,6 +304,7 @@ procedure TWatchTime.CalcAutoWatchTimeLane(aLaneID: integer);
 var
 found: boolean;
 begin
+
   if appData.tblmLane.FieldByName('LaneID').AsInteger <> aLaneID then
     found := appData.LocateTLaneID(aLaneID)
   else
@@ -196,23 +312,21 @@ begin
 
   if found then
   begin
-
-    Times[1] := appData.tblmLane.FieldByName('Time1').AsVariant;
-    Times[2] := appData.tblmLane.FieldByName('Time1').AsVariant;
-    Times[3] := appData.tblmLane.FieldByName('Time1').AsVariant;
-    Indices[1] := 1;
-    Indices[2] := 2;
-    Indices[3] := 3;
-    DevOk[1] := false;
-    DevOk[2] := false;
-
+    AssignDataLaneToWT(appData.tblmLane.Fields);  // READ from lane.
     LoadFromSettings; // loads the accepted deviation gap for watch times.
     fAccptDevMsec := fAcceptedDeviation * 1000;
-    SortWatchTimes;
-    CheckDeviation;
-    fRaceTime := CalcRaceTime;
-    AssignAutoRaceTimeToData(appData.tblmLane);
+    SortWatchTimes;  // bubble sort - fastest watch-time comes first in stack.
+    CheckDeviation;  // test if time-keeper's times pass acceptable deviation.
+    fCalcRT := CalcRaceTime; // calculate the auto- racetime.
+    try
+      appData.tblmLane.Edit;
+      AssignDataWTToLane(appData.tblmLane.Fields); // WRITE to lane.
+      appData.tblmLane.Post;
+    except on E: Exception do
+        appData.tblmLane.Cancel;
+    end;
   end;
+
 end;
 
 procedure TWatchTime.CalcAutoWatchTimeSession(aSessionID: integer);
@@ -253,11 +367,15 @@ begin
 
   case count of
   0, 1: // LANE IS EMPTY or Single watch time.
-    ; // there is no deviation gap to calculate.
+  begin
+    DevOk[1] := true; // there is no deviation gap to calculate.
+    DevOk[2] := true;
+  end;
   2:
     BEGIN
       j := 0;
       t1:=0;
+      DevOk[2] := true;
       // Loop through array to find the 2 valid watch times.
       for I := 1 to 3 do
       begin
@@ -298,17 +416,20 @@ begin
         GapB := MilliSecondsBetween(Times[3],Times[2]);
 
         // Check if the deviation is acceptable
-        if (GapA >= fAccptDevMsec) AND (GapB >= fAccptDevMsec) then
+        if (GapA > fAccptDevMsec) AND (GapB > fAccptDevMsec) then
         begin
           // Both deviations exceed the limit. Ambiguous issue.
           ;
         end
-        else if (GapA <= fAccptDevMsec) then
-          // If false - likely issue with MinTime index
-          DevOk[1] := true
-        else if (GapB <= fAccptDevMsec) then
-          // If false - likely issue with MaxTime index
-          DevOk[2] := true;
+        else
+        begin
+          if (GapA <= fAccptDevMsec) then
+            // If false - likely issue with MinTime index
+            DevOk[1] := true;
+          if (GapB <= fAccptDevMsec) then
+            // If false - likely issue with MaxTime index
+            DevOk[2] := true;
+        end;
       End;
     END;
   end;
@@ -328,7 +449,7 @@ begin
   DevOk[1] := false;
   DevOk[2] := false;
   fAcceptedDeviation := 0;
-  fRaceTime := null;
+  fCalcRT := null;
 end;
 
 destructor TWatchTime.Destroy;
@@ -373,6 +494,48 @@ begin
   end;
 end;
 
+procedure TWatchTime.ProcessHeat(aHeatID: integer);
+begin
+    // Calculate the Auto-RaceTime for the lane.....
+
+    CalcAutoWatchTimeHeat(aHeatID);
+
+      // much safer method to find.
+      // locate the JSON heat placed into tblmHeat
+      (*
+      appData.tblmSession.ApplyMaster; // Redundant?
+      if appData.LocateTSessionID(SessionID) then
+      begin
+        appData.tblmEvent.ApplyMaster; // Redundant?
+        if appData.LocateTEventNum(SessionID, EventNum) then
+        begin
+          appData.tblmHeat.ApplyMaster; // Redundant?
+          if appData.LocateTHeatNum(appData.tblmEvent.FieldByName('EventID').AsInteger, HeatNum) then
+          begin
+            // Calculate the Auto-RaceTime for the lane.....
+            aWatchTime := TWatchTime.Create();
+            aWatchTime.CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
+            aWatchTime.free;
+          end;
+        end;
+      end;
+      *)
+      (*
+      // quick access but dependant on Time-Drops to assign unique PK - RaceNum
+      else
+      begin
+        appData.tblmHeat.ApplyMaster; // Redundant?
+        if appData.LocateTRaceNum(RaceNum) then
+        begin
+          // Calculate the Auto-RaceTime for the lane.....
+          aWatchTime := TWatchTime.Create();
+          aWatchTime.CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
+          aWatchTime.free;
+        end;
+      end;
+      *)
+end;
+
 procedure TWatchTime.SortWatchTimes;
 var
 I, J: integer;
@@ -396,47 +559,6 @@ begin
         Indices[j] := TempIndex;
       end;
     end;
-  end;
-end;
-
-procedure TWatchTime.AssignAutoRaceTimeToData(ADataSet: TDataSet);
-var
-  I, J: integer;
-begin
-  ADataSet.Edit;
-  try
-    ADataSet.FieldByName('LaneIsEmpty').AsBoolean := LaneIsEmpty;
-    for I := 1 to 3 do
-    begin
-      j := Indices[I];
-      case j of
-      1:
-        ADataSet.FieldByName('T1A').AsBoolean := IsValidWatchTime(Times[I]);
-      2:
-        ADataSet.FieldByName('T2A').AsBoolean := IsValidWatchTime(Times[I]);
-      3:
-        ADataSet.FieldByName('T3A').AsBoolean := IsValidWatchTime(Times[I]);
-      end;
-    end;
-
-    // deviation status min-mid.
-    ADataSet.FieldByName('TDev1').AsBoolean := DevOk[1];
-    // deviation status mid-max.
-    ADataSet.FieldByName('TDev2').AsBoolean := DevOk[2];
-
-    if LaneIsEmpty then
-      ADataSet.FieldByName('RaceTimeA').Clear
-    else
-    begin
-      if VarIsNull(fRaceTime)  then
-        ADataSet.FieldByName('RaceTimeA').Clear
-      else
-      ADataSet.FieldByName('RaceTimeA').AsDateTime := TimeOf(fRaceTime);
-    end;
-
-    ADataSet.Post;
-  except on E: Exception do
-    ADataSet.Cancel;
   end;
 end;
 

@@ -28,7 +28,7 @@ uses
   Vcl.ActnMan, Vcl.ActnCtrls, Vcl.ActnMenus, Vcl.PlatformDefaultStyleActnCtrls,
   Vcl.ExtDlgs, FireDAC.Stan.Param, Vcl.ComCtrls, Vcl.DBCtrls, tdReConstruct,
   Vcl.PlatformVclStylesActnCtrls, Vcl.WinXPanels, Vcl.WinXCtrls,
-  System.Types, System.IOUtils, uAppUtils, Math, DirectoryWatcher,
+  System.Types, System.IOUtils, Math, DirectoryWatcher,
   tdReConstructDlg;
 
 type
@@ -92,6 +92,7 @@ type
     actnReportSCMEvent: TAction;
     actnReportTD: TAction;
     actnSyncSCM: TAction;
+    btnCalcHeatAutoWT: TButton;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearReScanMeetsExecute(Sender: TObject);
@@ -106,6 +107,7 @@ type
     procedure actnSetDTMeetsFolderExecute(Sender: TObject);
     procedure actnSyncTDExecute(Sender: TObject);
     procedure actnSyncSCMExecute(Sender: TObject);
+    procedure btnCalcHeatAutoWTClick(Sender: TObject);
     procedure btnDataDebugClick(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
     procedure btnNextEventClick(Sender: TObject);
@@ -162,7 +164,6 @@ type
 
 var
   Main: TMain;
-  AppUtils: TAppUtils;
 
 implementation
 
@@ -170,7 +171,7 @@ implementation
 
 uses UITypes, DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
-  tdMeetProgramPick, tdResults;
+  tdMeetProgramPick, tdResults, uWatchTime, uAppUtils;
 
 const
   MSG_CONFIRM_RECONSTRUCT =
@@ -246,7 +247,7 @@ begin
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
     begin
-      if AppUtils.DirHasResultFiles(Settings.MeetsFolder) then
+      if DirHasResultFiles(Settings.MeetsFolder) then
       begin
         AppData.DisableAllTDControls;
         dtGrid.BeginUpdate;
@@ -497,6 +498,20 @@ begin
   AppData.SyncSCMtoDT();
   SCMGrid.EndUpdate;
   UpdateEventDetailsLabel;
+end;
+
+procedure TMain.btnCalcHeatAutoWTClick(Sender: TObject);
+var
+wt: TWatchTime;
+begin
+  wt := TWatchTime.Create;
+  wt.ProcessHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
+  wt.Free;
+  // Update lblEventDetailsTD.
+  PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
+  // paint cell icons into grid
+  PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+
 end;
 
 procedure TMain.btnDataDebugClick(Sender: TObject);
@@ -960,7 +975,6 @@ begin
   vimgRelayBug.ImageIndex := -1;
   vimgStrokeBug.ImageIndex := -1;
 
-  AppUtils.AcceptedDeviation := Settings.AcceptedDeviation;
 
   // Empty data in TFDMemTables.
   appData.EmptyAllTDDataSets;
@@ -971,7 +985,7 @@ begin
   // Test DT directory exists...
   if DirectoryExists(Settings.MeetsFolder) then
   begin
-      if AppUtils.DirHasResultFiles(Settings.MeetsFolder) then
+      if DirHasResultFiles(Settings.MeetsFolder) then
       begin
         dtGrid.BeginUpdate;
         appdata.DisableAllTDControls;
@@ -1474,8 +1488,8 @@ begin
         DTGrid.AddImageIdx(I, ARow, 7, TCellHAlign.haFull,
         TCellVAlign.vaFull); }
       end;
-        // USER MODE : display - cell pointer
-      DTGrid.AddImageIdx(7, ARow, 9, TCellHAlign.haAfterText, TCellVAlign.vaTop);
+      // USER MODE : display - cell pointer
+      // DTGrid.AddImageIdx(7, ARow, 9, TCellHAlign.haAfterText, TCellVAlign.vaTop);
       DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'USER RT';
     end;
     artSplit:

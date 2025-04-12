@@ -17,11 +17,6 @@ uses
   SysUtils, Classes, System.JSON, System.IOUtils, Windows,
   Vcl.Dialogs, DateUtils, uWatchTime;
 
-//var
-//  doSafeMethod: boolean;
-const
-  DO_SAFE_ASSIGN: boolean = true;
-
 (*
   {
     "createdAt": "2023-07-31T17:53:00.042-07:00",
@@ -408,14 +403,15 @@ end;
 
 procedure ProcessFile(const AFileName: string);
 var
-  SessionID, EventNum, HeatNum, RaceNum: integer;
+  SessionID, RaceNum: integer;
+//  , EventNum, HeatNum: integer;
   Fields: TArray<string>;
-  aWatchTime: TWatchTime;
+  fn: string;
 begin
   // init
-  SessionID := 0;
-  EventNum := 0;
-  HeatNum := 0;
+//  SessionID := 0;
+//  EventNum := 0;
+//  HeatNum := 0;
   RaceNum := 0;
   if FileExists(AFileName) then
   begin
@@ -426,19 +422,21 @@ begin
     // =====================================================
     try
       begin
-        Fields := SplitString(AFileName, '_');
+        // remove path from filename
+        fn := ExtractFileName(AFileName);
+        Fields := SplitString(fn, '_');
         if Length(Fields) > 1 then
         begin
           // Strip non-numeric characters from Fields[1]
-          Fields[1] := StripNonNumeric(Fields[1]);
-          SessionID := StrToIntDef(Fields[1], 0);
+          Fields[0] := StripNonNumeric(Fields[0]);
+          SessionID := StrToIntDef(Fields[0], 0);
           if (SessionID <> 0) then
           begin
             // Filename syntax used by Time Drops: SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
-            if Length(Fields) > 2 then
-              EventNum := StrToIntDef(StripNonNumeric(Fields[1]), 0);
-            if Length(Fields) > 3 then
-              HeatNum := StrToIntDef(StripNonNumeric(Fields[2]), 0);
+//            if Length(Fields) > 2 then
+//              EventNum := StrToIntDef(StripNonNumeric(Fields[1]), 0);
+//            if Length(Fields) > 3 then
+//              HeatNum := StrToIntDef(StripNonNumeric(Fields[2]), 0);
             if Length(Fields) > 4 then
               RaceNum := StrToIntDef(StripNonNumeric(Fields[3]), 0);
             ReadJsonFile(AFileName, RaceNum);
@@ -446,46 +444,13 @@ begin
         end;      
       end;
     finally
-      // Note: Assumes TimeDrops 'results' filename parameters matches the
-      // file's JSON object values.
-      if DO_SAFE_ASSIGN then
-      begin
-        // much safer method to find.
-        // locate the JSON heat placed into tblmHeat
-        appData.tblmSession.ApplyMaster; // Redundant?
-        if appData.LocateTSessionID(SessionID) then
-        begin
-          appData.tblmEvent.ApplyMaster; // Redundant?
-          if appData.LocateTEventNum(SessionID, EventNum) then
-          begin
-            appData.tblmHeat.ApplyMaster; // Redundant?
-            if appData.LocateTHeatNum(appData.tblmEvent.FieldByName('EventID').AsInteger, HeatNum) then
-            begin
-              // Calculate the Auto-RaceTime for the lane.....
-              aWatchTime := TWatchTime.Create();
-              aWatchTime.CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
-              aWatchTime.free;
-            end;
-          end;
-        end;
-      end
-      // quick access but dependant on Time-Drops to assign unique PK - RaceNum
-      else
-      begin
-        appData.tblmHeat.ApplyMaster; // Redundant?
-        if appData.LocateTRaceNum(RaceNum) then
-        begin
-          // Calculate the Auto-RaceTime for the lane.....
-          aWatchTime := TWatchTime.Create();
-          aWatchTime.CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
-          aWatchTime.free;
-        end;
-      end;
-    end;
+
     // =====================================================
     // Re-attach Master-Detail.
     AppData.EnableTDMasterDetail;
     // =====================================================
+
+    end;
   end;
 end;
 

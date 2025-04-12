@@ -1483,6 +1483,9 @@ object Main: TMain
           end
           item
             Control = btnDataDebug
+          end
+          item
+            Control = btnCalcHeatAutoWT
           end>
         HorizontalPositioning = sphpCenter
         Spacing = 4
@@ -1543,6 +1546,15 @@ object Main: TMain
           Caption = 'Data Debug'
           TabOrder = 0
           OnClick = btnDataDebugClick
+        end
+        object btnCalcHeatAutoWT: TButton
+          Left = 5
+          Top = 199
+          Width = 134
+          Height = 25
+          Caption = 'CalcHeatAutoWT'
+          TabOrder = 1
+          OnClick = btnCalcHeatAutoWTClick
         end
       end
     end
