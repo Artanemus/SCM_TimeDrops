@@ -93,6 +93,7 @@ type
     procedure DisableAllTDControls;
     procedure EnableAllTDControls;
     procedure CalcRaceTimeM(ADataSet: TDataSet);
+    procedure CalcRTSplitTime(ADataSet: TDataSet);
     procedure DisableTDMasterDetail();
     procedure EnableTDMasterDetail();
     // MISC SCM ROUTINES/FUNCTIONS
@@ -549,6 +550,64 @@ begin
 
 end;
 
+procedure TAppData.CalcRTSplitTime(ADataSet: TDataSet);
+var
+  t: TTime;
+  tOk: boolean;
+
+  function FindLastSplit(DS: TDataSet): Ttime;
+  begin
+    var tt: TTime;
+    var I: integer;
+    var s: string;
+    tt := 0;
+    for I := 10 downto 1 do
+    begin
+      s := 'Split'+ Inttostr(I);
+      if not ADataSet.FieldByName(s).IsNull then
+      begin
+        tt := ADataSet.FieldByName(s).AsDateTime;
+        if tt<> 0 then break;
+      end;
+    end;
+  end;
+
+begin
+  tOk := false;
+  t := 0;
+  if Assigned(Settings) then
+  begin
+    if Settings.UseTDpadTime then
+    begin
+      if not ADataSet.FieldByName('padTime').IsNull then
+      begin
+        t := ADataSet.FieldByName('padTime').AsDatetime;
+        if (t<>0) then tOk := true;
+      end;
+    end
+    else // use the last split time found in tblmLane
+    begin
+      // locate the last split
+      t := FindLastSplit(ADataSet);
+      if (t <> 0) then tOk := true;
+    end;
+  end;
+
+  try
+    begin
+      ADataSet.Edit;
+      if tOk then
+        ADataSet.FieldByName('RaceTime').AsDateTime := t
+      else
+        ADataSet.FieldByName('RaceTime').Clear;
+      ADataSet.Post;
+    end;
+  except on E: Exception do
+      ADataSet.Cancel;
+  end;
+
+end;
+
 procedure TAppData.CalcRaceTimeM(ADataSet: TDataSet);
 var
   I: Integer;
@@ -760,13 +819,13 @@ end;
 
 function TAppData.LocateTEventID(AEventID: integer): boolean;
 var
-  SearchOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
   result := false;
   if not tblmHeat.Active then exit;
   if (AEventID = 0) then exit;
-  SearchOptions := [];
-  result := dsmEvent.DataSet.Locate('EventID', AEventID, SearchOptions);
+  LOptions := [];
+  result := dsmEvent.DataSet.Locate('EventID', AEventID, LOptions);
   if result then
     dsmHeat.DataSet.Refresh;
 end;
@@ -774,6 +833,7 @@ end;
 function TAppData.LocateTEventNum(ASessionID, AEventNum: integer): boolean;
 var
   indexStr: string;
+  LOptions: TLocateOptions;
 begin
   // WARNING : DisableDTMasterDetail() before calling here.
   // USED ONLY BY TdtUtils.ProcessEvent.
@@ -783,26 +843,28 @@ begin
   if AEventNum = 0 then exit;
   // Store the original index field names
   indexStr := tblmEvent.IndexFieldNames;
-  tblmEvent.IndexFieldNames := 'EventID';
-  result := tblmEvent.Locate('SessionID;EventNum', VarArrayOf([ASessionID, AEventNum]), []);
+  LOptions := [];
+  tblmEvent.IndexFieldNames := 'SessionID;EventNum';
+  result := tblmEvent.Locate('SessionID;EventNum', VarArrayOf([ASessionID, AEventNum]), LOptions);
   // Restore the original index field names
   tblmEvent.IndexFieldNames := indexStr;
 end;
 
 function TAppData.LocateTHeatID(AHeatID: integer): boolean;
 var
-  SearchOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
   result := false;
   if not tblmHeat.Active then exit;
   if (AHeatID = 0) then exit;
-  SearchOptions := [];
-  result := dsmHeat.DataSet.Locate('HeatID', AHeatID, SearchOptions);
+  LOptions := [];
+  result := dsmHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
 end;
 
 function TAppData.LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
 var
   indexStr: string;
+  LOptions: TLocateOptions;
 begin
   // WARNING : DisableDTMasterDetail() before calling here.
   // USED ONLY BY TdtUtils.ProcessHeat.
@@ -812,8 +874,9 @@ begin
   if AHeatNum = 0 then exit;
   // Store the original index field names
   indexStr := tblmHeat.IndexFieldNames;
-  tblmHeat.IndexFieldNames := 'HeatID';
-  result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([AEventID, AHeatNum]), []);
+  LOptions := [];
+  tblmHeat.IndexFieldNames := 'EventID;HeatNum';
+  result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([AEventID, AHeatNum]), LOptions);
   // Restore the original index field names
   tblmHeat.IndexFieldNames := indexStr;
 end;
@@ -829,6 +892,7 @@ end;
 function TAppData.LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
 var
   indexStr: string;
+  LOptions: TLocateOptions;
 begin
   // WARNING : DisableDTMasterDetail() before calling here.
   // USED ONLY BY TdtUtils.ProcessHeat.
@@ -838,7 +902,8 @@ begin
   if ALaneNum = 0 then exit;
   // Store the original index field names
   indexStr := tblmLane.IndexFieldNames;
-  tblmLane.IndexFieldNames := 'LaneID';
+  LOptions := [];
+  tblmLane.IndexFieldNames := 'HeatID;LaneNum';
   result := tblmLane.Locate('HeatID;LaneNum', VarArrayOf([AHeatID, ALaneNum]), []);
   // Restore the original index field names
   tblmLane.IndexFieldNames := indexStr;
@@ -855,13 +920,13 @@ end;
 
 function TAppData.LocateTSessionID(ASessionID: integer): boolean;
 var
-  SearchOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
   result := false;
   if not tblmSession.Active then exit;
   if (ASessionID = 0) then exit;
-  SearchOptions := [];
-  result := tblmSession.Locate('SessionID', ASessionID, SearchOptions);
+  LOptions := [];
+  result := tblmSession.Locate('SessionID', ASessionID, LOptions);
   if result then
   begin
     dsmEvent.DataSet.Refresh;
@@ -872,6 +937,7 @@ end;
 function TAppData.LocateTSessionNum(ASessionNum: integer): boolean;
 var
   indexStr: string;
+  LOptions: TLocateOptions;
 begin
   // WARNING : DisableDTMasterDetail() before calling here.
   // USED ONLY BY TdtUtils.ProcessSession
@@ -881,50 +947,53 @@ begin
   // Store the original index field names
   indexStr := tblmSession.IndexFieldNames;
   if (ASessionNum = 0) then exit;
-  tblmSession.IndexFieldNames := 'SessionID';
-  result := tblmSession.Locate('SessionNum', ASessionNum, []);
+  tblmSession.IndexFieldNames := 'SessionNum';
+  LOptions := [];
+  result := tblmSession.Locate('SessionNum', ASessionNum, LOptions);
   // Restore the original index field names
   tblmSession.IndexFieldNames := indexStr;
 end;
 
 function TAppData.LocateSCMEventID(AEventID: integer): boolean;
 var
-  SearchOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
   result := false;
   if not fSCMDataIsActive then exit;
   if (aEventID = 0) then exit;
-  SearchOptions := [];
+  LOptions := [];
   if dsEvent.DataSet.Active then
-      result := dsEvent.DataSet.Locate('EventID', aEventID, SearchOptions);
+      result := dsEvent.DataSet.Locate('EventID', aEventID, LOptions);
 end;
 
 function TAppData.LocateSCMHeatID(AHeatID: integer): boolean;
 var
-  SearchOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
   result := false;
   if not fSCMDataIsActive then exit;
   if (AHeatID = 0) then exit;
-  SearchOptions := [];
+  LOptions := [];
   if dsHeat.DataSet.Active then
-      result := dsHeat.DataSet.Locate('HeatID', AHeatID, SearchOptions);
+      result := dsHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
 end;
 
 function TAppData.LocateSCMLaneNum(ALaneNum: integer; aEventType:
     scmEventType): boolean;
 var
-found: boolean;
+  found: boolean;
+  LOptions: TLocateOptions;
 begin
   // IGNORES SYNC STATE...
   found := false;
+  LOptions := [];
   case aEventType of
     etUnknown:
       found := false;
     etINDV:
-      found := qryINDV.Locate('Lane', ALaneNum, []);
+      found := qryINDV.Locate('Lane', ALaneNum, LOptions);
     etTEAM:
-      found := qryTEAM.Locate('Lane', ALaneNum, []);
+      found := qryTEAM.Locate('Lane', ALaneNum, LOptions);
   end;
   result := found;
 end;
@@ -943,14 +1012,14 @@ end;
 
 function TAppData.LocateSCMSessionID(ASessionID: integer): boolean;
 var
-  SearchOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
   result := false;
   if not fSCMDataIsActive then exit;
   if (ASessionID = 0) then exit;
-  SearchOptions := [];
+  LOptions := [];
   if dsSession.DataSet.Active then
-      result := dsSession.DataSet.Locate('SessionID', ASessionID, SearchOptions);
+      result := dsSession.DataSet.Locate('SessionID', ASessionID, LOptions);
 end;
 
 function TAppData.MaxID_Lane: integer;
@@ -1277,25 +1346,26 @@ end;
 function TAppData.SyncDTtoSCM: boolean;
 var
   found: boolean;
+  LOptions: TLocateOptions;
 begin
   result := false;
+  LOptions := [];
   tblmEvent.DisableControls;
   tblmHeat.DisableControls;
   tblmLane.DisableControls;
   tblmSession.DisableControls;
   // NOTE : SCM Sesssion ID = DT SessionNum.
-  found :=
-  LocateTSessionNum(qrySession.FieldByName('SessionID').AsInteger);
-  tblmEvent.ApplyMaster;
+  found := LocateTSessionID(qrySession.FieldByName('SessionID').AsInteger);
   if found then
   begin
-    found := tblmEvent.Locate('EventNum',
-        qryEvent.FieldByName('EventNum').AsInteger);
-    tblmHeat.ApplyMaster;
+    tblmEvent.ApplyMaster;
+//    found := appData.LocateTEventNum(qrySession.FieldByName('SessionID').AsInteger, qryEvent.FieldByName('EventNum').AsInteger);
+    found := tblmEvent.Locate('EventNum', qryEvent.FieldByName('EventNum').AsInteger, LOptions);
     if found then
     begin
+      tblmHeat.ApplyMaster;
       found := tblmHeat.Locate('HeatNum',
-          qryHeat.FieldByName('HeatNum').AsInteger);
+          qryHeat.FieldByName('HeatNum').AsInteger, LOptions);
       tblmLane.ApplyMaster;
       if found then
         result := true;

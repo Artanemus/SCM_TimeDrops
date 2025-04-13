@@ -38,9 +38,9 @@ object PostData: TPostData
     object lblHeaderTitle: TLabel
       Left = 110
       Top = 14
-      Width = 305
+      Width = 280
       Height = 21
-      Caption = 'Post Dolphin Timing data to SwimClubMeet.'
+      Caption = 'Post Time-Drops data to SwimClubMeet.'
     end
   end
   object pnlBody: TPanel

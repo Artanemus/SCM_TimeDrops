@@ -21,7 +21,7 @@ type
     function LaneIsEmpty: boolean;
     function IsValidWatchTime(ATime: variant): boolean;
     function CalcAvgWatchTime(): variant;
-    function CalcRaceTime: Variant;
+    procedure CalcRaceTime;
     procedure SortWatchTimes();
     procedure CheckDeviation();
     procedure LoadFromSettings();
@@ -71,7 +71,7 @@ begin
     result := 0;
 end;
 
-function TWatchTime.CalcRaceTime: Variant;
+procedure TWatchTime.CalcRaceTime;
 var
 I, count: integer;
 
@@ -105,7 +105,7 @@ begin
     concluded that all watch-times should be dropped!
   }
 
-  result := null;  // null uses system.variants.
+  fCalcRT := null;  // null uses system.variants.
   count := 0;
   for I := 1 to 3 do
     if IsValidWatchTime(Times[I]) then inc(count);
@@ -118,14 +118,14 @@ begin
       for I := 1 to 3 do
         if IsValidWatchTime(Times[I]) then
         begin
-          result := Times[I]; // NOTE: deviation is ignored.
+          fCalcRT := Times[I]; // NOTE: deviation is ignored.
           break;
         end;
     END;
   2:
     // if deviation is within accepted value.
     if DevOk[1] then
-      result := CalcAvgWatchTime;
+      fCalcRT := CalcAvgWatchTime;
   3:
     BEGIN
       // DOLPHIN TIMING RULES - use mid watch-time.
@@ -133,17 +133,17 @@ begin
       begin
         if IsValidWatchTime(Times[2]) then
           // The middle time is the second element in the sorted array
-          result := times[2];
+          fCalcRT := times[2];
       end
-      // SwimClubMeet RULES - assert deviation and find use average.
+      // SwimClubMeet RULES - assert deviation and find average.
       else
       begin
         if DevOk[1] and DevOk[2] then
-          result := CalcAvgWatchTime
+          fCalcRT := CalcAvgWatchTime
         else if DevOk[1] then
-          result := (Times[1]+Times[2])/2.0
+          fCalcRT := (Times[1]+Times[2])/2.0
         else if DevOk[2] then
-          result := (Times[2]+Times[3])/2.0;
+          fCalcRT := (Times[2]+Times[3])/2.0;
       end;
     END
   END;
@@ -270,6 +270,7 @@ begin
   if found then
   begin
     appData.tblmHeat.ApplyMaster;
+    appData.tblmHeat.First;
     while not appData.tblmHeat.Eof do
     begin
       if appData.tblmHeat.FieldByName('EventID').AsInteger = aEventID then
@@ -291,6 +292,7 @@ begin
   if found then
   begin
     appData.tblmLane.ApplyMaster;
+    appData.tblmLane.First;
     while not appData.tblmLane.Eof do
     begin
       if appData.tblmLane.FieldByName('HeatID').AsInteger = aHeatID then
@@ -317,7 +319,7 @@ begin
     fAccptDevMsec := fAcceptedDeviation * 1000;
     SortWatchTimes;  // bubble sort - fastest watch-time comes first in stack.
     CheckDeviation;  // test if time-keeper's times pass acceptable deviation.
-    fCalcRT := CalcRaceTime; // calculate the auto- racetime.
+    CalcRaceTime; // calculate the auto- racetime.
     try
       appData.tblmLane.Edit;
       AssignDataWTToLane(appData.tblmLane.Fields); // WRITE to lane.
@@ -341,6 +343,7 @@ begin
   if found then
   begin
     appData.tblmEvent.ApplyMaster;
+    appData.tblmEvent.First;
     while not appData.tblmEvent.Eof do
     begin
       if appData.tblmEvent.FieldByName('SessionID').AsInteger = aSessionID then

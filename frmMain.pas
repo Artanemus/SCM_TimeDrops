@@ -92,7 +92,7 @@ type
     actnReportSCMEvent: TAction;
     actnReportTD: TAction;
     actnSyncSCM: TAction;
-    btnCalcHeatAutoWT: TButton;
+    lblKeyBoardInfo: TLabel;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearReScanMeetsExecute(Sender: TObject);
@@ -107,7 +107,6 @@ type
     procedure actnSetDTMeetsFolderExecute(Sender: TObject);
     procedure actnSyncTDExecute(Sender: TObject);
     procedure actnSyncSCMExecute(Sender: TObject);
-    procedure btnCalcHeatAutoWTClick(Sender: TObject);
     procedure btnDataDebugClick(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
     procedure btnNextEventClick(Sender: TObject);
@@ -478,8 +477,8 @@ begin
   UpdateEventDetailsTD;
   if not found then
   begin
-    StatBar.SimpleText := 'Syncronization of Dolphin Timing to SwimClubMeet failed. '
-    + 'Your Dolphin Meets folder may not contain the session files required to sync.';
+    StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
+    + 'Your ''Results'' folder may not contain the session files required to sync.';
     timer1.enabled := true;
   end;
 end;
@@ -498,20 +497,6 @@ begin
   AppData.SyncSCMtoDT();
   SCMGrid.EndUpdate;
   UpdateEventDetailsLabel;
-end;
-
-procedure TMain.btnCalcHeatAutoWTClick(Sender: TObject);
-var
-wt: TWatchTime;
-begin
-  wt := TWatchTime.Create;
-  wt.ProcessHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
-  wt.Free;
-  // Update lblEventDetailsTD.
-  PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
-  // paint cell icons into grid
-  PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
-
 end;
 
 procedure TMain.btnDataDebugClick(Sender: TObject);
@@ -904,7 +889,12 @@ begin
               UpdateCellIcons(ADataSet, ARow, ActiveRT);
             end;
             artSplit:
-               UpdateCellIcons(ADataSet, ARow, ActiveRT);
+            begin
+              // The RaceTime needs to be recalculated...
+              AppData.CalcRTSplitTime(ADataSet);
+              UpdateCellIcons(ADataSet, ARow, ActiveRT);
+            end;
+
             artNone:
                UpdateCellIcons(ADataSet, ARow, ActiveRT);
           end;
@@ -1430,7 +1420,7 @@ begin
             s := 'TDev1';
             b2 := ADataSet.FieldByName(s).AsBoolean;
             // Unacceptable deviation - display DEV,CROSS in BOX.
-            if b and b2 then
+            if (b = true) and (b2 = false) then
             begin
                 DTGrid.AddImageIdx(I, ARow, 10, TCellHAlign.haFull,
                   TCellVAlign.vaFull);
@@ -1445,7 +1435,7 @@ begin
             s := 'TDev2';
             b2 := ADataSet.FieldByName(s).AsBoolean;
             // Unacceptable deviation - display DEV,CROSS in BOX.
-            if b and b2 then
+            if (b = true) and (b2 = false) then
             begin
                 DTGrid.AddImageIdx(I, ARow, 10, TCellHAlign.haFull,
                   TCellVAlign.vaFull);
@@ -1498,8 +1488,8 @@ begin
       begin
         DTGrid.RemoveImageIdx(I, ARow);
         // display small blue bug.
-        DTGrid.AddImageIdx(I, ARow, 11, TCellHAlign.haFull,
-            TCellVAlign.vaFull);
+//        DTGrid.AddImageIdx(I, ARow, 11, TCellHAlign.haFull,
+//            TCellVAlign.vaFull);
       end;
       DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'SPLIT';
     end;

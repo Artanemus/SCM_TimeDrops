@@ -845,7 +845,7 @@ object Main: TMain
       end
       object lblEventDetailsTD: TLabel
         Left = 16
-        Top = 56
+        Top = 42
         Width = 597
         Height = 36
         Hint = 
@@ -863,6 +863,23 @@ object Main: TMain
         ParentShowHint = False
         ShowHint = True
         Layout = tlCenter
+      end
+      object lblKeyBoardInfo: TLabel
+        Left = 16
+        Top = 72
+        Width = 597
+        Height = 17
+        Alignment = taCenter
+        AutoSize = False
+        Caption = 
+          'CTRL+LMB select single     SHIFT+LMB select range     ALT-LMB mo' +
+          'dify cell.'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Segoe UI'
+        Font.Style = []
+        ParentFont = False
       end
       object btnPrevDTFile: TButton
         Left = 15
@@ -1483,9 +1500,6 @@ object Main: TMain
           end
           item
             Control = btnDataDebug
-          end
-          item
-            Control = btnCalcHeatAutoWT
           end>
         HorizontalPositioning = sphpCenter
         Spacing = 4
@@ -1546,15 +1560,6 @@ object Main: TMain
           Caption = 'Data Debug'
           TabOrder = 0
           OnClick = btnDataDebugClick
-        end
-        object btnCalcHeatAutoWT: TButton
-          Left = 5
-          Top = 199
-          Width = 134
-          Height = 25
-          Caption = 'CalcHeatAutoWT'
-          TabOrder = 1
-          OnClick = btnCalcHeatAutoWTClick
         end
       end
     end

@@ -8409,7 +8409,6 @@ object Options: TOptions
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitTop = 469
     object btnClose: TButton
       Left = 574
       Top = 6
@@ -8428,16 +8427,14 @@ object Options: TOptions
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitHeight = 402
     object pgcntrl: TPageControl
       Left = 0
       Top = 0
       Width = 661
       Height = 416
-      ActivePage = tabsheetPaths
+      ActivePage = tabSettings
       Align = alClient
       TabOrder = 0
-      ExplicitHeight = 402
       object tabSettings: TTabSheet
         Caption = 'Settings'
         ImageIndex = 1

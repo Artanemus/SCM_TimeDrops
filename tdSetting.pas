@@ -29,13 +29,14 @@ type
     ProgramFolder: string;
     AppData: string;
     ReConstruct: string;
-//    Precedence: dtPrecedence;
     AcceptedDeviation: double;
     CalcRTMethod: integer;
     CalcSwimmerAge: integer;
     EnableRenameResultFiles: boolean;
     RaceNumber: integer;
     lastMeetProgramDate: TDateTime;
+    UseTDpadTime: boolean;
+    UseTDfinalTime: boolean;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -66,7 +67,6 @@ begin
   ProgramFolder := 'c:\TimeDrops\Meets';
   AppData := 'c:\TimeDrops\AppData';
   ReConstruct := 'c:\TimeDrops\ReConstruct';
-//  Precedence := dtPrecHeader;
   AcceptedDeviation := 0.3;
   RaceNumber := 0;
   // 0 = default DT method : 1 = extended SCM method.
@@ -76,6 +76,8 @@ begin
   // The datetime of the last meet program contructed and saved _
   // (by SCM_TimeDrops) to the Time-Drops Meet folder.
   lastMeetProgramDate := Now;
+  UseTDpadTime := false;
+  UseTDfinalTime := false;
   {
   ForceDirectories creates a new directory as specified in Dir,
   which must be a fully-qualified path name. If the directories given in
