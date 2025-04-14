@@ -39,6 +39,10 @@ type
     chkbxPadTime: TCheckBox;
     lblInfoFinalTime: TLabel;
     lblInfoPadTime: TLabel;
+    vimgAutoTimeSCM: TVirtualImage;
+    vimgAutoTimeTD: TVirtualImage;
+    vimgSplitSCM: TVirtualImage;
+    vimgSplitTD: TVirtualImage;
     procedure btnCloseClick(Sender: TObject);
     procedure btnedtAppDataRightButtonClick(Sender: TObject);
     procedure btnedtMeetProgramRightButtonClick(Sender: TObject);
@@ -174,9 +178,13 @@ begin
     // extended SCM method.
     rgrpMeanTimeMethod.ItemIndex := 1;
   else
-    // default DT method (default).
+    // standard behaviour as specified by Dolphin Timing. (default).
     rgrpMeanTimeMethod.ItemIndex := 0;
   end;
+
+  chkbxFinalTime.Checked := Settings.UseTDfinalTime;
+  chkbxPadTime.Checked := Settings.UseTDpadTime;
+
   try
     lbledtDeviation.Text := FloatToStr(Settings.AcceptedDeviation);
   except on E: Exception do
@@ -210,6 +218,9 @@ begin
   except on E: Exception do
     Settings.AcceptedDeviation := 0.3;
   end;
+  Settings.UseTDfinalTime := chkbxFinalTime.Checked;
+  Settings.UseTDpadTime := chkbxPadTime.Checked;
+
   Settings.SaveToFile();
 end;
 

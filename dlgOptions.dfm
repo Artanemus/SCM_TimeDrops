@@ -8440,7 +8440,7 @@ object Options: TOptions
         ImageIndex = 1
         object lblSwimmerAge: TLabel
           Left = 427
-          Top = 339
+          Top = 347
           Width = 71
           Height = 21
           Alignment = taRightJustify
@@ -8449,7 +8449,7 @@ object Options: TOptions
         end
         object lblInfoFinalTime: TLabel
           Left = 48
-          Top = 120
+          Top = 136
           Width = 450
           Height = 21
           Caption = 
@@ -8459,13 +8459,57 @@ object Options: TOptions
         end
         object lblInfoPadTime: TLabel
           Left = 48
-          Top = 178
+          Top = 210
           Width = 445
           Height = 21
           Caption = 
             '(Instead of '#39'last split time recorded'#39' - use Time Drops '#39'padTime' +
             #39'.)'
           Enabled = False
+        end
+        object vimgAutoTimeSCM: TVirtualImage
+          Left = 327
+          Top = 82
+          Width = 48
+          Height = 48
+          ImageCollection = AppData.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 70
+          ImageName = 'ActiveRTAutomatic'
+        end
+        object vimgAutoTimeTD: TVirtualImage
+          Left = 381
+          Top = 82
+          Width = 48
+          Height = 48
+          ImageCollection = AppData.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 79
+          ImageName = 'AutoRaceTime_TD'
+        end
+        object vimgSplitSCM: TVirtualImage
+          Left = 327
+          Top = 163
+          Width = 48
+          Height = 48
+          ImageCollection = AppData.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 67
+          ImageName = 'ActiveRTSplit'
+        end
+        object vimgSplitTD: TVirtualImage
+          Left = 381
+          Top = 163
+          Width = 48
+          Height = 48
+          ImageCollection = AppData.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 78
+          ImageName = 'padTime_splitTime_TD'
         end
         object lbledtDeviation: TLabeledEdit
           Left = 20
@@ -8483,11 +8527,10 @@ object Options: TOptions
         end
         object rgrpMeanTimeMethod: TRadioGroup
           Left = 20
-          Top = 237
+          Top = 245
           Width = 269
           Height = 92
           Caption = 'AutoCalc entrant'#39's race times ...'
-          Enabled = False
           ItemIndex = 0
           Items.Strings = (
             'Standard behaviour'
@@ -8505,7 +8548,7 @@ object Options: TOptions
         end
         object rgrpSwimmerAge: TRadioGroup
           Left = 328
-          Top = 237
+          Top = 245
           Width = 305
           Height = 92
           Caption = 'Calculate swimmer'#39's age ...'
@@ -8518,7 +8561,7 @@ object Options: TOptions
         end
         object dtpickSwimmerAge: TDateTimePicker
           Left = 504
-          Top = 335
+          Top = 343
           Width = 129
           Height = 29
           Date = 45738.000000000000000000
@@ -8528,20 +8571,18 @@ object Options: TOptions
         end
         object chkbxFinalTime: TCheckBox
           Left = 20
-          Top = 89
+          Top = 105
           Width = 301
           Height = 25
           Caption = 'Use Time Drops '#39'Final Time'#39'.'
-          Enabled = False
           TabOrder = 5
         end
         object chkbxPadTime: TCheckBox
           Left = 20
-          Top = 147
+          Top = 179
           Width = 301
           Height = 25
           Caption = 'Use Time Drops '#39'Pad Time'#39'.'
-          Enabled = False
           TabOrder = 6
         end
       end

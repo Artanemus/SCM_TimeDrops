@@ -1444,6 +1444,7 @@ begin
         end;
       end;
       DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'AUTO';
+
     end;
     artManual:
     begin

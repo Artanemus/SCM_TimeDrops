@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="24"
+   height="24"
+   viewBox="0 0 6.35 6.35"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   sodipodi:docname="ActiveRTAutoTime_SCM_TD.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#e1e1e1"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px"
+     inkscape:zoom="16.591246"
+     inkscape:cx="43.637471"
+     inkscape:cy="20.070826"
+     inkscape:window-width="2560"
+     inkscape:window-height="1377"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1">
+    <inkscape:page
+       x="0"
+       y="0"
+       width="6.3499999"
+       height="6.3499999"
+       id="page1"
+       margin="0"
+       bleed="0"
+       inkscape:label="AutoRaceTime_SCM"
+       inkscape:export-filename="AutoRaceTime_SCM.png"
+       inkscape:export-xdpi="3200"
+       inkscape:export-ydpi="3200" />
+    <inkscape:page
+       x="16.35"
+       y="0"
+       width="6.3499999"
+       height="6.3499999"
+       id="page2"
+       margin="0"
+       bleed="0"
+       inkscape:label="AutoRaceTime_TD" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="AutoRaceTime_SCM"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       d="m 1.9210107,4.7787265 h 0.57997 L 2.6812416,4.2684499 H 3.6530833 L 3.8333442,4.7787265 H 4.4289891 L 3.4884972,2.3148194 H 2.8615026 Z M 2.8301529,3.8456492 3.1749999,2.8834134 3.5120095,3.8456492 Z M 2.234508,0.69651361 V 0.11334039 H 4.1154918 V 0.69651361 Z M 3.1749999,6.2366596 q -0.57997,0 -1.0933219,-0.2077554 Q 1.5683262,5.8211487 1.184292,5.463955 0.80025777,5.1067614 0.57689077,4.6292883 0.35352432,4.1518152 0.35352432,3.61238 q 0,-0.5394353 0.22336645,-1.0169084 Q 0.80025777,2.1179985 1.184292,1.7608048 1.5683262,1.4036112 2.081678,1.1958558 2.5950299,0.98810031 3.1749999,0.98810031 q 0.4859208,0 0.9326545,0.14579329 0.4467337,0.1457933 0.8386053,0.4228006 L 5.3851559,1.1484729 5.8240522,1.5566942 5.3851559,1.9649155 Q 5.6829784,2.3293988 5.839727,2.7449098 5.9964757,3.1604207 5.9964757,3.61238 q 0,0.5394352 -0.2233669,1.0169083 Q 5.549742,5.1067614 5.1657078,5.463955 4.7816736,5.8211487 4.2683218,6.0289042 3.7549699,6.2366596 3.1749999,6.2366596 Z m 0,-0.5831732 q 0.9091422,0 1.5518117,-0.5977526 0.6426695,-0.5977526 0.6426695,-1.4433538 0,-0.8456013 -0.6426695,-1.4433539 -0.6426695,-0.5977526 -1.5518117,-0.5977526 -0.9091422,0 -1.5518117,0.5977526 -0.64266953,0.5977526 -0.64266953,1.4433539 0,0.8456012 0.64266953,1.4433538 0.6426695,0.5977526 1.5518117,0.5977526 z m 0,-2.0411064 z"
+       id="path1"
+       style="display:inline;fill:#9acd32;stroke-width:0.00755861" />
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="AutoRaceTime_TD__finalTime">
+    <path
+       d="M 18.574385,0.69651357 V 0.11334034 h 1.880984 v 0.58317323 z m 0.940492,5.54014603 c -0.386647,0 -0.751087,-0.069252 -1.093322,-0.2077554 C 18.07932,5.8904005 17.780192,5.7020841 17.524169,5.463955 17.268146,5.2258259 17.065679,4.9476037 16.916768,4.6292883 16.767857,4.3109729 16.693401,3.9720035 16.693401,3.61238 c 0,-0.3596235 0.07446,-0.698593 0.223367,-1.0169084 0.148911,-0.3183154 0.351378,-0.5965377 0.607401,-0.8346668 0.256023,-0.2381291 0.555151,-0.4264454 0.897386,-0.564949 0.342235,-0.1385037 0.706675,-0.20775553 1.093322,-0.20775553 0.323947,0 0.634832,0.0485977 0.932654,0.14579333 0.297823,0.097195 0.577358,0.2381291 0.838606,0.4228006 l 0.438896,-0.4082213 0.438896,0.4082213 -0.438896,0.4082213 c 0.198548,0.2429889 0.350072,0.502987 0.454571,0.7799943 0.104499,0.2770073 0.156749,0.566164 0.156749,0.8674702 0,0.3596235 -0.07446,0.6985929 -0.223367,1.0169083 -0.148911,0.3183154 -0.351378,0.5965376 -0.607401,0.8346667 -0.256023,0.2381291 -0.555151,0.4264455 -0.897386,0.5649492 -0.342235,0.1385036 -0.706675,0.2077554 -1.093322,0.2077554 z m 0,-0.5831732 c 0.606095,0 1.123365,-0.1992509 1.551812,-0.5977526 0.428446,-0.3985017 0.642669,-0.8796197 0.642669,-1.4433538 0,-0.5637342 -0.214223,-1.0448522 -0.642669,-1.4433539 -0.428447,-0.3985017 -0.945717,-0.5977526 -1.551812,-0.5977526 -0.606095,0 -1.123365,0.1992509 -1.551812,0.5977526 -0.428446,0.3985017 -0.642669,0.8796197 -0.642669,1.4433539 0,0.5637341 0.214223,1.0448521 0.642669,1.4433538 0.428447,0.3985017 0.945717,0.5977526 1.551812,0.5977526 z"
+       id="path1-1"
+       style="display:inline;fill:#9acd32;stroke-width:0.00755861"
+       sodipodi:nodetypes="cccccssssssssssccccsssssssssssssss" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.52777px;line-height:1.25;font-family:'Segoe UI';-inkscape-font-specification:'Segoe UI, Normal';text-align:center;letter-spacing:-0.367771px;text-anchor:middle;display:inline;fill:#9acd32;stroke-width:0.264583"
+       x="19.560076"
+       y="4.7909636"
+       id="text2-6"
+       inkscape:label="text TD"><tspan
+         sodipodi:role="line"
+         id="tspan2-8"
+         x="0"
+         y="0"
+         style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:3.52777px;font-family:'Segoe UI';-inkscape-font-specification:'Segoe UI Semi-Bold';letter-spacing:-0.367771px;fill:#9acd32;stroke-width:0.264583">TD</tspan></text>
+  </g>
+</svg>

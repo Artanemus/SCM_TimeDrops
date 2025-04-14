@@ -1277,12 +1277,25 @@ begin
           ADataSet.edit;
           try
             ADataSet.FieldByName('ActiveRT').AsInteger := Ord(artAutomatic);
-            ADataSet.fieldbyName('imgActiveRT').AsInteger := 2;
-            if ADataSet.FieldByName('RaceTimeA').IsNull then
-              ADataSet.FieldByName('RaceTime').Clear
-            else
-              ADataSet.FieldByName('RaceTime').AsVariant :=
-              ADataSet.FieldByName('RaceTimeA').AsVariant;
+            // optional - use TimeDrops 'finalTime' for auto race-time.
+            if Assigned(settings) and (Settings.UseTDfinalTime = true) then
+            begin
+              if ADataSet.FieldByName('finalTime').IsNull then
+                ADataSet.FieldByName('RaceTime').Clear
+              else
+                ADataSet.FieldByName('RaceTime').AsVariant :=
+                ADataSet.FieldByName('finalTime').AsVariant;
+              ADataSet.fieldbyName('imgActiveRT').AsInteger := 8
+            end
+            else // default image assignment...
+            begin
+              if ADataSet.FieldByName('RaceTimeA').IsNull then
+                ADataSet.FieldByName('RaceTime').Clear
+              else
+                ADataSet.FieldByName('RaceTime').AsVariant :=
+                ADataSet.FieldByName('RaceTimeA').AsVariant;
+              ADataSet.fieldbyName('imgActiveRT').AsInteger := 2;
+            end;
             ADataSet.post;
           except on E: Exception do
             begin
@@ -1323,8 +1336,23 @@ begin
         begin
           ADataSet.edit;
           ADataSet.FieldByName('ActiveRT').AsInteger := ORD(artSplit);
-          ADataSet.fieldbyName('imgActiveRT').AsInteger := 5;
-          ADataSet.FieldByName('RaceTime').Clear;
+          // optional - use TimeDrops 'padTime' for 'race-time'.
+          if Assigned(settings) and (Settings.UseTDpadTime = true) then
+          begin
+              if ADataSet.FieldByName('padTime').IsNull then
+                ADataSet.FieldByName('RaceTime').Clear
+              else
+                ADataSet.FieldByName('RaceTime').AsVariant :=
+                ADataSet.FieldByName('padTime').AsVariant;
+              ADataSet.fieldbyName('imgActiveRT').AsInteger := 9
+          end
+          else
+          begin
+            {TODO -oBSA -cGeneral : Find last split time and assign to RaceTime}
+            ADataSet.fieldbyName('imgActiveRT').AsInteger := 5;
+            ADataSet.FieldByName('RaceTime').Clear;
+          end;
+
           ADataSet.post;
         end;
 

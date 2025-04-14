@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg1"
+   width="24"
+   height="24"
+   viewBox="0 0 24 24"
+   sodipodi:docname="padTime_splitTime.svg"
+   inkscape:version="1.4 (86a8ad7, 2024-10-11)"
+   inkscape:export-filename="padTime_splitTime.png"
+   inkscape:export-xdpi="3200"
+   inkscape:export-ydpi="3200"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showguides="true"
+     inkscape:zoom="24.25"
+     inkscape:cx="25.814433"
+     inkscape:cy="12"
+     inkscape:window-width="2560"
+     inkscape:window-height="1377"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer2-1">
+    <sodipodi:guide
+       position="0.72164948,20.43299"
+       orientation="1,0"
+       id="guide1"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="23.195876,17.876289"
+       orientation="1,0"
+       id="guide2"
+       inkscape:locked="false" />
+    <inkscape:page
+       x="0"
+       y="0"
+       width="24"
+       height="24"
+       id="page2"
+       margin="0"
+       bleed="0"
+       inkscape:label="padTime_splitTime_SCM"
+       inkscape:export-filename="padTime_splitTime_TD.png"
+       inkscape:export-xdpi="3200"
+       inkscape:export-ydpi="3200" />
+    <inkscape:page
+       x="34"
+       y="0"
+       width="24"
+       height="24"
+       id="page3"
+       margin="0"
+       bleed="0"
+       inkscape:label="padTime_splitTime_TD"
+       inkscape:export-filename="padTime_splitTime_TD.png"
+       inkscape:export-xdpi="3200"
+       inkscape:export-ydpi="3200" />
+  </sodipodi:namedview>
+  <g
+     inkscape:groupmode="layer"
+     id="layer3"
+     inkscape:label="TimeDrops_padTime">
+    <g
+       inkscape:groupmode="layer"
+       id="layer1-2"
+       inkscape:label="Bkgrd"
+       transform="translate(34.041238)"
+       style="fill:#9acd32">
+      <path
+         style="display:none;fill:#9acd32;fill-opacity:1;stroke:none;stroke-width:1.74854px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="M 0.72164911,12.948454 H 23.195875 v 7.690722 H 0.72164911 Z"
+         id="path2-1-7"
+         inkscape:label="BottomBar" />
+      <path
+         style="fill:#9acd32;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="M 0.72164923,8.2680413 H 23.195875 V 10.783506 H 0.72164923 Z"
+         id="path2-8-6"
+         inkscape:label="MiddleBar" />
+      <path
+         style="fill:#9acd32;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="M 0.72164898,3.3608244 H 23.195875 V 5.8762886 H 0.72164898 Z"
+         id="path2-14"
+         inkscape:label="TopBar" />
+    </g>
+    <g
+       inkscape:groupmode="layer"
+       id="layer2-1"
+       inkscape:label="padTimeText"
+       transform="translate(13.493685,-4.325733)">
+      <text
+         xml:space="preserve"
+         style="font-size:13.3333px;line-height:1.25;font-family:'Segoe UI';-inkscape-font-specification:'Segoe UI, Normal';text-align:center;text-anchor:middle;fill:#9acd32"
+         x="35.767303"
+         y="25.661648"
+         id="text2-6"><tspan
+           sodipodi:role="line"
+           id="tspan2-8"
+           x="35.767303"
+           y="25.661648"
+           style="font-style:normal;font-variant:normal;font-weight:600;font-stretch:normal;font-size:13.3333px;font-family:'Segoe UI';-inkscape-font-specification:'Segoe UI Semi-Bold';fill:#9acd32">TD</tspan></text>
+    </g>
+  </g>
+  <g
+     inkscape:groupmode="layer"
+     id="layer4"
+     inkscape:label="SwimClubMeet_splitTime">
+    <g
+       inkscape:groupmode="layer"
+       id="layer1"
+       inkscape:label="Bkgrd"
+       style="fill:#9acd32">
+      <path
+         style="fill:#9acd32;fill-opacity:1;stroke:none;stroke-width:1.74854px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="M 0.72164911,12.948454 H 23.195875 v 7.690722 H 0.72164911 Z"
+         id="path2-1"
+         inkscape:label="BottomBar" />
+      <path
+         style="fill:#9acd32;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="M 0.72164923,8.2680413 H 23.195875 V 10.783506 H 0.72164923 Z"
+         id="path2-8"
+         inkscape:label="MiddleBar" />
+      <path
+         style="fill:#9acd32;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="M 0.72164898,3.3608244 H 23.195875 V 5.8762886 H 0.72164898 Z"
+         id="path2"
+         inkscape:label="TopBar" />
+    </g>
+  </g>
+</svg>
