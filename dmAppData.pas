@@ -552,25 +552,10 @@ end;
 
 procedure TAppData.CalcRTSplitTime(ADataSet: TDataSet);
 var
-  t: TTime;
+  t, t2: TTime;
   tOk: boolean;
-
-  function FindLastSplit(DS: TDataSet): Ttime;
-  begin
-    var tt: TTime;
-    var I: integer;
-    var s: string;
-    tt := 0;
-    for I := 10 downto 1 do
-    begin
-      s := 'Split'+ Inttostr(I);
-      if not ADataSet.FieldByName(s).IsNull then
-      begin
-        tt := ADataSet.FieldByName(s).AsDateTime;
-        if tt<> 0 then break;
-      end;
-    end;
-  end;
+  I: integer;
+  s: string;
 
 begin
   tOk := false;
@@ -585,10 +570,21 @@ begin
         if (t<>0) then tOk := true;
       end;
     end
-    else // use the last split time found in tblmLane
+    else
     begin
-      // locate the last split
-      t := FindLastSplit(ADataSet);
+      // assume split is acculmative time ....
+      // locate MAX(split)  : stack order not important.
+      t := 0;
+      for I := 1 to 10 do
+      begin
+        s := 'split' + IntTostr(I);
+        t2 := 0;
+        if not ADataSet.FieldByName(s).IsNull then
+          t2 := TimeOf(ADataSet.FieldByName(s).AsDatetime);
+        if (t < t2) then
+          t := t2
+      end;
+
       if (t <> 0) then tOk := true;
     end;
   end;

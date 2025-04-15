@@ -374,8 +374,19 @@ begin
   dlg := TOptions.Create(Self);
   mr := dlg.ShowModal;
   if IsPositiveResult(mr) then
+  begin
     // Update any preference changes
     LoadSettings;
+    dtGrid.BeginUpdate;
+    appData.tblmHeat.ApplyMaster;
+    appData.tblmLane.ApplyMaster;
+    dtGrid.EndUpdate;
+    // Update lblEventDetailsTD.
+    PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
+    // paint cell icons into grid
+    PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+
+  end;
   dlg.Free;
   UpdateCaption;
 end;
@@ -1481,7 +1492,7 @@ begin
       end;
       // USER MODE : display - cell pointer
       // DTGrid.AddImageIdx(7, ARow, 9, TCellHAlign.haAfterText, TCellVAlign.vaTop);
-      DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'USER RT';
+      DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'EDIT RT';
     end;
     artSplit:
     begin

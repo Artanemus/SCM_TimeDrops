@@ -3,7 +3,7 @@ object Options: TOptions
   Top = 0
   BorderStyle = bsDialog
   Caption = 'Application Options ...'
-  ClientHeight = 524
+  ClientHeight = 505
   ClientWidth = 661
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -8403,12 +8403,13 @@ object Options: TOptions
   end
   object pnlFooter: TPanel
     Left = 0
-    Top = 483
+    Top = 464
     Width = 661
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 2
+    ExplicitTop = 483
     object btnClose: TButton
       Left = 574
       Top = 6
@@ -8423,53 +8424,35 @@ object Options: TOptions
     Left = 0
     Top = 67
     Width = 661
-    Height = 416
+    Height = 397
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitHeight = 416
     object pgcntrl: TPageControl
       Left = 0
       Top = 0
       Width = 661
-      Height = 416
+      Height = 397
       ActivePage = tabSettings
       Align = alClient
       TabOrder = 0
+      ExplicitHeight = 416
       object tabSettings: TTabSheet
         Caption = 'Settings'
         ImageIndex = 1
         object lblSwimmerAge: TLabel
           Left = 427
-          Top = 347
+          Top = 315
           Width = 71
           Height = 21
           Alignment = taRightJustify
           Caption = 'Seed date.'
           Enabled = False
         end
-        object lblInfoFinalTime: TLabel
-          Left = 48
-          Top = 136
-          Width = 450
-          Height = 21
-          Caption = 
-            '(Instead of SCM AutoCalc race time - use Time Drops '#39'finalTime'#39'.' +
-            ')'
-          Enabled = False
-        end
-        object lblInfoPadTime: TLabel
-          Left = 48
-          Top = 210
-          Width = 445
-          Height = 21
-          Caption = 
-            '(Instead of '#39'last split time recorded'#39' - use Time Drops '#39'padTime' +
-            #39'.)'
-          Enabled = False
-        end
         object vimgAutoTimeSCM: TVirtualImage
-          Left = 327
-          Top = 82
+          Left = 248
+          Top = 89
           Width = 48
           Height = 48
           ImageCollection = AppData.imgcolDT
@@ -8479,8 +8462,8 @@ object Options: TOptions
           ImageName = 'ActiveRTAutomatic'
         end
         object vimgAutoTimeTD: TVirtualImage
-          Left = 381
-          Top = 82
+          Left = 302
+          Top = 89
           Width = 48
           Height = 48
           ImageCollection = AppData.imgcolDT
@@ -8490,8 +8473,8 @@ object Options: TOptions
           ImageName = 'AutoRaceTime_TD'
         end
         object vimgSplitSCM: TVirtualImage
-          Left = 327
-          Top = 163
+          Left = 248
+          Top = 143
           Width = 48
           Height = 48
           ImageCollection = AppData.imgcolDT
@@ -8501,8 +8484,8 @@ object Options: TOptions
           ImageName = 'ActiveRTSplit'
         end
         object vimgSplitTD: TVirtualImage
-          Left = 381
-          Top = 163
+          Left = 302
+          Top = 143
           Width = 48
           Height = 48
           ImageCollection = AppData.imgcolDT
@@ -8510,6 +8493,32 @@ object Options: TOptions
           ImageHeight = 0
           ImageIndex = 78
           ImageName = 'padTime_splitTime_TD'
+        end
+        object vimginfo1: TVirtualImage
+          Left = 356
+          Top = 89
+          Width = 32
+          Height = 32
+          ImageCollection = AppData.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 77
+          ImageName = 'info'
+          OnMouseEnter = vimginfo1MouseEnter
+          OnMouseLeave = vimginfo1MouseLeave
+        end
+        object vimgInfo2: TVirtualImage
+          Left = 356
+          Top = 143
+          Width = 32
+          Height = 32
+          ImageCollection = AppData.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 77
+          ImageName = 'info'
+          OnMouseEnter = vimgInfo2MouseEnter
+          OnMouseLeave = vimgInfo2MouseLeave
         end
         object lbledtDeviation: TLabeledEdit
           Left = 20
@@ -8527,7 +8536,7 @@ object Options: TOptions
         end
         object rgrpMeanTimeMethod: TRadioGroup
           Left = 20
-          Top = 245
+          Top = 213
           Width = 269
           Height = 92
           Caption = 'AutoCalc entrant'#39's race times ...'
@@ -8548,7 +8557,7 @@ object Options: TOptions
         end
         object rgrpSwimmerAge: TRadioGroup
           Left = 328
-          Top = 245
+          Top = 213
           Width = 305
           Height = 92
           Caption = 'Calculate swimmer'#39's age ...'
@@ -8561,7 +8570,7 @@ object Options: TOptions
         end
         object dtpickSwimmerAge: TDateTimePicker
           Left = 504
-          Top = 343
+          Top = 311
           Width = 129
           Height = 29
           Date = 45738.000000000000000000
@@ -8571,16 +8580,16 @@ object Options: TOptions
         end
         object chkbxFinalTime: TCheckBox
           Left = 20
-          Top = 105
-          Width = 301
+          Top = 112
+          Width = 222
           Height = 25
           Caption = 'Use Time Drops '#39'Final Time'#39'.'
           TabOrder = 5
         end
         object chkbxPadTime: TCheckBox
           Left = 20
-          Top = 179
-          Width = 301
+          Top = 159
+          Width = 222
           Height = 25
           Caption = 'Use Time Drops '#39'Pad Time'#39'.'
           TabOrder = 6
@@ -8693,5 +8702,10 @@ object Options: TOptions
     Options = [fdoPickFolders, fdoDontAddToRecent]
     Left = 564
     Top = 75
+  end
+  object bhintOptions: TBalloonHint
+    Position = hpAutoFromCenter
+    Left = 564
+    Top = 147
   end
 end

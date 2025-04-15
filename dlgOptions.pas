@@ -37,12 +37,13 @@ type
     lblSwimmerAge: TLabel;
     chkbxFinalTime: TCheckBox;
     chkbxPadTime: TCheckBox;
-    lblInfoFinalTime: TLabel;
-    lblInfoPadTime: TLabel;
     vimgAutoTimeSCM: TVirtualImage;
     vimgAutoTimeTD: TVirtualImage;
     vimgSplitSCM: TVirtualImage;
     vimgSplitTD: TVirtualImage;
+    bhintOptions: TBalloonHint;
+    vimginfo1: TVirtualImage;
+    vimgInfo2: TVirtualImage;
     procedure btnCloseClick(Sender: TObject);
     procedure btnedtAppDataRightButtonClick(Sender: TObject);
     procedure btnedtMeetProgramRightButtonClick(Sender: TObject);
@@ -51,6 +52,10 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure vimginfo1MouseEnter(Sender: TObject);
+    procedure vimginfo1MouseLeave(Sender: TObject);
+    procedure vimgInfo2MouseEnter(Sender: TObject);
+    procedure vimgInfo2MouseLeave(Sender: TObject);
   private
     procedure LoadFromSettings;
     procedure LoadSettings;
@@ -222,6 +227,76 @@ begin
   Settings.UseTDpadTime := chkbxPadTime.Checked;
 
   Settings.SaveToFile();
+end;
+
+procedure TOptions.vimginfo1MouseEnter(Sender: TObject);
+begin
+  bhintOptions.Title := 'finalTime vs AutoCalc';
+  bhintOptions.Description := '''
+  Checking this box results in using Time Drops' 'finalTime',
+  instead of using SwimClubMeet's auto-calculated race time.
+
+  SwimClubMeet offers two methods for auto-calculated race time.
+  METHOD 1 - Standard Practice:
+  - If there is one watch per lane, that time will also be
+      placed in 'raceTime'.
+  - If there are two watches for a given lane, the average
+      will be computed and placed in 'raceTime'.
+  - If there are three watch times for a given lane,
+      the middle time will be placed in 'raceTime'.
+
+  METHOD 2 - Enhanced:
+  The average is always used—whether for two or three watch times.
+  Deviation between three watch times is always checked, and
+  SwimClubMeet may conclude that all watch times should be dropped.
+
+  NOTES:
+  If the difference between the two watch times exceeds the
+  'Accepted Deviation', the average result time will NOT be computed,
+  and warning icons will appear for both watch times in this lane.
+  The 'raceTime' will be empty.
+  Switch to manual mode and select which time to use.
+  You are permitted to select both, in which case an average of the
+  two watch times will be used in 'raceTime'.
+
+  Rules for 'finalTime' are undocumented
+
+  ''';
+
+  bhintOptions.ShowHint;
+end;
+
+procedure TOptions.vimginfo2MouseEnter(Sender: TObject);
+begin
+  bhintOptions.Title := 'padTime vs Split-Time';
+  bhintOptions.Description := '''
+  Checking this box will use Time-Drops' 'padTime' instead
+  of SwimClubMeet's calculated split time.' +
+                 '
+  SwimClubMeet calculates split times by searching all 10
+  stored splits for each lane, identifying the maximum split time.
+  SCM assumes split times are cumulative, and that the maximum
+  split time represents the lane’s end time (i.e., the entrant's
+  race time).
+
+  There is no official documentation for Time-Drops' 'padTime'.
+  However, it is likely that the anticipated split count provided
+  when building the Meet Program plays a role in determining the
+  final 'padTime'.
+
+  ''';
+  bhintOptions.ShowHint;
+
+end;
+
+procedure TOptions.vimginfo1MouseLeave(Sender: TObject);
+begin
+  bhintOptions.HideHint;
+end;
+
+procedure TOptions.vimgInfo2MouseLeave(Sender: TObject);
+begin
+  bhintOptions.HideHint;
 end;
 
 end.
