@@ -142,7 +142,7 @@ type
     function MaxID_Session():integer;
 
     procedure POST_All;
-    procedure POST_Lane(ALane: Integer);
+    procedure POST_Lane(ALaneNum: Integer);
 
     // Read/Write Application Data State to file
     procedure ReadFromBinary(AFilePath:string);
@@ -1140,7 +1140,7 @@ begin
 
 end;
 
-procedure TAppData.POST_Lane(ALane: Integer);
+procedure TAppData.POST_Lane(ALaneNum: Integer);
 var
   AEventType: scmEventType;
   b1, b2: boolean;
@@ -1150,8 +1150,8 @@ begin
   tblmLane.DisableControls;
   AEventType := scmEventType(qryDistance.FieldByName('EventTypeID').AsInteger);
   // SYNC to ROW ...
-  b1 := LocateTLaneNum(tblmHeat.FieldByName('HeatID').AsInteger, ALane);
-  b2 := LocateSCMLaneNum(ALane, AEventType);
+  b1 := LocateTLaneNum(tblmHeat.FieldByName('HeatID').AsInteger, ALaneNum);
+  b2 := LocateSCMLaneNum(ALaneNum, AEventType);
   if (b1 and b2) then
   begin
       if AEventType = etINDV then

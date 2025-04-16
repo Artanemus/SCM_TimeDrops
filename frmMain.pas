@@ -837,45 +837,58 @@ begin
   Grid := Sender as TDBAdvGrid;
   ADataSet := Grid.DataSource.DataSet;
 
-
   if (ARow >= DTgrid.FixedRows) then
   begin
     case ACol of
       7: // C O L U M N   E N T E R   U S E R   R A C E T I M E  .
         begin
-          if (GetKeyState(VK_MENU) < 0) then
+          // 2025/04/16 :: The ALT key isn't required.
+          ActiveRT := dtActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+          if (ActiveRT = artUser) then // Enter a user race-time.
           begin
-            ActiveRT := dtActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
-            if (ActiveRT = artUser) then // Enter a user race-time.
+            grid.BeginUpdate;
+            // create the 'Enter Race-Time' dialogue.
+            dlg := TUserRaceTime.Create(Self);
+            // Assign : Current displayed racetime.
+            dlg.RaceTime := ADataSet.FieldByName('RaceTime').AsDateTime;
+            // Assign : Store user racetime.
+            dlg.RaceTimeUser := ADataSet.FieldByName('RaceTimeUser').AsDateTime;
+            mr := dlg.ShowModal;
+            if IsPositiveResult(mr) then
             begin
-              grid.BeginUpdate;
-              // create the 'Enter Race-Time' dialogue.
-              dlg := TUserRaceTime.Create(Self);
-              // Assign : Current displayed racetime.
-              dlg.RaceTime := ADataSet.FieldByName('RaceTime').AsDateTime;
-              // Assign : Store user racetime.
-              dlg.RaceTimeUser := ADataSet.FieldByName('RaceTimeUser').AsDateTime;
-              mr := dlg.ShowModal;
-              if IsPositiveResult(mr) then
-              begin
-                t := dlg.RaceTimeUser;
-                ADataSet.Edit;
-                if (t = 0) then
-                  ADataSet.FieldByName('RaceTime').Clear
-                else
-                  ADataSet.FieldByName('RaceTime').AsDateTime := t;
-                ADataSet.FieldByName('RaceTimeUser').AsDateTime := t;
-                ADataSet.Post;
+              t := dlg.RaceTimeUser;
+              ADataSet.Edit;
+              try
+                begin
+                  if (t = 0) then
+                    ADataSet.FieldByName('RaceTime').Clear
+                  else
+                    ADataSet.FieldByName('RaceTime').AsDateTime := t;
+                  ADataSet.FieldByName('RaceTimeUser').AsDateTime := t;
+                  ADataSet.Post;
+                end;
+              except on E: Exception do
+                ADataSet.Cancel;
               end;
-              dlg.Free;
-              grid.EndUpdate;
             end;
+            dlg.Free;
+            // if routine 'POST selected' is immediately called after the
+            // above change in user's racetime - the grid reports
+            // SelectedRowCount = 0. Solution :: re-select the row.
+            grid.SelectRows(ARow,1); // REQUIRED.
+            grid.EndUpdate;
+
+            {TODO -oBSA -cGeneral : Row still needs a repaint!
+            grid.repaintRow(ARow);  NOT WORKING...
+            grid.ClearRowSelect;
+            grid.invalidate;  }
+
           end;
         end;
       6: // C O L U M N   T O G G L E   A C T I V E - R T .
         begin
           grid.BeginUpdate;
-          { Toggle tblEntrant.ActiveRT}
+          { ALT KEY is active :: Toggle tblEntrant.ActiveRT}
           if (GetKeyState(VK_MENU) < 0) then
             // toggle backwards
             ActiveRT := AppData.ToggleActiveRT(ADataSet, 1)

@@ -1115,14 +1115,14 @@ object Main: TMain
             Width = 34
           end
           item
-            Alignment = taRightJustify
+            Alignment = taCenter
             Borders = []
             BorderPen.Color = clSilver
             ButtonHeight = 18
             CheckFalse = 'N'
             CheckTrue = 'Y'
             Color = 6445643
-            FieldName = 'Lane'
+            FieldName = 'LaneNum'
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clWindow
             Font.Height = -16

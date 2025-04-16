@@ -37,6 +37,7 @@ type
     lastMeetProgramDate: TDateTime;
     UseTDpadTime: boolean;
     UseTDfinalTime: boolean;
+    DoPostALL: boolean;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -78,6 +79,7 @@ begin
   lastMeetProgramDate := Now;
   UseTDpadTime := false;
   UseTDfinalTime := false;
+  DoPostALL := true;
   {
   ForceDirectories creates a new directory as specified in Dir,
   which must be a fully-qualified path name. If the directories given in

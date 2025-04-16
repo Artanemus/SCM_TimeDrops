@@ -14,6 +14,7 @@ object PostData: TPostData
   KeyPreview = True
   Position = poOwnerFormCenter
   RoundedCorners = rcOn
+  OnCreate = FormCreate
   OnKeyDown = FormKeyDown
   TextHeight = 21
   object pnlHeader: TPanel
