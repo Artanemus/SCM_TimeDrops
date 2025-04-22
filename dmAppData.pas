@@ -78,7 +78,7 @@ type
   private
     FConnection: TFDConnection;
     fTDDataIsActive: Boolean;
-    fDTMasterDetailActive: Boolean;
+    fTDMasterDetailActive: Boolean;
     fSCMDataIsActive: Boolean;
     msgHandle: HWND;  // TForm.dtfrmExec ...
     function GetSCMActiveSessionID: integer;
@@ -163,10 +163,10 @@ type
 
     property ActiveSessionID: integer read GetSCMActiveSessionID;
     property Connection: TFDConnection read FConnection write FConnection;
-    property TDDataIsActive: Boolean read fTDDataIsActive;
-    property DTMasterDetailActive: Boolean read fDTMasterDetailActive;
     property MSG_Handle: HWND read msgHandle write msgHandle;
     property SCMDataIsActive: Boolean read fSCMDataIsActive;
+    property TDDataIsActive: Boolean read fTDDataIsActive;
+    property TDMasterDetailActive: Boolean read fTDMasterDetailActive;
   end;
 
 const
@@ -196,7 +196,7 @@ end;
 
 procedure TAppData.ActivateDataTD;
 begin
-  fSCMDataIsActive := false;
+  fTDDataIsActive := false;
   // MAKE LIVE THE TIME-DROPS TABLES
   try
     tblmSession.Open;
@@ -211,7 +211,7 @@ begin
           tblmLane.Open;
           tblmNoodle.Open;
           if tblmLane.Active and tblmNoodle.Active then
-            fSCMDataIsActive := true;
+            fTDDataIsActive := true;
         end;
       end;
     end;
@@ -645,7 +645,7 @@ procedure TAppData.DataModuleCreate(Sender: TObject);
 begin
   // Init params.
   fTDDataIsActive := false;
-  fDTMasterDetailActive := false;
+  fTDMasterDetailActive := false;
   FConnection := nil;
   fSCMDataIsActive := false; // activated later once FConnection is assigned.
   msgHandle := 0;
@@ -719,17 +719,20 @@ begin
   tblmNoodle.ApplyMaster;
   tblmNoodle.First;
 
-  fDTMasterDetailActive := false;
+  fTDMasterDetailActive := false;
 end;
 
 procedure TAppData.EmptyAllTDDataSets;
 begin
    // clear all data records - cannot be performed on a closed table.
-  tblmSession.EmptyDataSet;
-  tblmEvent.EmptyDataSet;
-  tblmHeat.EmptyDataSet;
-  tblmLane.EmptyDataSet;
-  tblmNoodle.EmptyDataSet;
+  if tblmSession.Active then
+  begin
+    tblmSession.EmptyDataSet;
+    tblmEvent.EmptyDataSet;
+    tblmHeat.EmptyDataSet;
+    tblmLane.EmptyDataSet;
+    tblmNoodle.EmptyDataSet;
+  end;
 end;
 
 procedure TAppData.EnableAllTDControls;
@@ -763,7 +766,7 @@ begin
   tblmNoodle.DetailFields := 'HeatID';
   tblmNoodle.IndexFieldNames := 'HeatID';
   tblmSession.First;
-  fDTMasterDetailActive := true;
+  fTDMasterDetailActive := true;
 end;
 
 function TAppData.GetSCMActiveSessionID: integer;

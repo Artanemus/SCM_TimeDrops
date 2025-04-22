@@ -8978,7 +8978,7 @@ object Main: TMain
     Left = 0
     Top = 0
     Width = 1444
-    Height = 25
+    Height = 27
     UseSystemFont = False
     ActionManager = actnManager
     Caption = 'actnMenuBar'
@@ -8996,9 +8996,9 @@ object Main: TMain
   end
   object rpnlBody: TRelativePanel
     Left = 0
-    Top = 25
+    Top = 27
     Width = 1444
-    Height = 773
+    Height = 771
     ControlCollection = <
       item
         Control = pnlTool1
@@ -9044,13 +9044,13 @@ object Main: TMain
     TabOrder = 1
     DesignSize = (
       1444
-      773)
+      771)
     object pnlTool1: TPanel
       AlignWithMargins = True
       Left = 3
       Top = 3
       Width = 144
-      Height = 767
+      Height = 765
       BevelOuter = bvNone
       ParentBackground = False
       TabOrder = 0
@@ -9210,7 +9210,7 @@ object Main: TMain
       Left = 153
       Top = 3
       Width = 525
-      Height = 767
+      Height = 765
       BevelOuter = bvNone
       Color = 5988209
       ParentBackground = False
@@ -9280,7 +9280,7 @@ object Main: TMain
         DefaultRowHeight = 46
         DrawingStyle = gdsClassic
         FixedColor = 3880234
-        RowCount = 5
+        RowCount = 2
         FixedRows = 1
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindow
@@ -9753,9 +9753,6 @@ object Main: TMain
           34)
         RowHeights = (
           34
-          46
-          46
-          46
           46)
       end
       object btnPickSCMTreeView: TButton
@@ -9781,7 +9778,7 @@ object Main: TMain
       Left = 684
       Top = 3
       Width = 613
-      Height = 767
+      Height = 765
       BevelOuter = bvNone
       ParentBackground = False
       TabOrder = 2
@@ -10427,7 +10424,7 @@ object Main: TMain
       Left = 1303
       Top = 3
       Width = 144
-      Height = 767
+      Height = 765
       Anchors = []
       BevelOuter = bvNone
       Color = clDimgray
@@ -10519,6 +10516,14 @@ object Main: TMain
           OnClick = btnDataDebugClick
         end
       end
+      object btnBuildData: TButton
+        Left = 17
+        Top = 285
+        Width = 109
+        Height = 40
+        Caption = 'Build Data'
+        TabOrder = 1
+      end
     end
   end
   object StatBar: TStatusBar
@@ -10603,6 +10608,12 @@ object Main: TMain
                 Caption = '&Refresh'
                 ImageIndex = 4
                 ImageName = 'Sync'
+              end
+              item
+                Action = actnLoginToSCM
+                Caption = 'L&ogin to SCM ...'
+                ImageIndex = 16
+                ImageName = 'login'
               end
               item
                 Caption = '-'
@@ -10863,6 +10874,14 @@ object Main: TMain
       ImageIndex = 15
       ImageName = 'arrow_forward'
       OnExecute = actnSyncSCMExecute
+    end
+    object actnLoginToSCM: TAction
+      Category = 'File'
+      Caption = 'Login to SCM ...'
+      ImageIndex = 16
+      ImageName = 'login'
+      OnExecute = actnLoginToSCMExecute
+      OnUpdate = actnLoginToSCMUpdate
     end
   end
 end

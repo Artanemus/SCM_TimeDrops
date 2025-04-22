@@ -93,10 +93,14 @@ type
     actnReportTD: TAction;
     actnSyncSCM: TAction;
     lblKeyBoardInfo: TLabel;
+    btnBuildData: TButton;
+    actnLoginToSCM: TAction;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearReScanMeetsExecute(Sender: TObject);
     procedure actnImportDTResultExecute(Sender: TObject);
+    procedure actnLoginToSCMExecute(Sender: TObject);
+    procedure actnLoginToSCMUpdate(Sender: TObject);
     procedure actnPostExecute(Sender: TObject);
     procedure actnPostUpdate(Sender: TObject);
     procedure actnPreferencesExecute(Sender: TObject);
@@ -170,16 +174,10 @@ implementation
 
 uses UITypes, DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
-  tdMeetProgramPick, tdResults, uWatchTime, uAppUtils;
+  tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin;
 
 const
-  MSG_CONFIRM_RECONSTRUCT =
-    'This uses the data in the current session to build Time-Drops %s files.' +
-    sLineBreak +
-    'Files are saved to the reconstruct folder specified in preferences.' +
-    sLineBreak +
-    'Do you want to perform the reconstruct?';
-  MSG_RECONSTRUCT_COMPLETE = 'Re-construct and export of %s files is complete.';
+
   CAPTION_RECONSTRUCT = '%s files ...';
   DO4_FILE_EXTENSION = 'DO4';
   DO3_FILE_EXTENSION = 'DO3';
@@ -234,7 +232,7 @@ var
   mr: TModalResult;
 begin
   s := '''
-    This will clear all patches. The dolphin meets folder will be re-scanned and the DT data tables will be rebuilt.
+    This will clear all patches. The Time-Drops meets folder will be re-scanned and the DT data tables will be rebuilt.
     Any posted racetimes, made to SwimClubMeet, will remain intact. There is no undo.
     (HINT: use ''Save SCM-DT Session'' to store all work prior to calling here.)
     Do you really want to rescan?
@@ -289,6 +287,37 @@ begin
   end;
 end;
 
+procedure TMain.actnLoginToSCMExecute(Sender: TObject);
+var
+  aLoginDlg: TLogin;  // 24/04/2020 uses simple INI access
+  result: TModalResult;
+begin
+  // -----------------------------------------------------------
+  // 24/04/2020 Basic login using simple INI access
+  // to the FireDAC connection definition file
+  // -----------------------------------------------------------
+  aLoginDlg := TLogin.Create(self);
+  aLoginDlg.DBName := 'SwimClubMeet';
+  aLoginDlg.DBConnection := SCM.scmConnection;
+  result := aLoginDlg.ShowModal;
+  aLoginDlg.Free;
+  // user has aborted .
+  if (result = mrAbort) or (result = mrCancel) then
+  begin
+    if (SCM.scmConnection.Connected) then SCM.scmConnection.Close;
+    {TODO -oBSA -cGeneral : Connection has closed - UI update needed.}
+  end;
+end;
+
+procedure TMain.actnLoginToSCMUpdate(Sender: TObject);
+begin
+  if Assigned(SCM) and SCM.scmFDManager.Active and
+  Assigned(SCM.scmConnection) then
+    TAction(Sender).Enabled := true
+  else
+    TAction(Sender).Enabled := false;
+end;
+
 procedure TMain.actnPostExecute(Sender: TObject);
 var
   dlg: TPostData;
@@ -302,7 +331,6 @@ begin
   begin
     s := '''
       SCM and DT are not synronized. (Based on Session ID, event and heat number.)
-      However you are permitted to perform the post.
       Do you want to CONTINUE?
       ''';
     mr := MessageBox(0, PChar(s), PChar('POST ''RACE-TIMES'' WARNING'), MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
@@ -442,7 +470,7 @@ var
   dlg: TSessionPicker;
   mr: TModalResult;
 begin
-  if Assigned(AppData) then
+  if Assigned(AppData) and (appData.SCMDataIsActive = true) then
   begin
     dlg := TSessionPicker.Create(Self);
     dlg.rtnSessionID := 0;
@@ -956,9 +984,29 @@ end;
 procedure TMain.FormCreate(Sender: TObject);
 begin
 
-  // A Class that uses JSON to read and write application configuration .
-  // Created on bootup by dtfrmBoot.
+  // A Class that uses JSON to read and write application configuration
+  if Settings = nil then
+    Settings := TPrgSetting.Create;
+
+  { If settings FILE doesn't exsist in %AppData% - it will be created and
+    default data will be assigned.}
   LoadSettings;
+
+  // CREATE THE CORE SCM CONNECTION DATAMODULE.
+  if not Assigned(SCM) then SCM := TSCM.Create(self);
+
+  if not Assigned(SCM) then
+  begin
+    MessageDlg('The SCM connection couldn''t be created!', mtError,
+      [mbOK], 0);
+    // shutdown in an orderly fashion.
+    Application.Terminate();
+    { Terminate is not immediate. Terminate is called automatically
+    on a WM_QUIT message and when the main form closes}
+    exit;
+  end;
+
+
   {
     Sort out the menubar font height - so tiny!
 
@@ -976,6 +1024,10 @@ begin
   Screen.MenuFont.Name := 'Segoe UI Semibold';
   Screen.MenuFont.Size := 12;
   actnManager.Style := PlatformVclStylesStyle;
+
+  // Enable of HINTS.
+  application.ShowHint := true;
+
   // local fields init.
   fFlagSelectSession := false;
   // UI initialization.
@@ -989,11 +1041,26 @@ begin
   vimgRelayBug.ImageIndex := -1;
   vimgStrokeBug.ImageIndex := -1;
 
+  // C R E A T E   T H E   D T  D A T A M O D U L E .
+  if NOT Assigned(AppData) then
+    AppData := TAppData.Create(Self);
 
-  // Empty data in TFDMemTables.
-  appData.EmptyAllTDDataSets;
-  // Attaches mater-detail.
-  appData.EnableTDMasterDetail;
+  if Assigned(appData) then
+  begin
+    appData.ActivateDataTD;
+    if appData.TDDataIsActive then
+    begin
+      // Empty data in TFDMemTables.
+      appData.EmptyAllTDDataSets;
+      // Attaches mater-detail.
+      appData.EnableTDMasterDetail;
+    end;
+  end;
+
+  // by default - NOT connected. Connection occurs on selection of session.
+  if SCM.scmConnection.Connected then
+    appdata.ActivateDataSCM;
+
 
   FDirectoryWatcher := nil;
   // Test DT directory exists...
@@ -1001,19 +1068,22 @@ begin
   begin
       if DirHasResultFiles(Settings.MeetsFolder) then
       begin
-        dtGrid.BeginUpdate;
-        appdata.DisableAllTDControls;
-        try
-          // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
-          // Necessary to manually calculate Primary keys in each memory table.
-          ProcessDirectory(Settings.MeetsFolder);
-          // Update UI controls ...
-          PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
-          // Paint cell icons.
-          PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
-        finally
-          appdata.EnableAllTDControls;
-          dtGrid.EndUpdate;
+        if appData.TDDataIsActive then
+        begin
+          dtGrid.BeginUpdate;
+          appdata.DisableAllTDControls;
+          try
+            // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
+            // Necessary to manually calculate Primary keys in each memory table.
+            ProcessDirectory(Settings.MeetsFolder);
+            // Update UI controls ...
+            PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
+            // Paint cell icons.
+            PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+          finally
+            appdata.EnableAllTDControls;
+            dtGrid.EndUpdate;
+          end;
         end;
       end;
     // Set up the file system watcher
@@ -1023,8 +1093,15 @@ begin
   end;
 
 
+
 {$IFNDEF DEBUG}
   btnDataDebug.Visible := false;
+{$ENDIF}
+
+{$IFDEF DEBUG}
+  // A button that allows me to run dmTDData.BuildTDData.
+  // The FieldDefs are save out to XML. Load XML data to restore.
+  btnBuildData.Visible := true;
 {$ENDIF}
 
   // Assert StatusBar params
@@ -1065,8 +1142,13 @@ gracefully without causing the application to hang.
     end;
   end;
 
-  SaveToSettings;
-  if Assigned(AppData) then AppData.MSG_Handle := 0;
+  if Assigned(Settings) then
+  begin
+    SaveToSettings;
+    if Assigned(AppData) then AppData.MSG_Handle := 0;
+    FreeAndNil(Settings);
+  end;
+
 end;
 
 procedure TMain.FormHide(Sender: TObject);
@@ -1314,33 +1396,7 @@ begin
   Caption := 'SwimClubMeet - Dolphin Timing. ';
 end;
 
-(*
-procedure TMain.ReconstructAndExportFiles(fileExtension: string; messageText:
-  string);
-var
-  mr: TModalResult;
-begin
-  if AppData.qrysession.Active then
-  begin
-    mr := MessageBox(0,
-      PChar(Format(MSG_CONFIRM_RECONSTRUCT, [fileExtension])),
-      PChar(Format(CAPTION_RECONSTRUCT, [fileExtension])), MB_ICONQUESTION or
-      MB_YESNO);
-    if isPositiveResult(mr) then
-    begin
-      scmGrid.BeginUpdate;
-      scmGrid.DataSource.DataSet.DisableControls;
-      ReConstructSession(AppData.qrySession.FieldByName('SessionID').AsInteger);
-      scmGrid.DataSource.DataSet.EnableControls;
-      scmGrid.EndUpdate;
-      MessageBox(0,
-        PChar(Format(MSG_RECONSTRUCT_COMPLETE, [fileExtension])),
-        PChar(Format(CAPTION_RECONSTRUCT, [fileExtension])), MB_ICONINFORMATION
-          or MB_OK);
-    end;
-  end;
-end;
-*)
+
 
 procedure TMain.SaveToSettings;
 begin
@@ -1632,5 +1688,44 @@ begin
     lblSessionStart.Caption := s;
   end;
 end;
+
+(*
+CONST
+    {MSG_CONFIRM_RECONSTRUCT =
+        'This uses the data in the current session to build Time-Drops %s files.' +
+            sLineBreak +
+                'Files are saved to the reconstruct folder specified in preferences.' +
+                    sLineBreak +
+                        'Do you want to perform the reconstruct?';
+                        }
+  {  MSG_RECONSTRUCT_COMPLETE = 'Re-construct and export of %s files is complete.';
+  }
+
+procedure TMain.ReconstructAndExportFiles(fileExtension: string; messageText:
+  string);
+var
+  mr: TModalResult;
+begin
+  if AppData.qrysession.Active then
+  begin
+    mr := MessageBox(0,
+      PChar(Format(MSG_CONFIRM_RECONSTRUCT, [fileExtension])),
+      PChar(Format(CAPTION_RECONSTRUCT, [fileExtension])), MB_ICONQUESTION or
+      MB_YESNO);
+    if isPositiveResult(mr) then
+    begin
+      scmGrid.BeginUpdate;
+      scmGrid.DataSource.DataSet.DisableControls;
+      ReConstructSession(AppData.qrySession.FieldByName('SessionID').AsInteger);
+      scmGrid.DataSource.DataSet.EnableControls;
+      scmGrid.EndUpdate;
+      MessageBox(0,
+        PChar(Format(MSG_RECONSTRUCT_COMPLETE, [fileExtension])),
+        PChar(Format(CAPTION_RECONSTRUCT, [fileExtension])), MB_ICONINFORMATION
+          or MB_OK);
+    end;
+  end;
+end;
+*)
 
 end.

@@ -2,7 +2,6 @@ program SCM_TimeDrops;
 
 uses
   Vcl.Forms,
-  tdLogin in 'tdLogin.pas' {Login},
   dmSCM in 'dmSCM.pas' {SCM: TDataModule},
   dmAppData in 'dmAppData.pas' {AppData: TDataModule},
   SCMDefines in '..\SCM_SHARED\SCMDefines.pas',
@@ -30,7 +29,9 @@ uses
   tdMeetProgramPick in 'tdMeetProgramPick.pas' {MeetProgramPick},
   tdTimingSystemStatus in 'tdTimingSystemStatus.pas',
   tdReConstructDlg in 'tdReConstructDlg.pas' {ReConstructDlg},
-  uWatchTime in 'uWatchTime.pas';
+  uWatchTime in 'uWatchTime.pas',
+  tdLogin in 'tdLogin.pas' {Login},
+  tdLoginV1 in 'tdLoginV1.pas' {LoginV1};
 
 {$R *.res}
 
@@ -38,6 +39,6 @@ begin
   Application.Initialize;
   Application.MainFormOnTaskbar := True;
   TStyleManager.TrySetStyle('Windows10 SlateGray');
-  Application.CreateForm(TLogin, Login);
+  Application.CreateForm(TMain, Main);
   Application.Run;
 end.

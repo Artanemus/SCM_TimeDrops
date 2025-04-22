@@ -1,0 +1,54 @@
+FULL PATH AND FILENAME ...
+
+C:\Users\#USERNAME#\AppData\Roaming\Artanemus\SwimClubMeet\TimeDrops\initTimeDrops.json
+
+CONTENTS OF JSON FILE ... (EXAMPLE)
+
+{
+  "Server":"localHost\\SQLEXPRESS",
+  "User":"",
+  "Password":"",
+  "OSAuthent":true,
+  "LoginTimeOut":  20,
+  "MeetsFolder":"c:\\TimeDrops\\Meets",
+  "MeetProgramType":  0,
+  "ProgramFolder":"c:\\TimeDrops\\Meets",
+  "AppData":"c:\\TimeDrops\\AppData",
+  "ReConstruct":"c:\\TimeDrops\\ReConstruct",
+  "AcceptedDeviation":0.3,
+  "CalcRTMethod":  0,
+  "CalcSwimmerAge":  0,
+  "EnableRenameResultFiles":false,
+  "RaceNumber":  0,
+  "lastMeetProgramDate":"2025-03-23T11:03:12.026",
+  "UseTDpadTime":false,
+  "UseTDfinalTime":false,
+  "DoPostALL":false
+}
+
+NOTE: To successfully login objects "Server", "User", "Password", "OSAuthent", "LoginTimeOut" and assigned values ARE REQUIRED.
+
+NOTE: If initTimeDrops.json and directory don't exist then they are automatically created on app SCM_TimeDrops start-up.
+
+SIMPLY CONNECT PARAM ASSIGNMENT..
+
+  // Required for multi connection attempts to work
+  fDBConnection.Params.Clear;
+
+  fDBConnection.Params.Add('Server=' + Server);
+  fDBConnection.Params.Add('DriverID=MSSQL');
+  fDBConnection.Params.Add('Database=' + fDBName);
+  fDBConnection.Params.Add('User_name=' + User);
+  fDBConnection.Params.Add('Password=' + Password);
+  if (OsAuthent) then
+    AValue := 'Yes'
+  else
+    AValue := 'No';
+  fDBConnection.Params.Add('OSAuthent=' + AValue);
+  fDBConnection.Params.Add('Mars=yes');
+  fDBConnection.Params.Add('MetaDefSchema=dbo');
+  fDBConnection.Params.Add('ExtendedMetadata=False');
+  fDBConnection.Params.Add('Encrypt=No');
+  fDBConnection.Params.Add('ODBCAdvanced=Encrypt=no;Trust Server');
+  fDBConnection.Params.Add('Certificate =Yes');
+  fDBConnection.Params.Add('ApplicationName=' + fAppShortName);

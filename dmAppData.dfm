@@ -4,12 +4,10 @@ object AppData: TAppData
   Height = 792
   Width = 1190
   object qrySession: TFDQuery
-    Active = True
     IndexFieldNames = 'SwimClubID'
     MasterSource = dsSwimClub
     MasterFields = 'SwimClubID'
     DetailFields = 'SwimClubID'
-    Connection = SCM.scmConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False
@@ -26,12 +24,10 @@ object AppData: TAppData
     Top = 88
   end
   object qryEvent: TFDQuery
-    Active = True
     IndexFieldNames = 'SessionID'
     MasterSource = dsSession
     MasterFields = 'SessionID'
     DetailFields = 'SessionID'
-    Connection = SCM.scmConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False
@@ -56,12 +52,10 @@ object AppData: TAppData
     Top = 152
   end
   object qryHeat: TFDQuery
-    Active = True
     IndexFieldNames = 'EventID'
     MasterSource = dsEvent
     MasterFields = 'EventID'
     DetailFields = 'EventID'
-    Connection = SCM.scmConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False
@@ -84,12 +78,10 @@ object AppData: TAppData
     Top = 216
   end
   object qryINDV: TFDQuery
-    Active = True
     IndexFieldNames = 'HeatID'
     MasterSource = dsHeat
     MasterFields = 'HeatID'
     DetailFields = 'HeatID'
-    Connection = SCM.scmConnection
     FormatOptions.AssignedValues = [fvFmtDisplayTime]
     FormatOptions.FmtDisplayTime = 'nn:ss.zzz'
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert]
@@ -120,12 +112,10 @@ object AppData: TAppData
     Top = 216
   end
   object qryTEAM: TFDQuery
-    Active = True
     IndexFieldNames = 'HeatID'
     MasterSource = dsHeat
     MasterFields = 'HeatID'
     DetailFields = 'HeatID'
-    Connection = SCM.scmConnection
     FormatOptions.AssignedValues = [fvFmtDisplayTime]
     FormatOptions.FmtDisplayTime = 'nn:ss.zzz'
     SQL.Strings = (
@@ -144,12 +134,10 @@ object AppData: TAppData
     Top = 216
   end
   object qryTEAMEntrant: TFDQuery
-    Active = True
     IndexFieldNames = 'TeamID'
     MasterSource = dsTEAM
     MasterFields = 'TeamID'
     DetailFields = 'TeamID'
-    Connection = SCM.scmConnection
     SQL.Strings = (
       'SELECT [TeamEntrantID]'
       '      ,[MemberID]'
@@ -22564,6 +22552,27 @@ object AppData: TAppData
               00B20E05080000000000000000C83AFF074558726D510F83B10000000049454E
               44AE426082}
           end>
+      end
+      item
+        Name = 'login'
+        SourceImages = <
+          item
+            Image.Data = {
+              89504E470D0A1A0A0000000D49484452000000300000003008060000005702F9
+              87000000017352474200AECE1CE90000016A494441546843ED99E151C3300C46
+              5F376084B20123B0496102D800D8800DDA4D98A11BC0066C00A71EBEF305A789
+              6C55C687FC37B6A2F77D8A1C271B061F9BC1F327007A3B180EFC07079E81A74A
+              D04FE01578995BEF51422D00296F019038BFC62800EFC0752F80CAEA392DFBCA
+              1617C5F67020007E1408075A4AA1766D3C035AE5AE8087731B8F32A0AB0392FC
+              1B70031C807B65B2A5E9AE00D31DD702C215401494A4779994AD10EE00D6105D
+              002C21BA0158413401D4BEC3E7DDE41190EE9486F6996802C8171B74C42A883F
+              0970046E01396D2D8D2680E20968E98E93EBB22BE725A449BEFB79600FDC6540
+              DAE4BB025824DF0DC02AF92E0096C9BB0348BD0B401A35353FED114D5D48D970
+              4ED3D3CB9C45F2EE0E246069BFF2356D4D9F5F12C9DD81A584B4D70340AB98F5
+              FC70C05A516DBC7040AB5869BEC5FF810F605B0AEEF175DA0260D81F1CA2BCEC
+              EEB367130F072CCA703646005C54DE15C1C38115225D74CAF00E7C036EF65731
+              5B48308D0000000049454E44AE426082}
+          end>
       end>
     Left = 72
     Top = 440
@@ -22632,7 +22641,6 @@ object AppData: TAppData
     Top = 504
   end
   object qryNearestSessionID: TFDQuery
-    Connection = SCM.scmConnection
     SQL.Strings = (
       'DECLARE @LocateDate DATETIME = GETDATE();'
       'SET @LocateDate = :ADATE;'
@@ -22790,12 +22798,10 @@ object AppData: TAppData
       00670065007300}
   end
   object qryDistance: TFDQuery
-    Active = True
     IndexFieldNames = 'DistanceID'
     MasterSource = dsEvent
     MasterFields = 'DistanceID'
     DetailFields = 'DistanceID'
-    Connection = SCM.scmConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False
@@ -22811,12 +22817,10 @@ object AppData: TAppData
     Top = 152
   end
   object qryStroke: TFDQuery
-    Active = True
     IndexFieldNames = 'StrokeID'
     MasterSource = dsEvent
     MasterFields = 'StrokeID'
     DetailFields = 'StrokeID'
-    Connection = SCM.scmConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False
@@ -23452,10 +23456,8 @@ object AppData: TAppData
     Top = 664
   end
   object qrySwimClub: TFDQuery
-    Active = True
     IndexFieldNames = 'SwimClubID'
     DetailFields = 'SwimClubID'
-    Connection = SCM.scmConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False
@@ -23471,12 +23473,10 @@ object AppData: TAppData
     Top = 16
   end
   object qrySessionList: TFDQuery
-    Active = True
     IndexFieldNames = 'SwimClubID'
     MasterSource = dsSwimClub
     MasterFields = 'SwimClubID'
     DetailFields = 'SwimClubID'
-    Connection = SCM.scmConnection
     FormatOptions.AssignedValues = [fvFmtDisplayDateTime]
     FormatOptions.FmtDisplayDateTime = 'yyyy-mm-dd HH:NN'
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
@@ -23625,6 +23625,11 @@ object AppData: TAppData
         CollectionIndex = 41
         CollectionName = 'arrow_forward'
         Name = 'arrow_forward'
+      end
+      item
+        CollectionIndex = 80
+        CollectionName = 'login'
+        Name = 'login'
       end>
     ImageCollection = imgcolDT
     Width = 32
@@ -24085,6 +24090,14 @@ object AppData: TAppData
           '20-80H240Zm-80-440v-280q0-33 23.5-56.5T240-880h320l240 240v120h-' +
           '80v-80H520v-200H240v280h-80ZM40-360v-80h880v80H40Zm440-160Zm0 24' +
           '0Z"/></svg>'
+      end
+      item
+        IconName = 'baseline-login'
+        SVGText = 
+          '<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em"' +
+          ' viewBox="0 0 24 24"><path fill="currentColor" d="M11 7L9.6 8.4l' +
+          '2.6 2.6H2v2h10.2l-2.6 2.6L11 17l5-5zm9 12h-8v2h8c1.1 0 2-.9 2-2V' +
+          '5c0-1.1-.9-2-2-2h-8v2h8z"/></svg>'
       end>
     Left = 936
     Top = 240
@@ -24158,7 +24171,6 @@ object AppData: TAppData
     Top = 504
   end
   object qryListSwimmers: TFDQuery
-    Connection = SCM.scmConnection
     SQL.Strings = (
       '/*'
       '  @Keep'
@@ -24238,7 +24250,6 @@ object AppData: TAppData
       end>
   end
   object qrySplit: TFDQuery
-    Connection = SCM.scmConnection
     SQL.Strings = (
       'DECLARE @ID INT;'
       'DECLARE @EventTypeID INT;'
@@ -24282,7 +24293,6 @@ object AppData: TAppData
       end>
   end
   object qryListTeams: TFDQuery
-    Connection = SCM.scmConnection
     SQL.Strings = (
       'DECLARE @SessionID INT;'
       'SET @SessionID = :SESSIONID;'
