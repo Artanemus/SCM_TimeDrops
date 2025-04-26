@@ -209,8 +209,8 @@
             <Form>Login</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="tdLoginV1.pas">
-            <Form>LoginV1</Form>
+        <DCCReference Include="dlgFDExplorer.pas">
+            <Form>FDExplorer</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Base">

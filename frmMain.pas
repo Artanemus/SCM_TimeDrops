@@ -64,7 +64,6 @@ type
     lblSessionStart: TLabel;
     btnPickSCMTreeView: TButton;
     btnPickDTTreeView: TButton;
-    btnDataDebug: TButton;
     lblEventDetailsTD: TLabel;
     DTAppendFile: TFileOpenDialog;
     sbtnAutoPatch: TSpeedButton;
@@ -86,15 +85,17 @@ type
     actnLoadSession: TAction;
     actnAbout: TAction;
     actnSyncTD: TAction;
-    actnConnect: TAction;
     actnPost: TAction;
     actnReportSCMSession: TAction;
     actnReportSCMEvent: TAction;
     actnReportTD: TAction;
     actnSyncSCM: TAction;
     lblKeyBoardInfo: TLabel;
-    btnBuildData: TButton;
     actnLoginToSCM: TAction;
+    lbl_scmGridOverlay: TLabel;
+    act_FireDACExplorer: TAction;
+    actBuildTDTables: TAction;
+    actTDTableViewer: TAction;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearReScanMeetsExecute(Sender: TObject);
@@ -108,10 +109,16 @@ type
     procedure actnReConstructTDResultFilesUpdate(Sender: TObject);
     procedure actnRefreshExecute(Sender: TObject);
     procedure actnSelectSessionExecute(Sender: TObject);
+    procedure actnSelectSessionUpdate(Sender: TObject);
+    procedure actnSelectSwimClubExecute(Sender: TObject);
+    procedure actnSelectSwimClubUpdate(Sender: TObject);
     procedure actnSetDTMeetsFolderExecute(Sender: TObject);
     procedure actnSyncTDExecute(Sender: TObject);
     procedure actnSyncSCMExecute(Sender: TObject);
-    procedure btnDataDebugClick(Sender: TObject);
+    procedure actnSyncSCMUpdate(Sender: TObject);
+    procedure actnSyncTDUpdate(Sender: TObject);
+    procedure actTDTableViewerExecute(Sender: TObject);
+    procedure act_FireDACExplorerExecute(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
     procedure btnNextEventClick(Sender: TObject);
     procedure btnPickDTTreeViewClick(Sender: TObject);
@@ -174,8 +181,9 @@ implementation
 
 uses UITypes, DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
-  tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin;
-
+  tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin,
+  Winapi.ShellAPI, dlgFDExplorer;
+  
 const
 
   CAPTION_RECONSTRUCT = '%s files ...';
@@ -216,8 +224,18 @@ begin
 end;
 
 procedure TMain.actnExportMeetProgramUpdate(Sender: TObject);
+var
+Passed: boolean;
 begin
-  if Assigned(AppData) then
+  passed := true;
+  if not Assigned(SCM) then passed := false;
+  if not Assigned(SCM.scmConnection) then passed := false;
+  if not SCM.scmConnection.Connected then passed := false;
+  if not Assigned(appData) then passed := false;
+  if not appData.SCMDataIsActive then passed := false;
+  if not appData.TDDataIsActive then passed := false;
+
+  if passed then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -290,23 +308,31 @@ end;
 procedure TMain.actnLoginToSCMExecute(Sender: TObject);
 var
   aLoginDlg: TLogin;  // 24/04/2020 uses simple INI access
-  result: TModalResult;
 begin
   // -----------------------------------------------------------
   // 24/04/2020 Basic login using simple INI access
   // to the FireDAC connection definition file
   // -----------------------------------------------------------
   aLoginDlg := TLogin.Create(self);
-  aLoginDlg.DBName := 'SwimClubMeet';
-  aLoginDlg.DBConnection := SCM.scmConnection;
-  result := aLoginDlg.ShowModal;
+  aLoginDlg.ShowModal;
   aLoginDlg.Free;
-  // user has aborted .
-  if (result = mrAbort) or (result = mrCancel) then
+
+  if SCM.scmConnection.Connected then
   begin
-    if (SCM.scmConnection.Connected) then SCM.scmConnection.Close;
-    {TODO -oBSA -cGeneral : Connection has closed - UI update needed.}
+    scmGrid.BeginUpdate;
+    try
+      appData.SetUpSCMConnection;
+    finally
+      scmGrid.EndUpdate;
+    end;
+    // UPDATE ICONS located in panel (pnlTool), located left of scmGrid.
+    PostMessage(Self.Handle, SCM_UPDATEUI, 0 , 0 );
+    // Update description detail in panel (lblEventDetails), located above scmGrid.
+    PostMessage(Self.Handle, SCM_UPDATEUI2, 0 , 0 );
+    // Update cell icons (ActiveRT) in scmGrid.
+    PostMessage(Self.Handle, SCM_UPDATEUI3, 0 , 0 );
   end;
+
 end;
 
 procedure TMain.actnLoginToSCMUpdate(Sender: TObject);
@@ -441,15 +467,24 @@ begin
     SCMGrid.EndUpdate;
     // Message user.
     MessageBox(0,
-      PChar('Re-Construct & Export of the Time Drops Results has been completed.'),
-      PChar('Re-Construct & Export Meet Program'), MB_ICONINFORMATION or MB_OK);
+      PChar('Creation of Time Drops Results files has been completed.'),
+      PChar('Re-Construct & Export TD Results'), MB_ICONINFORMATION or MB_OK);
   end;
   dlg.Free;
 end;
 
 procedure TMain.actnReConstructTDResultFilesUpdate(Sender: TObject);
+var
+Passed: boolean;
 begin
-  if Assigned(AppData) then
+  passed := true;
+  if not Assigned(SCM) then passed := false;
+  if not Assigned(SCM.scmConnection) then passed := false;
+  if not SCM.scmConnection.Connected then passed := false;
+  if not Assigned(appData) then passed := false;
+  if not appData.SCMDataIsActive then passed := false;
+
+  if passed then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -470,27 +505,93 @@ var
   dlg: TSessionPicker;
   mr: TModalResult;
 begin
-  if Assigned(AppData) and (appData.SCMDataIsActive = true) then
+  dlg := TSessionPicker.Create(Self);
+  dlg.rtnSessionID := 0;
+  // the picker will locate to the given session id.
+  if AppData.qrySession.Active and not AppData.qrySession.IsEmpty then
   begin
-    dlg := TSessionPicker.Create(Self);
-    dlg.rtnSessionID := 0;
+    dlg.rtnSessionID := AppData.qrySession.FieldByName('SessionID').AsInteger;
+  end;
+
+  mr := dlg.ShowModal;
+  if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
+  begin
+    AppData.MSG_Handle := 0;
+    AppData.LocateSCMSessionID(dlg.rtnSessionID);
+    AppData.MSG_Handle := Self.Handle;
+  end;
+  dlg.Free;
+  UpdateCaption;
+  PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
+end;
+
+procedure TMain.actnSelectSessionUpdate(Sender: TObject);
+var
+Passed: boolean;
+begin
+  passed := true;
+  if not Assigned(SCM) then passed := false;
+  if not Assigned(SCM.scmConnection) then passed := false;
+  if not SCM.scmConnection.Connected then passed := false;
+  if not Assigned(appData) then passed := false;
+  if not appData.SCMDataIsActive then passed := false;
+
+  if passed then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+      TAction(Sender).Enabled := false;
+end;
+
+procedure TMain.actnSelectSwimClubExecute(Sender: TObject);
+begin
+  (*
+var
+  dlg: TSwimClubPicker;
+  mr: TModalResult;
+begin
+    dlg := TSwimClubPicker.Create(Self);
+    dlg.rtnSwimClubID := 0;
     // the picker will locate to the given session id.
-    if AppData.qrySession.Active and not AppData.qrySession.IsEmpty then
+    if AppData.qrySwimClub.Active and not AppData.qrySwimClub.IsEmpty then
     begin
-      dlg.rtnSessionID := AppData.qrySession.FieldByName('SessionID').AsInteger;
+      dlg.rtnSwimClubID := AppData.qrySwimClub.FieldByName('SwimClubID').AsInteger;
     end;
 
     mr := dlg.ShowModal;
-    if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
+    if IsPositiveResult(mr) and (dlg.rtnSwimClubID > 0) then
     begin
       AppData.MSG_Handle := 0;
-      AppData.LocateSCMSessionID(dlg.rtnSessionID);
+      AppData.LocateSCMSwimClubID(dlg.rtnSwimClubID);
       AppData.MSG_Handle := Self.Handle;
     end;
     dlg.Free;
     UpdateCaption;
     PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
-  end;
+    *)
+end;
+
+procedure TMain.actnSelectSwimClubUpdate(Sender: TObject);
+var
+Passed: boolean;
+begin
+  passed := true;
+  if not Assigned(SCM) then passed := false;
+  if not Assigned(SCM.scmConnection) then passed := false;
+  if not SCM.scmConnection.Connected then passed := false;
+  if not Assigned(appData) then passed := false;
+  if not appData.SCMDataIsActive then passed := false;
+
+
+  if false then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+      TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnSetDTMeetsFolderExecute(Sender: TObject);
@@ -523,28 +624,109 @@ begin
 end;
 
 procedure TMain.actnSyncSCMExecute(Sender: TObject);
+var
+Passed: boolean;
 begin
-  if not AppData.SyncCheckSession() then
-  begin
-    StatBar.SimpleText := 'The SwimClubMeet session cannot be synced to the DT data. '
-    +   'Load the correct session and try again.';
-    timer1.enabled := true;
-    exit;
-  end;
+  passed := true;
+  if not Assigned(SCM) then passed := false;
+  if not Assigned(SCM.scmConnection) then passed := false;
+  if not SCM.scmConnection.Connected then passed := false;
+  if not Assigned(appData) then passed := false;
+  if not appData.SCMDataIsActive then passed := false;
+  if not appData.TDDataIsActive then passed := false;
 
-  SCMGrid.BeginUpdate;
-  AppData.SyncSCMtoDT();
-  SCMGrid.EndUpdate;
-  UpdateEventDetailsLabel;
+  if passed then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+      TAction(Sender).Enabled := false;
 end;
 
-procedure TMain.btnDataDebugClick(Sender: TObject);
+procedure TMain.actnSyncSCMUpdate(Sender: TObject);
+var
+Passed: boolean;
+begin
+  passed := true;
+  if not Assigned(SCM) then passed := false;
+  if not Assigned(SCM.scmConnection) then passed := false;
+  if not SCM.scmConnection.Connected then passed := false;
+  if not Assigned(appData) then passed := false;
+  if not appData.SCMDataIsActive then passed := false;
+  if not appData.TDDataIsActive then passed := false;
+
+  if passed then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+      TAction(Sender).Enabled := false;
+end;
+
+procedure TMain.actnSyncTDUpdate(Sender: TObject);
+begin
+  TAction(Sender).Enabled := false;
+  if not Assigned(SCM) then exit;
+  if not Assigned(SCM.scmConnection) then exit;
+  if not SCM.scmConnection.Connected then exit;
+  if not Assigned(appData) then exit;
+  if not appData.SCMDataIsActive then exit;
+  if not appData.TDDataIsActive then exit;
+
+  if not TAction(Sender).Enabled then
+    TAction(Sender).Enabled := true;
+end;
+
+procedure TMain.actTDTableViewerExecute(Sender: TObject);
 var
 dlg: TDataDebug;
 begin
   dlg := TDataDebug.Create(self);
   dlg.ShowModal;
   dlg.Free;
+end;
+
+procedure TMain.act_FireDACExplorerExecute(Sender: TObject);
+var
+  ExplorerPath: string;
+  IniFilePath: string;
+  BDSBinPath: string;
+  dlg: TFDExplorer;
+begin
+
+{$IFDEF DEBUG}
+  // Retrieve the value of the BDSBIN environment variable
+  SetLength(BDSBinPath, 256); // Allocate enough space
+  SetLength(BDSBinPath, GetEnvironmentVariable('BDSBIN', PChar(BDSBinPath), Length(BDSBinPath)));
+  if BDSBinPath <> '' then
+  // Path to the FireDAC Explorer executable
+    ExplorerPath := IncludeTrailingPathDelimiter(BDSBinPath) + 'FDExplorer.exe'
+  else
+    raise Exception.Create('Environment variable BDSBIN is not set.');
+{$ELSE}
+  ExplorerPath := ExtractFilePath(Application.ExeName);
+  ExplorerPath := ExplorerPath + 'FDExplorer.exe';
+{$ENDIF}
+
+  dlg := TFDExplorer.Create(self);
+  try
+  begin
+    if IsPositiveResult(dlg.ShowModal) then
+    begin
+      // Path to your FDConnectionDefs.ini file
+      IniFilePath := SCM.scmFDManager.ActualDriverDefFileName;
+      if FileExists(ExplorerPath) then
+        ShellExecute(0, 'open', PChar(ExplorerPath), PChar(IniFilePath), nil, SW_SHOWNORMAL)
+      else
+        ShowMessage('FireDAC Explorer executable not found.');
+    end;
+  end;
+  finally
+      dlg.free;
+  end;
+
 end;
 
 procedure TMain.btnNextDTFileClick(Sender: TObject);
@@ -620,6 +802,12 @@ var
   sql: string;
   id: integer;
 begin
+  if not Assigned(SCM) then exit;
+  if not Assigned(SCM.scmConnection) then exit;
+  if not SCM.scmConnection.Connected then exit;
+  if not Assigned(appData) then exit;
+  if not appData.SCMDataIsActive then exit;
+
   if (GetKeyState(VK_CONTROL) < 0) then
   begin
       AppData.dsEvent.DataSet.next;
@@ -741,6 +929,14 @@ sess, ev, ht: integer;
 mr: TModalResult;
 found: boolean;
 begin
+
+  if not Assigned(SCM) then exit;
+  if not Assigned(SCM.scmConnection) then exit;
+  if not SCM.scmConnection.Connected then exit;
+  if not Assigned(appData) then exit;
+  if not appData.SCMDataIsActive then exit;
+
+
   // Open the SCM TreeView.
   dlg := TTreeViewSCM.Create(Self);
 
@@ -825,6 +1021,12 @@ end;
 
 procedure TMain.btnPrevEventClick(Sender: TObject);
 begin
+  if not Assigned(SCM) then exit;
+  if not Assigned(SCM.scmConnection) then exit;
+  if not SCM.scmConnection.Connected then exit;
+  if not Assigned(appData) then exit;
+  if not appData.SCMDataIsActive then exit;
+
   if (GetKeyState(VK_CONTROL) < 0) then
   begin
       AppData.dsEvent.DataSet.prior;
@@ -982,6 +1184,8 @@ begin
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
+var
+  msg: string;
 begin
 
   // A Class that uses JSON to read and write application configuration
@@ -993,20 +1197,25 @@ begin
   LoadSettings;
 
   // CREATE THE CORE SCM CONNECTION DATAMODULE.
-  if not Assigned(SCM) then SCM := TSCM.Create(self);
-
-  if not Assigned(SCM) then
-  begin
-    MessageDlg('The SCM connection couldn''t be created!', mtError,
-      [mbOK], 0);
-    // shutdown in an orderly fashion.
-    Application.Terminate();
-    { Terminate is not immediate. Terminate is called automatically
-    on a WM_QUIT message and when the main form closes}
-    exit;
+  try
+    SCM := TSCM.Create(self);
+  except on E: Exception do
+    begin
+      msg := '''
+      Creation and full initialisation of the SCM failed!
+      SCM_TimeDrops must terminate.
+      ''';
+      MessageDlg(msg, mtError, [mbOK], 0);
+      // shutdown in an orderly fashion.
+      Application.Terminate();
+      { Terminate is not immediate. Terminate is called automatically
+      on a WM_QUIT message and when the main form closes}
+      exit;
+    end;
+    // NOTE: at this point SCM.scmConnection IS NOT ACTIVE.
   end;
 
-
+  
   {
     Sort out the menubar font height - so tiny!
 
@@ -1057,11 +1266,6 @@ begin
     end;
   end;
 
-  // by default - NOT connected. Connection occurs on selection of session.
-  if SCM.scmConnection.Connected then
-    appdata.ActivateDataSCM;
-
-
   FDirectoryWatcher := nil;
   // Test DT directory exists...
   if DirectoryExists(Settings.MeetsFolder) then
@@ -1077,9 +1281,9 @@ begin
             // Necessary to manually calculate Primary keys in each memory table.
             ProcessDirectory(Settings.MeetsFolder);
             // Update UI controls ...
-            PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
+//            PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
             // Paint cell icons.
-            PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+//            PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
           finally
             appdata.EnableAllTDControls;
             dtGrid.EndUpdate;
@@ -1092,16 +1296,14 @@ begin
     FDirectoryWatcher.Start;
   end;
 
-
-
 {$IFNDEF DEBUG}
-  btnDataDebug.Visible := false;
+  actnReConstructTDResultFiles.Visible := false;
 {$ENDIF}
 
 {$IFDEF DEBUG}
   // A button that allows me to run dmTDData.BuildTDData.
   // The FieldDefs are save out to XML. Load XML data to restore.
-  btnBuildData.Visible := true;
+  actnReConstructTDResultFiles.Visible := true;
 {$ENDIF}
 
   // Assert StatusBar params
@@ -1113,6 +1315,15 @@ begin
 
   // Enable hint information
   Application.ShowHint := true;
+
+  // Update UI controls ...
+  PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
+  // Update UI controls ...
+  PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
+  // Paint cell icons.
+  PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+
+
 
 end;
 
@@ -1158,6 +1369,7 @@ end;
 
 procedure TMain.FormShow(Sender: TObject);
 begin
+  (*
   if AppData.qrySession.IsEmpty then
   begin
     pnlSCM.Visible := false;
@@ -1169,6 +1381,8 @@ begin
     pnlSCM.Visible := true;
     pnlDT.Visible := true;
   end;
+  *)
+
   // Windows handle to message after after data scroll...
   if Assigned(AppData) then
   begin
@@ -1214,9 +1428,52 @@ procedure TMain.MSG_UpdateUI(var Msg: TMessage);
 var
 i: integer;
 begin
-  // update HEATUI elements.
-  if Assigned(AppData) AND AppData.SCMDataIsActive then
+  pnlTool1.Visible := true;
+  pnlSCM.Visible := true;
+  lbl_scmGridOverlay.Visible := true;
+  if (Assigned(SCM) = false) or (Assigned(AppData) = False) then
   begin
+    lbl_scmGridOverlay.Caption := 'DataModule is OFFLINE. ';
+    exit;
+  end;
+  if SCM.scmConnection.Connected = false then
+  begin
+    lbl_scmGridOverlay.Caption := 'Connect to the SwimClubMeet database.';
+    exit;
+  end;
+
+  if AppData.SCMDataIsActive = false then
+  begin
+    lbl_scmGridOverlay.Caption := 'Select a SwimClubMeet session.';
+    exit;
+  end;
+  if AppData.qrySession.IsEmpty then
+  begin
+    lbl_scmGridOverlay.Caption := 'The SwimClubMeet session is empty.';
+    exit;
+  end;
+
+  if AppData.qrySession.FieldByName('SessionID').AsInteger = 0 then
+  begin
+    lbl_scmGridOverlay.Caption := 'Bad SwimClubMeet session ID.';
+    exit;
+  end;
+
+  if AppData.qryEvent.IsEmpty then
+  begin
+    lbl_scmGridOverlay.Caption := 'No events were found for the current session.';
+    exit;
+  end;
+
+  if AppData.qryHeat.IsEmpty then
+  begin
+    lbl_scmGridOverlay.Caption := 'No heats were found for the current event.';
+    exit;
+  end;
+
+    StatBar.SimpleText := '';
+    lbl_scmGridOverlay.Visible := false;
+  // update HEATUI elements.
     UpdateEventDetailsLabel; // append heat number to label
     UpdateSessionStartLabel; //
 
@@ -1277,7 +1534,6 @@ begin
       end;
     end;
 
-  end;
 
 end;
 

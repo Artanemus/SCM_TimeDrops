@@ -9031,7 +9031,7 @@ object Options: TOptions
       Top = 0
       Width = 661
       Height = 397
-      ActivePage = tabSettings
+      ActivePage = TabSheet1
       Align = alClient
       TabOrder = 0
       object tabSettings: TTabSheet
@@ -9288,6 +9288,26 @@ object Options: TOptions
           TabOrder = 3
           Text = 'c:\TimeDrops\ReConstruct\'
           OnRightButtonClick = btnedtReConstructRightButtonClick
+        end
+      end
+      object TabSheet1: TTabSheet
+        Caption = 'Actions'
+        ImageIndex = 2
+        object chk_EnableLoginPrompt: TCheckBox
+          Left = 56
+          Top = 32
+          Width = 305
+          Height = 25
+          Caption = 'Enable prompt for Login on startup.'
+          TabOrder = 0
+        end
+        object chk_EnableSessionPrompt: TCheckBox
+          Left = 56
+          Top = 63
+          Width = 369
+          Height = 25
+          Caption = 'Enable prompt for session selection on startup.'
+          TabOrder = 1
         end
       end
     end

@@ -1,4 +1,4 @@
-unit tdLogin;
+unit tdLoginBAK;
 
 interface
 
@@ -17,13 +17,17 @@ type
     lblServer: TLabel;
     lblUserName: TLabel;
     lblPassword: TLabel;
-    lblStatusMsg: TLabel;
-    chkbOSAuthent: TCheckBox;
+    lblLoginErrMsg: TLabel;
+    chkbUseOsAuthentication: TCheckBox;
     edtPassword: TEdit;
-    edtServer: TEdit;
-    edtUser_Name: TEdit;
+    edtServerName: TEdit;
+    edtUser: TEdit;
     pnlSideBar: TPanel;
     imgDTBanner: TImage;
+    ActionList1: TActionList;
+    actnConnect: TAction;
+    actnDisconnect: TAction;
+    actnTimeDrops: TAction;
     Panel2: TPanel;
     btnDisconnect: TButton;
     btnConnect: TButton;
@@ -38,6 +42,8 @@ type
     procedure FormShow(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
   private
+//    fDBName: String;
+//    fDBConnection: TFDConnection;
     procedure ReadLoginParams();
     procedure WriteLoginParams();
 
@@ -45,6 +51,8 @@ type
     { Public declarations }
 
   published
+//    property DBName: string read fDBName write fDBName;
+//    property DBConnection: TFDConnection read fDBConnection write fDBConnection;
   end;
 
 var
@@ -59,64 +67,48 @@ uses exeinfo, System.IniFiles, frmMain, SCMUtility;
 
 procedure TLogin.btnDisconnectClick(Sender: TObject);
 begin
-  lblStatusMsg.Caption := '';
-  if Assigned(SCM.scmConnection) then
-  begin
-    if (SCM.scmConnection.Connected) then
-    begin
-      SCM.scmConnection.Close;
-    end;
-  end;
-
-    if (SCM.scmConnection.Connected) then
-    begin
-      btnDisconnect.Visible := true;
-      btnConnect.Visible := false;
-    end
-    else
-    begin
-      lblStatusMsg.Caption := 'Disconnected from DB server.';
-      btnDisconnect.Visible := false;
-      btnConnect.Visible := true;
-    end;
+  // setting modal result will Close() the form;
+  ModalResult := mrAbort;
 end;
 
 procedure TLogin.btnConnectClick(Sender: TObject);
+var
+  sc: TSimpleConnect;
 begin
   if Assigned(SCM.scmConnection) then
   begin
     if (SCM.scmConnection.Connected) then
       SCM.scmConnection.Close;
-    lblStatusMsg.Caption := 'Attempting to connect.';
-    // Assert the default OLE DB provider login timeout. 10 seconds.
-    SCM.UpdateConnectionDef('MSSQL_SwimClubMeet', 'LoginTimeout', '10');
+    lblLoginErrMsg.Caption := 'Attempting to connect.';
     btnDisconnect.Visible := false;
     btnConnect.Visible := false;
     WriteLoginParams();
     SCM.scmConnection.Open;
     if (SCM.scmConnection.Connected) then
     begin
-      lblStatusMsg.Caption := 'Connected to DB server.';
       btnDisconnect.Visible := true;
       btnConnect.Visible := false;
     end
     else
     begin
-      lblStatusMsg.Caption := 'Could not connect.';
+      lblLoginErrMsg.Caption := 'Could not connect.';
       btnDisconnect.Visible := false;
       btnConnect.Visible := true;
     end;
+    sc.Free;
   end;
 end;
 
 procedure TLogin.btnDoneClick(Sender: TObject);
 begin
-  ModalResult := mrClose;
+  ModalResult := mrOk;
 end;
 
 procedure TLogin.FormCreate(Sender: TObject);
+var
+  AValue, ASection, AName: string;
 begin
-  lblStatusMsg.Caption := '';
+  lblLoginErrMsg.Visible := false;
   ReadLoginParams;
 end;
 
@@ -129,27 +121,26 @@ end;
 
 procedure TLogin.FormShow(Sender: TObject);
 var
-ParamValue: string;
+DatabaseName, ParamValue: string;
 begin
-  lblStatusMsg.Caption := '';
-  if Assigned(SCM.scmConnection) then
+  lblLoginErrMsg.Caption := '';
+  if not Assigned(SCM.scmConnection) then
   begin
     SCM.ReadConnectionDef('MSSQL_SwimClubMeet', 'DataBase', ParamValue);
-    Caption := 'Connected to the ' + ParamValue + ' Database Server ...';
+    Caption := 'Login to the ' + DatabaseName + ' Database Server ...';
+    lblLoginErrMsg.Visible := false;
     if SCM.scmConnection.Connected then
     begin
-      lblStatusMsg.Caption := 'Connected to DB server.';
       btnDisconnect.Visible := true;
       btnConnect.Visible := false;
     end
     else
     begin
-      lblStatusMsg.Caption := 'Not connected.';
       btnDisconnect.Visible := false;
       btnConnect.Visible := true;
     end;
   end;
-  btnDone.SetFocus;
+  btnConnect.SetFocus;
 end;
 
 procedure TLogin.ReadLoginParams();
@@ -160,13 +151,13 @@ begin
   iniFileName := SCM.scmFDManager.ActualConnectionDefFileName;
   if not FileExists(iniFileName) then exit;
   iFile := TIniFile.Create(iniFileName);
-  edtServer.Text := iFile.ReadString('MSSQL_SwimClubMeet', 'Server', 'localHost\SQLEXPRESS');
-  edtUser_Name.Text := iFile.ReadString('MSSQL_SwimClubMeet', 'User_Name', '');
+  edtServerName.Text := iFile.ReadString('MSSQL_SwimClubMeet', 'Server', 'localHost\SQLEXPRESS');
+  edtUser.Text := iFile.ReadString('MSSQL_SwimClubMeet', 'User_Name', '');
   edtPassword.Text := iFile.ReadString('MSSQL_SwimClubMeet', 'Password', '');
   UseOsAuthentication := iFile.ReadString('MSSQL_SwimClubMeet', 'OSAuthent', 'Yes');
   UseOsAuthentication := LowerCase(UseOsAuthentication);
   if UseOsAuthentication.Contains('yes') or UseOsAuthentication.Contains('true') then
-    chkbOSAuthent.Checked := true else chkbOSAuthent.Checked := false;
+    chkbUseOsAuthentication.Checked := true else chkbUseOsAuthentication.Checked := false;
   iFile.Free;
 end;
 
@@ -178,13 +169,13 @@ begin
   iniFileName := SCM.scmFDManager.ActualConnectionDefFileName;
   if not FileExists(iniFileName) then exit;
   iFile := TIniFile.Create(iniFileName);
-  if chkbOSAuthent.Checked then
+  if chkbUseOsAuthentication.Checked then
     iFile.WriteString('MSSQL_SwimClubMeet', 'OSAuthent', 'Yes')
   else
     iFile.WriteString('MSSQL_SwimClubMeet', 'OSAuthent', 'No');
   iFile.WriteString('MSSQL_SwimClubMeet', 'Password', edtPassword.Text);
-  iFile.WriteString('MSSQL_SwimClubMeet', 'User_Name', edtUser_Name.Text);
-  iFile.WriteString('MSSQL_SwimClubMeet', 'Server', edtServer.Text);
+  iFile.WriteString('MSSQL_SwimClubMeet', 'User_Name', edtUser.Text);
+  iFile.WriteString('MSSQL_SwimClubMeet', 'Server', edtServerName.Text);
   iFile.Free;
 end;
 

@@ -30,4 +30,10 @@ object SCM: TSCM
     Left = 56
     Top = 24
   end
+  object DebugConnection: TFDConnection
+    Params.Strings = (
+      'ConnectionDef=MSSQL_SwimClubMeet')
+    Left = 472
+    Top = 88
+  end
 end

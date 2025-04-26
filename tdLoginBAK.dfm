@@ -18987,7 +18987,7 @@ object Login: TLogin
       Align = alClient
       BevelOuter = bvNone
       TabOrder = 1
-      object lblStatusMsg: TLabel
+      object lblLoginErrMsg: TLabel
         Left = 26
         Top = 297
         Width = 220
@@ -19018,7 +19018,7 @@ object Login: TLogin
         Alignment = taRightJustify
         Caption = 'User Name'
       end
-      object chkbOSAuthent: TCheckBox
+      object chkbUseOsAuthentication: TCheckBox
         Left = 110
         Top = 168
         Width = 206
@@ -19034,21 +19034,21 @@ object Login: TLogin
         TabOrder = 1
         Text = 'edtPassword'
       end
-      object edtServer: TEdit
+      object edtServerName: TEdit
         Left = 110
         Top = 16
         Width = 371
         Height = 29
         TabOrder = 2
-        Text = 'edtServer'
+        Text = 'edtServerName'
       end
-      object edtUser_Name: TEdit
+      object edtUser: TEdit
         Left = 110
         Top = 66
         Width = 335
         Height = 29
         TabOrder = 3
-        Text = 'edtUser_Name'
+        Text = 'edtUser'
       end
       object Panel2: TPanel
         Left = 0
@@ -19070,6 +19070,7 @@ object Login: TLogin
           Height = 32
           Anchors = [akTop, akRight]
           Caption = 'Disconnect'
+          ModalResult = 3
           TabOrder = 1
           OnClick = btnDisconnectClick
         end
@@ -19091,11 +19092,23 @@ object Login: TLogin
           Anchors = [akTop, akRight]
           Caption = 'Done'
           Default = True
-          ModalResult = 8
           TabOrder = 2
           OnClick = btnDoneClick
         end
       end
+    end
+  end
+  object ActionList1: TActionList
+    Left = 672
+    Top = 128
+    object actnConnect: TAction
+      Caption = 'Connect'
+    end
+    object actnDisconnect: TAction
+      Caption = 'Disconnect'
+    end
+    object actnTimeDrops: TAction
+      Caption = 'Time Drops'
     end
   end
 end

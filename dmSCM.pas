@@ -47,6 +47,7 @@ type
     dsSwimClub: TDataSource;
     qrySCMSystem: TFDQuery;
     scmFDManager: TFDManager;
+    DebugConnection: TFDConnection;
     procedure DataModuleDestroy(Sender: TObject);
     procedure DataModuleCreate(Sender: TObject);
   private
@@ -56,9 +57,12 @@ type
   public
     { Public declarations }
     scmConnection: TFDConnection;
+    fLoginTimeout: integer;
 
     procedure ActivateTable();
     procedure DeActivateTable();
+    procedure UpdateConnectionDef(const ConnectionName, ParamName, ParamValue: string);
+    procedure ReadConnectionDef(const ConnectionName, ParamName: string; out ParamValue: string);
 
     function  GetDBVerInfo(): string;
 
@@ -78,6 +82,8 @@ implementation
 
 uses
   Winapi.Windows;
+
+
 
 function ExpandEnvVars(const Value: string): string;
 var
@@ -131,6 +137,47 @@ begin
   end;
 end;
 
+procedure TSCM.ReadConnectionDef(const ConnectionName, ParamName: string;
+  out ParamValue: string);
+var
+  ConnectionDef: IFDStanConnectionDef;
+begin
+  // Check if the connection definition exists
+  ConnectionDef := SCM.scmFDManager.ConnectionDefs.ConnectionDefByName(ConnectionName);
+  if Assigned(ConnectionDef) then
+  begin
+    // Read the parameter value
+    ParamValue := ConnectionDef.Params.Values[ParamName];
+  end
+  else
+    raise Exception.CreateFmt('Connection definition "%s" not found.', [ConnectionName]);
+end;
+
+(*
+You do not need to make the TFDManager inactive before updating its
+ConnectionDefs. The TFDManager allows you to modify connection definitions
+dynamically at runtime without deactivating it.
+*)
+
+procedure TSCM.UpdateConnectionDef(const ConnectionName, ParamName,
+  ParamValue: string);
+var
+  ConnectionDef: IFDStanConnectionDef;
+begin
+  // Get the connection definition by name
+  ConnectionDef := SCM.scmFDManager.ConnectionDefs.ConnectionDefByName(ConnectionName);
+
+  if Assigned(ConnectionDef) then
+  begin
+    // Update the parameter
+    ConnectionDef.Params.Values[ParamName] := ParamValue;
+
+    // Save the changes to the FDConnectionDefs.ini file
+    SCM.scmFDManager.ConnectionDefs.Save;
+  end
+  else
+    raise Exception.CreateFmt('Connection definition "%s" not found.', [ConnectionName]);
+end;
 
 procedure TSCM.DataModuleCreate(Sender: TObject);
 var
@@ -152,31 +199,28 @@ begin
   else
   begin
     msg := '''
-    Unable to find %APPDATA%\Artanemus\SCM\FDConnectionDefs.ini.
+    While preparing the FireDAC's connection manager, the application
+    was unable to find %APPDATA%\Artanemus\SCM\FDConnectionDefs.ini.
     A connection can't be made with the SwimClubMeet database.
     (NOTE: The application's folder contains a backup of this file.)
     ''';
-    MessageBox(0, pChar(msg), pChar('Critical SCM DataModule error.'), MB_ICONSTOP or MB_OK);
-    exit;
+    raise Exception.Create(msg);
   end;
 
-    try
-      begin
-        scmConnection := TFDConnection.Create(Self);
-        scmConnection.ConnectionDefName := 'MSSQL_SwimClubMeet';
-      end;
-    except on E: Exception do
-      begin
-        msg := '''
-        Failed to complete connection.
-        %APPDATA%\Artanemus\SCM\FDConnectionDefs.ini may be corrupt.
-        A connection can''t be made with the SwimClubMeet database.
-        (NOTE: The application's folder contains a backup of this file.)
-        ''';
-        MessageBox(0, pChar(msg), pChar('Critical SCM DataModule error.'), MB_ICONSTOP or MB_OK);
-      end;
+  try
+    begin
+      scmConnection := TFDConnection.Create(Self);
+      scmConnection.ConnectionDefName := 'MSSQL_SwimClubMeet';
+      // The connection isn't opened. This will occur on the main form -
+      // via the TLogin dialogue.
     end;
-
+  except on E: Exception do
+    begin
+      msg := Format('Failed to create FireDAC''s connection component. Error: %s', [E.Message]);
+      FreeAndNil(scmConnection);
+      raise Exception.Create(msg);
+    end;
+  end;
 end;
 
 

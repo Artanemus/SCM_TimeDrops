@@ -31,7 +31,7 @@ uses
   tdReConstructDlg in 'tdReConstructDlg.pas' {ReConstructDlg},
   uWatchTime in 'uWatchTime.pas',
   tdLogin in 'tdLogin.pas' {Login},
-  tdLoginV1 in 'tdLoginV1.pas' {LoginV1};
+  dlgFDExplorer in 'dlgFDExplorer.pas' {FDExplorer};
 
 {$R *.res}
 

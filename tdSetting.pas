@@ -19,10 +19,10 @@ type
     { protected declarations }
   public
     { public declarations }
-    Server: string;
-    User: string;
-    Password: string;
-    OSAuthent: boolean;
+//    Server: string;
+//    User: string;
+//    Password: string;
+//    OSAuthent: boolean;
     LoginTimeOut: integer;
     MeetsFolder: string;
     MeetProgramType: integer;
@@ -38,6 +38,8 @@ type
     UseTDpadTime: boolean;
     UseTDfinalTime: boolean;
     DoPostALL: boolean;
+    EnableLoginPrompt: boolean;
+    EnableSessionPrompt: boolean;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -58,10 +60,10 @@ implementation
 
 constructor TPrgSetting.Create();
 begin
-  Server := '';
-  User := '';
-  Password := '';
-  OSAuthent := false;
+//  Server := '';
+//  User := '';
+//  Password := '';
+//  OSAuthent := false;
   LoginTimeOut := CONNECTIONTIMEOUT;
   MeetsFolder := 'c:\TimeDrops\Meets';
   MeetProgramType := 0; // Export a basic meet program (Minimalistic).
@@ -80,6 +82,9 @@ begin
   UseTDpadTime := false;
   UseTDfinalTime := false;
   DoPostALL := true;
+  EnableLoginPrompt:= false;
+  EnableSessionPrompt:= false;
+
   {
   ForceDirectories creates a new directory as specified in Dir,
   which must be a fully-qualified path name. If the directories given in

@@ -85,6 +85,7 @@ type
     procedure DeActivateDataSCM();
 
   public
+    procedure SetUpSCMConnection;
     procedure ActivateDataTD;
     procedure ActivateDataSCM();
     procedure BuildCSVEventData(AFileName: string);
@@ -222,8 +223,9 @@ end;
 
 procedure TAppData.ActivateDataSCM;
 begin
-  if Assigned(fConnection) and fConnection.Connected then
+  if Assigned(SCM.scmConnection) and SCM.scmConnection.Connected then
   begin
+    fConnection := SCM.scmConnection;
     // GRAND MASTER.
     qrySwimClub.Connection := fConnection;
     qrySwimClub.Open;
@@ -268,7 +270,7 @@ begin
       fSCMDataIsActive := true;
     end;
 
-  end;
+  end else FConnection := nil;
 end;
 
 procedure TAppData.BuildCSVEventData(AFileName: string);
@@ -1183,6 +1185,26 @@ begin
   tblmLane.EnableControls;
   qryTEAM.EnableControls;
   qryINDV.EnableControls;
+end;
+
+procedure TAppData.SetUpSCMConnection;
+begin
+  qryTEAM.DisableControls;
+  qryINDV.DisableControls;
+  qryHeat.DisableControls;
+  qryEvent.DisableControls;
+  qrySession.DisableControls;
+  qrySwimClub.DisableControls;
+
+  ActivateDataSCM;
+
+  qrySwimClub.EnableControls;
+  qrySession.EnableControls;
+  qryEvent.EnableControls;
+  qryHeat.EnableControls;
+  qryINDV.EnableControls;
+  qryTEAM.EnableControls;
+
 end;
 
 procedure TAppData.ReadFromBinary(AFilePath:string);

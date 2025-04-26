@@ -8989,7 +8989,7 @@ object Main: TMain
     ColorMap.UnusedColor = clWhite
     Font.Charset = DEFAULT_CHARSET
     Font.Color = clBlack
-    Font.Height = -12
+    Font.Height = -13
     Font.Name = 'Segoe UI'
     Font.Style = []
     Spacing = 0
@@ -9095,17 +9095,21 @@ object Main: TMain
         Top = 125
         Width = 50
         Height = 50
+        Hint = 'Swimming stroke.'
         ImageCollection = AppData.imgcolDT
         ImageWidth = 0
         ImageHeight = 0
         ImageIndex = 0
         ImageName = 'StrokeFS'
+        ParentShowHint = False
+        ShowHint = True
       end
       object lblMeters: TLabel
         Left = 9
         Top = 131
         Width = 71
         Height = 37
+        Hint = 'Distance to swim.'
         Alignment = taRightJustify
         Caption = '400M'
         Font.Charset = DEFAULT_CHARSET
@@ -9114,12 +9118,15 @@ object Main: TMain
         Font.Name = 'Segoe UI Semibold'
         Font.Style = []
         ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
       end
       object lblHeatNum: TLabel
         Left = 24
         Top = 181
         Width = 50
         Height = 45
+        Hint = 'Heat number.'
         Alignment = taCenter
         AutoSize = False
         Caption = 'H0'
@@ -9129,6 +9136,8 @@ object Main: TMain
         Font.Name = 'Segoe UI Semibold'
         Font.Style = []
         ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
         Transparent = True
       end
       object lblMetersRelay: TLabel
@@ -9152,6 +9161,7 @@ object Main: TMain
         Top = 644
         Width = 143
         Height = 59
+        Hint = 'Session ID and date.'
         Alignment = taCenter
         AutoSize = False
         Caption = 'SESSION'#13#10'DD/MM/YYYY'
@@ -9161,6 +9171,8 @@ object Main: TMain
         Font.Name = 'Segoe UI Semibold'
         Font.Style = []
         ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
         Transparent = True
         WordWrap = True
       end
@@ -9169,10 +9181,8 @@ object Main: TMain
         Top = 266
         Width = 128
         Height = 41
-        Hint = 
-          'Syncronize SwimClubMeet to DT.'#13#10'(Must have the same session numb' +
-          'er.)'
-        Caption = 'SYNC'
+        Hint = 'Syncronize SwimClubMeet to TD.'
+        Caption = 'SYNC TO TD'
         Images = AppData.vimglistMenu
         Layout = blGlyphRight
         ParentShowHint = False
@@ -9186,7 +9196,7 @@ object Main: TMain
         Height = 41
         Hint = 
           'If changes have occurred (new events, heats, etc)'#13#10'pressing this' +
-          ' button will re-sync to the SCM database.'
+          ' button will update data.'
         Caption = 'REFRESH'
         Images = AppData.vimglistMenu
         Layout = blGlyphRight
@@ -9754,6 +9764,24 @@ object Main: TMain
         RowHeights = (
           34
           46)
+        object lbl_scmGridOverlay: TLabel
+          Left = 0
+          Top = 296
+          Width = 494
+          Height = 223
+          Align = alBottom
+          Alignment = taCenter
+          AutoSize = False
+          Caption = 'BIG LETTERS IN THE GRID OVERLAY'
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clCoral
+          Font.Height = -21
+          Font.Name = 'Segoe UI'
+          Font.Style = [fsBold]
+          ParentFont = False
+          WordWrap = True
+          StyleElements = [seClient, seBorder]
+        end
       end
       object btnPickSCMTreeView: TButton
         Left = 440
@@ -10451,9 +10479,6 @@ object Main: TMain
           end
           item
             Control = ShapeSpacer
-          end
-          item
-            Control = btnDataDebug
           end>
         HorizontalPositioning = sphpCenter
         Spacing = 4
@@ -10463,8 +10488,8 @@ object Main: TMain
           Top = 0
           Width = 128
           Height = 41
-          Hint = 'Syncronize Dolphin Timing to SCM.'
-          Caption = 'SYNC'
+          Hint = 'Syncronize Time Drops to SCM.'
+          Caption = 'SYNC TO SCM'
           Images = AppData.vimglistMenu
           ParentShowHint = False
           ShowHint = True
@@ -10475,7 +10500,7 @@ object Main: TMain
           Top = 45
           Width = 128
           Height = 41
-          Hint = 'Post the DT '#39'Race-Times'#39' to the SCM heat.'
+          Hint = 'Post the TD '#39'Race-Times'#39' to the SCM heat.'
           Caption = 'POST'
           Images = AppData.vimglistMenu
           ParentShowHint = False
@@ -10506,23 +10531,6 @@ object Main: TMain
           Margins.Bottom = 6
           Brush.Color = clTomato
         end
-        object btnDataDebug: TButton
-          Left = 17
-          Top = 155
-          Width = 109
-          Height = 40
-          Caption = 'Data Debug'
-          TabOrder = 0
-          OnClick = btnDataDebugClick
-        end
-      end
-      object btnBuildData: TButton
-        Left = 17
-        Top = 285
-        Width = 109
-        Height = 40
-        Caption = 'Build Data'
-        TabOrder = 1
       end
     end
   end
@@ -10611,7 +10619,7 @@ object Main: TMain
               end
               item
                 Action = actnLoginToSCM
-                Caption = 'L&ogin to SCM ...'
+                Caption = 'C&onnect to the SCM database...'
                 ImageIndex = 16
                 ImageName = 'login'
               end
@@ -10652,7 +10660,6 @@ object Main: TMain
                 Items = <
                   item
                     Action = actnClearReScanMeets
-                    Caption = '&Clear and re-scan TD meets folder ...'
                     ImageIndex = 10
                     ImageName = 'scan'
                   end
@@ -10674,7 +10681,7 @@ object Main: TMain
                   end
                   item
                     Action = actnReConstructTDResultFiles
-                    Caption = '&Re-construct and export Time-Drops Results ...'
+                    Caption = '&Create Time-Drops Results files  ...'
                     ImageIndex = 9
                     ImageName = 'build'
                   end>
@@ -10738,6 +10745,27 @@ object Main: TMain
           item
             Items = <
               item
+                Action = act_FireDACExplorer
+                Caption = '&FireDAC Explorer ...'
+                ImageIndex = 9
+                ImageName = 'build'
+              end
+              item
+                Action = actTDTableViewer
+                ImageIndex = 12
+                ImageName = 'file_report'
+              end
+              item
+                Action = actBuildTDTables
+                Caption = '&Re-Build TimeDrops Tables ... '
+                ImageIndex = 3
+                ImageName = 'Settings'
+              end>
+            Caption = '&Tools'
+          end
+          item
+            Items = <
+              item
                 Action = actnAbout
                 Caption = '&About SCM TimeDrops ...'
                 ImageIndex = 8
@@ -10764,6 +10792,8 @@ object Main: TMain
       Enabled = False
       ImageIndex = 2
       ImageName = 'document_search'
+      OnExecute = actnSelectSwimClubExecute
+      OnUpdate = actnSelectSwimClubUpdate
     end
     object actnSelectSession: TAction
       Category = 'File'
@@ -10771,6 +10801,7 @@ object Main: TMain
       ImageIndex = 2
       ImageName = 'document_search'
       OnExecute = actnSelectSessionExecute
+      OnUpdate = actnSelectSessionUpdate
     end
     object actnExportMeetProgram: TAction
       Category = 'Export'
@@ -10782,7 +10813,7 @@ object Main: TMain
     end
     object actnReConstructTDResultFiles: TAction
       Category = 'Export'
-      Caption = 'Re-construct and export Time-Drops Results ...'
+      Caption = 'Create Time-Drops Results files  ...'
       ImageIndex = 9
       ImageName = 'build'
       OnExecute = actnReConstructTDResultFilesExecute
@@ -10804,7 +10835,7 @@ object Main: TMain
     end
     object actnClearReScanMeets: TAction
       Category = 'Import'
-      Caption = 'Clear and re-scan TD meets folder ...'
+      Caption = 'Clear TD grid and re-import '#39'Meets'#39' ...'
       ImageIndex = 10
       ImageName = 'scan'
       OnExecute = actnClearReScanMeetsExecute
@@ -10835,12 +10866,7 @@ object Main: TMain
       ImageIndex = 11
       ImageName = 'arrow_back'
       OnExecute = actnSyncTDExecute
-    end
-    object actnConnect: TAction
-      Category = 'Edit'
-      Caption = 'Connect'
-      ImageIndex = 5
-      ImageName = 'link'
+      OnUpdate = actnSyncTDUpdate
     end
     object actnPost: TAction
       Category = 'Edit'
@@ -10874,14 +10900,36 @@ object Main: TMain
       ImageIndex = 15
       ImageName = 'arrow_forward'
       OnExecute = actnSyncSCMExecute
+      OnUpdate = actnSyncSCMUpdate
     end
     object actnLoginToSCM: TAction
       Category = 'File'
-      Caption = 'Login to SCM ...'
+      Caption = 'Connect to the SCM database...'
       ImageIndex = 16
       ImageName = 'login'
       OnExecute = actnLoginToSCMExecute
       OnUpdate = actnLoginToSCMUpdate
+    end
+    object act_FireDACExplorer: TAction
+      Category = 'Tools'
+      Caption = 'FireDAC Explorer ...'
+      ImageIndex = 9
+      ImageName = 'build'
+      OnExecute = act_FireDACExplorerExecute
+    end
+    object actBuildTDTables: TAction
+      Category = 'Tools'
+      Caption = 'Re-Build TimeDrops Tables ... '
+      Enabled = False
+      ImageIndex = 3
+      ImageName = 'Settings'
+    end
+    object actTDTableViewer: TAction
+      Category = 'Tools'
+      Caption = 'Inspect Time-Drops Tables ...'
+      ImageIndex = 12
+      ImageName = 'file_report'
+      OnExecute = actTDTableViewerExecute
     end
   end
 end
