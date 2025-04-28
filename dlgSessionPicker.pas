@@ -4,8 +4,11 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, dmAppData,
-  Vcl.DBCtrls, Data.DB, Vcl.Grids, Vcl.DBGrids, FireDAC.Stan.Param;
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
+  Vcl.DBCtrls, Data.DB, Vcl.Grids, Vcl.DBGrids, FireDAC.Stan.Param, dmSCM,
+  FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Error, FireDAC.DatS,
+  FireDAC.Phys.Intf, FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt,
+  FireDAC.Comp.DataSet, FireDAC.Comp.Client;
 
 type
   TSessionPicker = class(TForm)
@@ -18,6 +21,14 @@ type
     btnOk: TButton;
     btnCancel: TButton;
     btnSelectClub: TButton;
+    qrySessionList: TFDQuery;
+    qrySessionListSessionID: TFDAutoIncField;
+    qrySessionListCaption: TWideStringField;
+    qrySessionListSessionStart: TSQLTimeStampField;
+    qrySessionListClosedDT: TSQLTimeStampField;
+    qrySessionListSwimClubID: TIntegerField;
+    qrySessionListSessionStatusID: TIntegerField;
+    dsSessionList: TDataSource;
     procedure btnCancelClick(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -52,12 +63,20 @@ end;
 procedure TSessionPicker.FormCreate(Sender: TObject);
 begin
   fSessionID := 0;
-  AppData.qrySessionList.Close;
-  AppData.qrySessionList.ParamByName('SWIMCLUBID').AsInteger :=
-    AppData.qrySwimClub.FieldByName('SwimClubID').AsInteger;
-  AppData.qrySessionList.Prepare;
-  AppData.qrySessionList.Open;
-  if not AppData.qrySessionList.Active then
+
+  if Assigned(SCM) and Assigned(SCM.scmConnection)
+      and SCM.scmConnection.Connected then
+  begin
+    qrySessionList.Connection := SCM.scmConnection;
+    if qrySessionList.Active then
+      qrySessionList.Close;
+    qrySessionList.ParamByName('SWIMCLUBID').AsInteger :=
+      SCM.qrySwimClub.FieldByName('SwimClubID').AsInteger;
+    qrySessionList.Prepare;
+    qrySessionList.Open;
+  end;
+
+  if not qrySessionList.Active then
   begin
     raise Exception.Create('Session List failed to load.');
   end;
@@ -88,12 +107,12 @@ begin
   if fSessionID <> 0 then
   begin
     SearchOptions := [];
-    if AppData.qrySessionList.Active and not AppData.qrySessionList.IsEmpty then
+    if qrySessionList.Active and not qrySessionList.IsEmpty then
     begin
-        success := AppData.qrySessionList.Locate('SessionID', fSessionID, SearchOptions);
+        success := qrySessionList.Locate('SessionID', fSessionID, SearchOptions);
         if not success then
         begin
-          AppData.qrySessionList.First;
+          qrySessionList.First;
         end;
     end;
   end;

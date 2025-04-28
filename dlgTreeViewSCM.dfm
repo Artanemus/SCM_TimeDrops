@@ -8986,12 +8986,12 @@ object TreeViewSCM: TTreeViewSCM
     Font.Name = 'Segoe UI'
     Font.Style = []
     HideSelection = False
-    Images = AppData.vimglistTreeView
+    Images = IMG.vimglistTreeView
     Indent = 30
     ParentFont = False
     ReadOnly = True
     RowSelect = True
-    StateImages = AppData.vimglistStateImages
+    StateImages = IMG.vimglistStateImages
     TabOrder = 0
     OnDblClick = TVDblClick
     Items.NodeData = {
@@ -9042,7 +9042,6 @@ object TreeViewSCM: TTreeViewSCM
   end
   object qryEvent: TFDQuery
     ActiveStoredUsage = [auDesignTime]
-    Connection = SCM.scmConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False
@@ -9098,7 +9097,6 @@ object TreeViewSCM: TTreeViewSCM
     MasterSource = dsEvent
     MasterFields = 'EventID'
     DetailFields = 'EventID'
-    Connection = SCM.scmConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False

@@ -4,7 +4,7 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, dmAppData, Data.DB, Vcl.Grids,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, dmTDS, Data.DB, Vcl.Grids,
   Vcl.DBGrids, Vcl.ComCtrls;
 
 type
@@ -37,11 +37,11 @@ implementation
 procedure TDataDebug.FormShow(Sender: TObject);
 begin
   // ASSERT connection
-  dbgridSession.DataSource := appData.dsmSession;
-  dbgridEvent.DataSource := appData.dsmEvent;
-  dbgridHeat.DataSource := appData.dsmHeat;
-  dbgridLane.DataSource := appData.dsmLane;
-  dbgridNoodle.DataSource := appData.dsmNoodle;
+  dbgridSession.DataSource := TDS.dsmSession;
+  dbgridEvent.DataSource := TDS.dsmEvent;
+  dbgridHeat.DataSource := TDS.dsmHeat;
+  dbgridLane.DataSource := TDS.dsmLane;
+  dbgridNoodle.DataSource := TDS.dsmNoodle;
 
 end;
 

@@ -2,15 +2,13 @@ program SCM_TimeDrops;
 
 uses
   Vcl.Forms,
-  dmSCM in 'dmSCM.pas' {SCM: TDataModule},
-  dmAppData in 'dmAppData.pas' {AppData: TDataModule},
-  SCMDefines in '..\SCM_SHARED\SCMDefines.pas',
-  SCMSimpleConnect in '..\SCM_SHARED\SCMSimpleConnect.pas',
-  tdSetting in 'tdSetting.pas',
   XSuperJSON in '..\x-superobject\XSuperJSON.pas',
   XSuperObject in '..\x-superobject\XSuperObject.pas',
-  frmMain in 'frmMain.pas' {Main},
+  tdSetting in 'tdSetting.pas',
   Vcl.PlatformVclStylesActnCtrls in '..\SCM_SHARED\Vcl.PlatformVclStylesActnCtrls.pas',
+  SCMDefines in '..\SCM_SHARED\SCMDefines.pas',
+  SCMSimpleConnect in '..\SCM_SHARED\SCMSimpleConnect.pas',
+  frmMain in 'frmMain.pas' {Main},
   uAppUtils in 'uAppUtils.pas',
   DirectoryWatcher in 'DirectoryWatcher.pas',
   tdMeetProgram in 'tdMeetProgram.pas',
@@ -31,7 +29,10 @@ uses
   tdReConstructDlg in 'tdReConstructDlg.pas' {ReConstructDlg},
   uWatchTime in 'uWatchTime.pas',
   tdLogin in 'tdLogin.pas' {Login},
-  dlgFDExplorer in 'dlgFDExplorer.pas' {FDExplorer};
+  dlgFDExplorer in 'dlgFDExplorer.pas' {FDExplorer},
+  dmIMG in 'dmIMG.pas' {IMG: TDataModule},
+  dmSCM in 'dmSCM.pas' {SCM: TDataModule},
+  dmTDS in 'dmTDS.pas' {TDS: TDataModule};
 
 {$R *.res}
 

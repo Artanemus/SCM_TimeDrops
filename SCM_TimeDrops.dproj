@@ -141,77 +141,70 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="dmSCM.pas">
-            <Form>SCM</Form>
-            <FormType>dfm</FormType>
-            <DesignClass>TDataModule</DesignClass>
-        </DCCReference>
-        <DCCReference Include="dmAppData.pas">
-            <Form>AppData</Form>
-            <FormType>dfm</FormType>
-            <DesignClass>TDataModule</DesignClass>
-        </DCCReference>
-        <DCCReference Include="..\SCM_SHARED\SCMDefines.pas"/>
-        <DCCReference Include="..\SCM_SHARED\SCMSimpleConnect.pas"/>
-        <DCCReference Include="tdSetting.pas"/>
         <DCCReference Include="..\x-superobject\XSuperJSON.pas"/>
         <DCCReference Include="..\x-superobject\XSuperObject.pas"/>
+        <DCCReference Include="tdSetting.pas"/>
+        <DCCReference Include="..\SCM_SHARED\Vcl.PlatformVclStylesActnCtrls.pas"/>
+        <DCCReference Include="..\SCM_SHARED\SCMDefines.pas"/>
+        <DCCReference Include="..\SCM_SHARED\SCMSimpleConnect.pas"/>
         <DCCReference Include="frmMain.pas">
             <Form>Main</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="..\SCM_SHARED\Vcl.PlatformVclStylesActnCtrls.pas"/>
         <DCCReference Include="uAppUtils.pas"/>
         <DCCReference Include="DirectoryWatcher.pas"/>
         <DCCReference Include="tdMeetProgram.pas"/>
         <DCCReference Include="tdReConstruct.pas"/>
         <DCCReference Include="dlgOptions.pas">
             <Form>Options</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="dlgPostData.pas">
             <Form>PostData</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="dlgTreeViewData.pas">
             <Form>TreeViewData</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="dlgTreeViewSCM.pas">
             <Form>TreeViewSCM</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="dlgDataDebug.pas">
             <Form>DataDebug</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="dlgUserRaceTime.pas">
             <Form>UserRaceTime</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="..\SCM_SHARED\SCMUtility.pas"/>
         <DCCReference Include="dlgSessionPicker.pas">
             <Form>SessionPicker</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="tdResults.pas"/>
         <DCCReference Include="tdMeetProgramPick.pas">
             <Form>MeetProgramPick</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="tdTimingSystemStatus.pas"/>
         <DCCReference Include="tdReConstructDlg.pas">
             <Form>ReConstructDlg</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="uWatchTime.pas"/>
         <DCCReference Include="tdLogin.pas">
             <Form>Login</Form>
-            <FormType>dfm</FormType>
         </DCCReference>
         <DCCReference Include="dlgFDExplorer.pas">
             <Form>FDExplorer</Form>
+        </DCCReference>
+        <DCCReference Include="dmIMG.pas">
+            <Form>IMG</Form>
             <FormType>dfm</FormType>
+            <DesignClass>TDataModule</DesignClass>
+        </DCCReference>
+        <DCCReference Include="dmSCM.pas">
+            <Form>SCM</Form>
+            <FormType>dfm</FormType>
+            <DesignClass>TDataModule</DesignClass>
+        </DCCReference>
+        <DCCReference Include="dmTDS.pas">
+            <Form>TDS</Form>
+            <FormType>dfm</FormType>
+            <DesignClass>TDataModule</DesignClass>
         </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>

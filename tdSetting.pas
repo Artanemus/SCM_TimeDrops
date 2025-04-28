@@ -6,8 +6,7 @@ uses
   system.IOUtils,
   system.SysUtils, system.Types, system.UITypes, system.Classes,
   system.Variants, VCL.Controls,
-  XsuperObject,
-  dmAppData;
+  XsuperObject;
 
 type
 
@@ -27,8 +26,8 @@ type
     MeetsFolder: string;
     MeetProgramType: integer;
     ProgramFolder: string;
-    AppData: string;
-    ReConstruct: string;
+    AppDataFolder: string;
+    ReConstructFolder: string;
     AcceptedDeviation: double;
     CalcRTMethod: integer;
     CalcSwimmerAge: integer;
@@ -68,8 +67,8 @@ begin
   MeetsFolder := 'c:\TimeDrops\Meets';
   MeetProgramType := 0; // Export a basic meet program (Minimalistic).
   ProgramFolder := 'c:\TimeDrops\Meets';
-  AppData := 'c:\TimeDrops\AppData';
-  ReConstruct := 'c:\TimeDrops\ReConstruct';
+  AppDataFolder := 'c:\TimeDrops\AppData';
+  ReConstructFolder := 'c:\TimeDrops\ReConstruct';
   AcceptedDeviation := 0.3;
   RaceNumber := 0;
   // 0 = default DT method : 1 = extended SCM method.

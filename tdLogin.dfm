@@ -18989,7 +18989,7 @@ object Login: TLogin
       TabOrder = 1
       object lblStatusMsg: TLabel
         Left = 26
-        Top = 297
+        Top = 316
         Width = 220
         Height = 21
         Caption = 'Status and Connection Message'
@@ -19017,6 +19017,21 @@ object Login: TLogin
         Height = 21
         Alignment = taRightJustify
         Caption = 'User Name'
+      end
+      object lblConnectionInfo: TLabel
+        Left = 26
+        Top = 198
+        Width = 455
+        Height = 112
+        AutoSize = False
+        Caption = 'Connection information...'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Segoe UI'
+        Font.Style = []
+        ParentFont = False
+        WordWrap = True
       end
       object chkbOSAuthent: TCheckBox
         Left = 110

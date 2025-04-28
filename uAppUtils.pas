@@ -18,7 +18,7 @@ function DirHasResultFiles(const ADirectory: string): boolean;
 
 implementation
 
-uses System.Character, DateUtils, Data.DB, tdResults, dmAppData;
+uses System.Character, DateUtils, Data.DB, tdResults;
 
 function StripNonNumeric(const AStr: string): string;
 var

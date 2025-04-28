@@ -10,7 +10,7 @@ uses
   FireDAC.Stan.Intf, FireDAC.Stan.Option, FireDAC.Stan.Param,
   FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf, FireDAC.DApt.Intf,
   FireDAC.Stan.StorageBin, Data.DB, FireDAC.Comp.DataSet, FireDAC.Comp.Client,
-  uAppUtils, dmAppData, Datasnap.DBClient, Datasnap.Provider, tdSetting;
+  uAppUtils, dmTDS, Datasnap.DBClient, Datasnap.Provider, tdSetting;
 
 type
 
@@ -472,22 +472,22 @@ begin
   { p o p u l a t e   t h e   T r e e V i e w . . .
     TABLES HAVE MASTER-DETAIL RELATIONSHIPS ENABLED.
   }
-  AppData.tblmLane.DisableControls;
-  AppData.tblmHeat.DisableControls;
-  AppData.tblmEvent.DisableControls;
-  AppData.tblmSession.DisableControls;
+  TDS.tblmLane.DisableControls;
+  TDS.tblmHeat.DisableControls;
+  TDS.tblmEvent.DisableControls;
+  TDS.tblmSession.DisableControls;
 
-  storeSessID := AppData.tblmSession.FieldByName('SessionID').AsInteger;
-  storeEvID := AppData.tblmEvent.FieldByName('EventID').AsInteger;
-  storeHtID := AppData.tblmHeat.FieldByName('HeatID').AsInteger;
+  storeSessID := TDS.tblmSession.FieldByName('SessionID').AsInteger;
+  storeEvID := TDS.tblmEvent.FieldByName('EventID').AsInteger;
+  storeHtID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
 
   // R O O T   N O D E    -   LEVEL 0 - S E S S I O N   . . .
-  AppData.tblmSession.First;
-  while not AppData.tblmSession.Eof do
+  TDS.tblmSession.First;
+  while not TDS.tblmSession.Eof do
   begin
-    s := AppData.tblmSession.FieldByName('Caption').AsString;
-    i := AppData.tblmSession.FieldByName('SessionNum').AsInteger;
-    idsess := AppData.tblmSession.FieldByName('SessionID').AsInteger;
+    s := TDS.tblmSession.FieldByName('Caption').AsString;
+    i := TDS.tblmSession.FieldByName('SessionNum').AsInteger;
+    idsess := TDS.tblmSession.FieldByName('SessionID').AsInteger;
 
     { CREATE NodeSess : EventID, EventNum. }
     ident := TTVData.Create(idsess, i);
@@ -497,14 +497,14 @@ begin
 
     // ------------------------------------------------------------
     // Level 1  -   E V E N T S  ...  SESSION CHILD NODES.
-    AppData.tblmEvent.ApplyMaster;
-    // AppData.tblmEvent.Refresh;
-    AppData.tblmEvent.First;
-    while not AppData.tblmEvent.Eof do
+    TDS.tblmEvent.ApplyMaster;
+    // TDS.tblmEvent.Refresh;
+    TDS.tblmEvent.First;
+    while not TDS.tblmEvent.Eof do
     begin
-      sev := AppData.tblmEvent.FieldByName('Caption').AsString;
-      i := AppData.tblmEvent.FieldByName('EventNum').AsInteger;
-      idev := AppData.tblmEvent.FieldByName('EventID').AsInteger;
+      sev := TDS.tblmEvent.FieldByName('Caption').AsString;
+      i := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
+      idev := TDS.tblmEvent.FieldByName('EventID').AsInteger;
 
       { CREATE nodeEv : EventID, EventNum. }
       ident := TTVData.Create(idev, i);
@@ -527,14 +527,14 @@ begin
         called for the master dataset or when scrolling is disabled by
         MasterLink.DisableScroll.
       }
-      AppData.tblmHeat.ApplyMaster;
-      // AppData.tblmHeat.Refresh;
-      AppData.tblmHeat.First;
-      while not AppData.tblmHeat.Eof do
+      TDS.tblmHeat.ApplyMaster;
+      // TDS.tblmHeat.Refresh;
+      TDS.tblmHeat.First;
+      while not TDS.tblmHeat.Eof do
       begin
-        sht := AppData.tblmHeat.FieldByName('Caption').AsString;
-        i := AppData.tblmHeat.FieldByName('HeatNum').AsInteger;
-        idht := AppData.tblmHeat.FieldByName('HeatID').AsInteger;
+        sht := TDS.tblmHeat.FieldByName('Caption').AsString;
+        i := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
+        idht := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
 
         { CREATE nodeHt : HeatID, HeatNum. }
         ident := TTVData.Create(idht, i);
@@ -547,30 +547,30 @@ begin
           // heat number icons 1 thru 9.
           NodeHt.ImageIndex := i + 14;
         NodeHt.SelectedIndex := NodeHt.ImageIndex;
-        AppData.tblmHeat.Next;
+        TDS.tblmHeat.Next;
       end;
-      AppData.tblmEvent.Next;
+      TDS.tblmEvent.Next;
     end;
     // ------------------------------------------------------------
-    AppData.tblmSession.Next;
+    TDS.tblmSession.Next;
   end;
 
   // Master-Detail enabled - order is important ...
   // Restore Record positions for DT tables.
-  if AppData.LocateTSessionID(storeSessID) then
+  if TDS.LocateTSessionID(storeSessID) then
   begin
-    AppData.tblmEvent.ApplyMaster;
-    if AppData.LocateTEventID(storeEvID) then
+    TDS.tblmEvent.ApplyMaster;
+    if TDS.LocateTEventID(storeEvID) then
     begin
-      AppData.tblmHeat.ApplyMaster;
-      AppData.LocateTHeatID(storeHtID);
+      TDS.tblmHeat.ApplyMaster;
+      TDS.LocateTHeatID(storeHtID);
     end;
   end;
 
-  AppData.tblmSession.EnableControls;
-  AppData.tblmEvent.EnableControls;
-  AppData.tblmHeat.EnableControls;
-  AppData.tblmLane.EnableControls;
+  TDS.tblmSession.EnableControls;
+  TDS.tblmEvent.EnableControls;
+  TDS.tblmHeat.EnableControls;
+  TDS.tblmLane.EnableControls;
 
 end;
 
@@ -579,9 +579,9 @@ var
   node: TTreeNode;
   SearchOptions: TLocateOptions;
 begin
-  if not Assigned(AppData) then
+  if not Assigned(TDS) then
     exit;
-  if not AppData.SCMDataIsActive then
+  if not TDS.DataIsActive then
     exit;
   SearchOptions := [];
   // File the tree view with nodes deom the Dolphin Timing data tables.

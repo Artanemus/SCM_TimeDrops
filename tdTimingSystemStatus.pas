@@ -5,7 +5,7 @@ uses
   system.IOUtils,
   system.SysUtils, system.Types, system.UITypes, system.Classes,
   system.Variants, VCL.Controls, system.DateUtils,
-  XSuperJSON, XSuperObject, dmAppData,
+  XSuperJSON, XSuperObject,
   FireDAC.Stan.Param, dmSCM, tdSetting;
 
 function BuildAndSaveTimingSystemStatus(AFilePath: TFileName; ASessionID, currEvent, currHeat: integer): boolean;

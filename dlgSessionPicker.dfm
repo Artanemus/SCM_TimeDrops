@@ -8990,20 +8990,20 @@ object SessionPicker: TSessionPicker
     object dbtxtClubName: TDBText
       Left = 0
       Top = 7
-      Width = 168
+      Width = 109
       Height = 21
       AutoSize = True
       DataField = 'Caption'
-      DataSource = AppData.dsSwimClub
+      DataSource = SCM.dsSwimClub
     end
     object dbtxtNickName: TDBText
       Left = 0
       Top = 34
-      Width = 134
+      Width = 108
       Height = 21
       AutoSize = True
       DataField = 'NickName'
-      DataSource = AppData.dsSwimClub
+      DataSource = SCM.dsSwimClub
     end
   end
   object pnlFooter: TPanel
@@ -9059,7 +9059,7 @@ object SessionPicker: TSessionPicker
       Width = 546
       Height = 363
       Align = alClient
-      DataSource = AppData.dsSessionList
+      DataSource = dsSessionList
       Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgRowSelect, dgConfirmDelete, dgCancelOnExit, dgTitleClick, dgTitleHotTrack]
       ReadOnly = True
       TabOrder = 0
@@ -9093,5 +9093,72 @@ object SessionPicker: TSessionPicker
           Visible = True
         end>
     end
+  end
+  object qrySessionList: TFDQuery
+    IndexFieldNames = 'SwimClubID'
+    MasterFields = 'SwimClubID'
+    DetailFields = 'SwimClubID'
+    FormatOptions.AssignedValues = [fvFmtDisplayDateTime]
+    FormatOptions.FmtDisplayDateTime = 'yyyy-mm-dd HH:NN'
+    UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
+    UpdateOptions.EnableDelete = False
+    UpdateOptions.EnableInsert = False
+    UpdateOptions.EnableUpdate = False
+    SQL.Strings = (
+      'DECLARE @SwimClubID AS INTEGER;'
+      'SET @SwimClubID = :SWIMCLUBID;'
+      ''
+      'SELECT '
+      'SessionID'
+      ',Caption'
+      ',SessionStart'
+      ',ClosedDT'
+      ',SwimClubID'
+      ',SessionStatusID'
+      ' FROM dbo.Session'
+      ' WHERE SessionStatusID = 1 AND SwimClubID = SwimClubID'
+      ' ORDER BY SessionStart DESC')
+    Left = 312
+    Top = 24
+    ParamData = <
+      item
+        Name = 'SWIMCLUBID'
+        DataType = ftAutoInc
+        ParamType = ptInput
+        Value = 1
+      end>
+    object qrySessionListSessionID: TFDAutoIncField
+      FieldName = 'SessionID'
+      Origin = 'SessionID'
+      ProviderFlags = [pfInWhere, pfInKey]
+    end
+    object qrySessionListCaption: TWideStringField
+      FieldName = 'Caption'
+      Origin = 'Caption'
+      Size = 128
+    end
+    object qrySessionListSessionStart: TSQLTimeStampField
+      FieldName = 'SessionStart'
+      Origin = 'SessionStart'
+      DisplayFormat = 'yyyy-mm-dd HH:NN'
+    end
+    object qrySessionListClosedDT: TSQLTimeStampField
+      FieldName = 'ClosedDT'
+      Origin = 'ClosedDT'
+      DisplayFormat = 'yyyy-mm-dd HH:NN'
+    end
+    object qrySessionListSwimClubID: TIntegerField
+      FieldName = 'SwimClubID'
+      Origin = 'SwimClubID'
+    end
+    object qrySessionListSessionStatusID: TIntegerField
+      FieldName = 'SessionStatusID'
+      Origin = 'SessionStatusID'
+    end
+  end
+  object dsSessionList: TDataSource
+    DataSet = qrySessionList
+    Left = 400
+    Top = 25
   end
 end

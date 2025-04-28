@@ -7,7 +7,7 @@ uses
   System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, System.Actions,
   Vcl.ActnList, Vcl.Imaging.pngimage, Vcl.WinXCtrls, Vcl.StdCtrls, dmSCM,
-  tdSetting, SCMDefines, SCMSimpleConnect, dmAppData,
+  tdSetting, SCMDefines, SCMSimpleConnect,
   FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Stan.Option,
   FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Pool,
   FireDAC.Stan.Async, FireDAC.Phys, FireDAC.VCLUI.Wait, Data.DB;
@@ -30,6 +30,7 @@ type
     RelativePanel1: TRelativePanel;
     pnlBody: TPanel;
     btnDone: TButton;
+    lblConnectionInfo: TLabel;
 
     procedure btnDisconnectClick(Sender: TObject);
     procedure btnConnectClick(Sender: TObject);
@@ -39,6 +40,7 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
   private
     procedure ReadLoginParams();
+    procedure SetConnectionInfo;
     procedure WriteLoginParams();
 
   public
@@ -68,17 +70,18 @@ begin
     end;
   end;
 
-    if (SCM.scmConnection.Connected) then
-    begin
-      btnDisconnect.Visible := true;
-      btnConnect.Visible := false;
-    end
-    else
-    begin
-      lblStatusMsg.Caption := 'Disconnected from DB server.';
-      btnDisconnect.Visible := false;
-      btnConnect.Visible := true;
-    end;
+  if (SCM.scmConnection.Connected) then
+  begin
+    btnDisconnect.Visible := true;
+    btnConnect.Visible := false;
+  end
+  else
+  begin
+    lblStatusMsg.Caption := 'Disconnected from DB server.';
+    lblConnectionInfo. Caption := '';
+    btnDisconnect.Visible := false;
+    btnConnect.Visible := true;
+  end;
 end;
 
 procedure TLogin.btnConnectClick(Sender: TObject);
@@ -89,11 +92,40 @@ begin
       SCM.scmConnection.Close;
     lblStatusMsg.Caption := 'Attempting to connect.';
     // Assert the default OLE DB provider login timeout. 10 seconds.
-    SCM.UpdateConnectionDef('MSSQL_SwimClubMeet', 'LoginTimeout', '10');
+    SCM.WriteConnectionDef('MSSQL_SwimClubMeet', 'LoginTimeout', '10');
     btnDisconnect.Visible := false;
     btnConnect.Visible := false;
     WriteLoginParams();
     SCM.scmConnection.Open;
+    if (SCM.scmConnection.Connected) then
+    begin
+      lblStatusMsg.Caption := 'Connected to DB server.';
+      btnDisconnect.Visible := true;
+      btnConnect.Visible := false;
+      SetConnectionInfo;
+    end
+    else
+    begin
+      lblStatusMsg.Caption := 'Could not connect.';
+      lblConnectionInfo. Caption := '';
+      btnDisconnect.Visible := false;
+      btnConnect.Visible := true;
+    end;
+  end;
+end;
+
+procedure TLogin.btnDoneClick(Sender: TObject);
+begin
+  ModalResult := mrClose;
+end;
+
+procedure TLogin.FormCreate(Sender: TObject);
+begin
+  lblStatusMsg.Caption := '';
+  lblConnectionInfo.Caption := '';
+  ReadLoginParams;
+  if Assigned(SCM.scmConnection) then
+  begin
     if (SCM.scmConnection.Connected) then
     begin
       lblStatusMsg.Caption := 'Connected to DB server.';
@@ -109,17 +141,6 @@ begin
   end;
 end;
 
-procedure TLogin.btnDoneClick(Sender: TObject);
-begin
-  ModalResult := mrClose;
-end;
-
-procedure TLogin.FormCreate(Sender: TObject);
-begin
-  lblStatusMsg.Caption := '';
-  ReadLoginParams;
-end;
-
 procedure TLogin.FormKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
@@ -132,13 +153,18 @@ var
 ParamValue: string;
 begin
   lblStatusMsg.Caption := '';
+  lblConnectionInfo.Caption := '';
+
   if Assigned(SCM.scmConnection) then
   begin
+    // Form Caption. (reads TFDManager params).
     SCM.ReadConnectionDef('MSSQL_SwimClubMeet', 'DataBase', ParamValue);
     Caption := 'Connected to the ' + ParamValue + ' Database Server ...';
+    // Status Message Caption.
     if SCM.scmConnection.Connected then
     begin
       lblStatusMsg.Caption := 'Connected to DB server.';
+      SetConnectionInfo; // Machine, Server, SCM DB version.
       btnDisconnect.Visible := true;
       btnConnect.Visible := false;
     end
@@ -168,6 +194,36 @@ begin
   if UseOsAuthentication.Contains('yes') or UseOsAuthentication.Contains('true') then
     chkbOSAuthent.Checked := true else chkbOSAuthent.Checked := false;
   iFile.Free;
+end;
+
+procedure TLogin.SetConnectionInfo;
+var
+  VersionInfo: string;
+  HostMachine: string;
+begin
+  if Assigned(SCM.scmConnection) then
+  begin
+    if SCM.scmConnection.Connected then
+    begin
+      // Display some information on the connection.
+      with  lblConnectionInfo do
+      begin
+        Caption := 'FireDAC''s Connection Definition :' + sLineBreak;
+        Caption := Caption + SCM.scmFDManager.ConnectionDefFileName + sLineBreak + sLineBreak;
+        VersionInfo := SCM.scmConnection.ExecSQLScalar(
+    'SELECT CAST(SERVERPROPERTY(''ProductVersion'') AS VARCHAR(50)) + '' - '' ' +
+    '+ CAST(SERVERPROPERTY(''ProductLevel'') AS VARCHAR(50)) + '' - '' ' +
+    '+ CAST(SERVERPROPERTY(''Edition'') AS VARCHAR(50)) AS VersionInfo');
+        Caption := Caption + 'Server version: ' + VersionInfo + sLineBreak;
+        HostMachine := SCM.scmConnection.ExecSQLScalar(
+    'SELECT CAST(SERVERPROPERTY(''MachineName'') AS VARCHAR(50)) AS MachineName;');
+        Caption := Caption + 'Host Machine: ' + HostMachine + sLineBreak;
+        Caption := Caption + 'SCM database version: ' + SCM.GetDBVerInfo;
+      end;
+    end
+    else
+      lblConnectionInfo.Caption := '';
+  end;
 end;
 
 procedure TLogin.WriteLoginParams();

@@ -8986,7 +8986,7 @@ object Options: TOptions
       Top = 3
       Width = 73
       Height = 58
-      ImageCollection = AppData.imgcolDT
+      ImageCollection = IMG.imgcolDT
       ImageWidth = 0
       ImageHeight = 0
       ImageIndex = 16
@@ -9051,7 +9051,7 @@ object Options: TOptions
           Top = 89
           Width = 48
           Height = 48
-          ImageCollection = AppData.imgcolDT
+          ImageCollection = IMG.imgcolDT
           ImageWidth = 0
           ImageHeight = 0
           ImageIndex = 70
@@ -9062,7 +9062,7 @@ object Options: TOptions
           Top = 89
           Width = 48
           Height = 48
-          ImageCollection = AppData.imgcolDT
+          ImageCollection = IMG.imgcolDT
           ImageWidth = 0
           ImageHeight = 0
           ImageIndex = 79
@@ -9073,7 +9073,7 @@ object Options: TOptions
           Top = 143
           Width = 48
           Height = 48
-          ImageCollection = AppData.imgcolDT
+          ImageCollection = IMG.imgcolDT
           ImageWidth = 0
           ImageHeight = 0
           ImageIndex = 67
@@ -9084,7 +9084,7 @@ object Options: TOptions
           Top = 143
           Width = 48
           Height = 48
-          ImageCollection = AppData.imgcolDT
+          ImageCollection = IMG.imgcolDT
           ImageWidth = 0
           ImageHeight = 0
           ImageIndex = 78
@@ -9095,7 +9095,7 @@ object Options: TOptions
           Top = 89
           Width = 32
           Height = 32
-          ImageCollection = AppData.imgcolDT
+          ImageCollection = IMG.imgcolDT
           ImageWidth = 0
           ImageHeight = 0
           ImageIndex = 77
@@ -9108,7 +9108,7 @@ object Options: TOptions
           Top = 143
           Width = 32
           Height = 32
-          ImageCollection = AppData.imgcolDT
+          ImageCollection = IMG.imgcolDT
           ImageWidth = 0
           ImageHeight = 0
           ImageIndex = 77
@@ -9242,7 +9242,7 @@ object Options: TOptions
           Top = 92
           Width = 647
           Height = 29
-          Images = AppData.vimglistDTGrid
+          Images = IMG.vimglistDTGrid
           RightButton.ImageIndex = 1
           RightButton.ImageName = 'Folders'
           RightButton.Visible = True
@@ -9255,7 +9255,7 @@ object Options: TOptions
           Top = 216
           Width = 647
           Height = 29
-          Images = AppData.vimglistDTGrid
+          Images = IMG.vimglistDTGrid
           RightButton.ImageIndex = 1
           RightButton.ImageName = 'Folders'
           RightButton.Visible = True
@@ -9268,7 +9268,7 @@ object Options: TOptions
           Top = 30
           Width = 647
           Height = 29
-          Images = AppData.vimglistDTGrid
+          Images = IMG.vimglistDTGrid
           RightButton.ImageIndex = 1
           RightButton.ImageName = 'Folders'
           RightButton.Visible = True
@@ -9281,7 +9281,7 @@ object Options: TOptions
           Top = 278
           Width = 647
           Height = 29
-          Images = AppData.vimglistDTGrid
+          Images = IMG.vimglistDTGrid
           RightButton.ImageIndex = 1
           RightButton.ImageName = 'Folders'
           RightButton.Visible = True

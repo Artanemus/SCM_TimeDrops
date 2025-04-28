@@ -43,7 +43,7 @@ unit tdReConstruct;
 
 interface
 
-uses dmSCM, dmAppData, System.SysUtils, System.Classes, system.Hash,
+uses dmSCM, System.SysUtils, System.Classes, system.Hash,
 DateUtils, variants, SCMDefines, Data.DB, tdSetting, XSuperJSON, XSuperObject,
 FireDAC.Stan.Param, tdTimingSystemStatus, uAppUtils;
 
@@ -72,11 +72,11 @@ begin
   *)
   // C o n s t r u c t   f i l e n a m e .
   fn := '';
-  fn := fn + 'Session'+ IntToStr(AppData.qrySession.FieldByName('SessionID').AsInteger);
-  fn := fn + '_Event'+ IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
-  fn := fn + '_Heat' + IntToStr(AppData.qryHeat.FieldByName('HeatNum').AsInteger);
+  fn := fn + 'Session'+ IntToStr(SCM.qrySession.FieldByName('SessionID').AsInteger);
+  fn := fn + '_Event'+ IntToStr(SCM.qryEvent.FieldByName('EventNum').AsInteger);
+  fn := fn + '_Heat' + IntToStr(SCM.qryHeat.FieldByName('HeatNum').AsInteger);
   fn := fn + '_Race' + IntToStr(raceNumber) + '.JSON';
-  fn := IncludeTrailingPathDelimiter(Settings.ReConstruct) + fn;
+  fn := IncludeTrailingPathDelimiter(Settings.ReConstructFolder) + fn;
   { In case the file already exists, the current file contents will be
   completely replaced with the new. If the named file cannot be created
   or opened, SaveToFile raises an EFCreateError exception}
@@ -102,7 +102,7 @@ begin
       exit;
     etINDV:
     begin
-      if not AppData.qryINDV.IsEmpty then
+      if not SCM.qryINDV.IsEmpty then
         SQL := '''
         SELECT MAX(SplitTime) AS MaxSplitTime
         FROM SwimClubMeet.dbo.Entrant
@@ -112,7 +112,7 @@ begin
       end;
     etTEAM:
     begin
-      if not AppData.qryTEAM.IsEmpty then
+      if not SCM.qryTEAM.IsEmpty then
         SQL := '''
         SELECT MAX(SplitTime) AS MaxSplitTime
         FROM SwimClubMeet.dbo.Team
@@ -147,7 +147,7 @@ var
   SQL: string;
 begin
   result := etUnknown;
-    if not AppData.qryEvent.IsEmpty then
+    if not SCM.qryEvent.IsEmpty then
     begin
       SQL := 'SELECT [EventTypeID] FROM [SwimClubMeet].[dbo].[Event] ' +
         'INNER JOIN Distance ON [Event].DistanceID = Distance.DistanceID ' +
@@ -170,7 +170,7 @@ begin
   Result := 'X';
 
   // Ensure the query isn't empty
-  if not AppData.qryEvent.IsEmpty then
+  if not SCM.qryEvent.IsEmpty then
   begin
     // Query to get boys count
     SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
@@ -209,7 +209,7 @@ var
   laneIsEmpty: boolean;
 begin
   if ADataSet.IsEmpty then exit;
-  LenOfPool := AppData.qrySwimClub.FieldByName('LenOfPool').AsInteger;
+  LenOfPool := SCM.qrySwimClub.FieldByName('LenOfPool').AsInteger;
 
   ADataSet.First;
   fs := TFormatSettings.Create;
@@ -314,8 +314,8 @@ begin
       // --- SPLITS --- (Simplified the logic slightly)
       With LaneObj.A['Splits'] do
       begin
-          AppData.qrySplit.Close;
-          AppData.qrySplit.ParamByName('EVENTTYPEID').AsInteger := Ord(aEventType);
+          SCM.qrySplit.Close;
+          SCM.qrySplit.ParamByName('EVENTTYPEID').AsInteger := Ord(aEventType);
 
           // Determine ID based on event type only if the lane is NOT empty
           ID := 0;
@@ -324,26 +324,26 @@ begin
               if aEventType = etINDV then
               begin
                   ID := ADataSet.FieldByName('EntrantID').AsInteger;
-                  AppData.qrySplit.ParamByName('ID').AsInteger := ID;
+                  SCM.qrySplit.ParamByName('ID').AsInteger := ID;
               end
               else if aEventType = etTEAM then
               begin
                   ID := ADataSet.FieldByName('TeamID').AsInteger;
-                  AppData.qrySplit.ParamByName('ID').AsInteger := ID;
+                  SCM.qrySplit.ParamByName('ID').AsInteger := ID;
               end;
 
               // Only query splits if we have a valid ID
               if ID > 0 then // Or whatever condition indicates a valid ID
               begin
-                  AppData.qrySplit.Prepare; // Prepare only if needed
-                  AppData.qrySplit.Open;
-                  if AppData.qrySplit.Active and not AppData.qrySplit.IsEmpty then // Check if query returned rows
+                  SCM.qrySplit.Prepare; // Prepare only if needed
+                  SCM.qrySplit.Open;
+                  if SCM.qrySplit.Active and not SCM.qrySplit.IsEmpty then // Check if query returned rows
                   begin
                       accDist := 0; // Start accumulated distance at 0
-                      AppData.qrySplit.First;
-                      while not AppData.qrySplit.Eof do
+                      SCM.qrySplit.First;
+                      while not SCM.qrySplit.Eof do
                       begin
-                          vtime := AppData.qrySplit.FieldByName('SplitTime').AsVariant;
+                          vtime := SCM.qrySplit.FieldByName('SplitTime').AsVariant;
                           // Process only if SplitTime is not null/empty/zero
                           if not (VarIsNull(vtime) or VarIsEmpty(vtime) or (VarIsType(vtime, varDate) and (TDateTime(vtime)=0))) then
                           begin
@@ -354,7 +354,7 @@ begin
                               Add(splitObj); // Add to LaneObj.A['Splits']
                           end;
                           // Always move next, even if split time was invalid, to avoid infinite loop
-                          AppData.qrySplit.Next;
+                          SCM.qrySplit.Next;
                       end; // while not Eof
                   end; // if Active and not IsEmpty
               end; // if ID > 0
@@ -371,10 +371,10 @@ procedure ReConstructHeat(aEventType: scmEventType);
 var
 dt: TDateTime;
 begin
-  AppData.qryHeat.ApplyMaster;
-  if AppData.qryHeat.IsEmpty then exit;
-  AppData.qryHeat.first;
-  while not AppData.qryHeat.eof do
+  SCM.qryHeat.ApplyMaster;
+  if SCM.qryHeat.IsEmpty then exit;
+  SCM.qryHeat.first;
+  while not SCM.qryHeat.eof do
   begin
 
       // Create the main SuperObject
@@ -383,18 +383,18 @@ begin
     X.S['type'] := 'Results';
     X.S['createdAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
     X.S['protocolVersion'] := '1.1.0';
-    X.I['sessionId'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
-    X.I['sessionNumber'] := AppData.qrySession.FieldByName('SessionID').AsInteger;
-    dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
+    X.I['sessionId'] := SCM.qrySession.FieldByName('SessionID').AsInteger;
+    X.I['sessionNumber'] := SCM.qrySession.FieldByName('SessionID').AsInteger;
+    dt := SCM.qrySession.FieldByName('SessionStart').AsDateTime;
     X.S['startTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', dt, AFormatSettings);
 
     // EVENT DATA
-    X.I['eventID'] := AppData.qryEvent.FieldByName('EventID').AsInteger;
-    X.I['eventNumber'] := AppData.qryEvent.FieldByName('EventNum').AsInteger;
+    X.I['eventID'] := SCM.qryEvent.FieldByName('EventID').AsInteger;
+    X.I['eventNumber'] := SCM.qryEvent.FieldByName('EventNum').AsInteger;
 
     // HEAT DATA
-    X.I['heatID'] := AppData.qryHeat.FieldByName('HeatID').AsInteger;
-    X.I['heatNumber'] := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
+    X.I['heatID'] := SCM.qryHeat.FieldByName('HeatID').AsInteger;
+    X.I['heatNumber'] := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
     X.S['startTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
     Inc(raceNumber);
     X.I['raceNumber'] := raceNumber;
@@ -402,22 +402,22 @@ begin
     // lanes and timekeepers times.
     if aEventType = etINDV then
     begin
-      AppData.qryINDV.ApplyMaster;
-      ReConstructLanes(AppData.qryINDV, aEventType);
+      SCM.qryINDV.ApplyMaster;
+      ReConstructLanes(SCM.qryINDV, aEventType);
     end
     else if aEventType = etTEAM then
     begin
-      AppData.qryTEAM.ApplyMaster;
-      ReConstructLanes(AppData.qryTEAM, aEventType);
+      SCM.qryTEAM.ApplyMaster;
+      ReConstructLanes(SCM.qryTEAM, aEventType);
     end;
     // write out the TSuperObject to a JSON Time-Drops 'Results' file
     SaveToTimeDropResultFile;
     // write/update 'Timing System Status' }
-    BuildAndSaveTimingSystemStatus(Settings.ReConstruct,
-      AppData.qrySession.FieldByName('SessionID').AsInteger, X.I['heatNumber'],
+    BuildAndSaveTimingSystemStatus(Settings.ReConstructFolder,
+      SCM.qrySession.FieldByName('SessionID').AsInteger, X.I['heatNumber'],
       X.I['eventNumber']);
 
-    AppData.qryHeat.Next
+    SCM.qryHeat.Next
   end;
 end;
 
@@ -425,18 +425,18 @@ procedure ReConstructEvent(SessionID: integer);
 var
 aEventType: scmEventType;
 begin
-  AppData.qryEvent.ApplyMaster;
-  if AppData.qryEvent.IsEmpty then exit;
-  AppData.qryEvent.first;
-  while not AppData.qryEvent.eof do
+  SCM.qryEvent.ApplyMaster;
+  if SCM.qryEvent.IsEmpty then exit;
+  SCM.qryEvent.first;
+  while not SCM.qryEvent.eof do
   begin
 
-    AppData.qryDistance.ApplyMaster;
-    aEventType := scmEventType(AppData.qryDistance.FieldByName('EventTypeID').AsInteger);
+    SCM.qryDistance.ApplyMaster;
+    aEventType := scmEventType(SCM.qryDistance.FieldByName('EventTypeID').AsInteger);
 
     // R e - c o n s t r u c t   H E A T .
     ReConstructHeat(aEventType);
-    AppData.qryEvent.next;
+    SCM.qryEvent.next;
   end;
 end;
 
@@ -455,8 +455,8 @@ begin
   raceNumber := 0;
   found := true;
   // check current session
-  if AppData.qrySession.FieldByName('SessionID').AsInteger <> SessionID then
-    found := AppData.LocateSCMSessionID(SessionID);
+  if SCM.qrySession.FieldByName('SessionID').AsInteger <> SessionID then
+    found := SCM.LocateSessionID(SessionID);
 
   if found then
   begin

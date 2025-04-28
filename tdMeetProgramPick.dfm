@@ -24,7 +24,6 @@ object MeetProgramPick: TMeetProgramPick
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 384
     object btnOk: TButton
       Left = 281
       Top = 6
@@ -53,8 +52,6 @@ object MeetProgramPick: TMeetProgramPick
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitTop = 41
-    ExplicitHeight = 343
     object lblEventCSV: TLabel
       Left = 3
       Top = 33
@@ -67,7 +64,7 @@ object MeetProgramPick: TMeetProgramPick
       Top = 60
       Width = 28
       Height = 29
-      ImageCollection = AppData.imgcolDT
+      ImageCollection = IMG.imgcolDT
       ImageWidth = 0
       ImageHeight = 0
       ImageIndex = 77
@@ -80,7 +77,7 @@ object MeetProgramPick: TMeetProgramPick
       Top = 131
       Width = 28
       Height = 28
-      ImageCollection = AppData.imgcolDT
+      ImageCollection = IMG.imgcolDT
       ImageWidth = 0
       ImageHeight = 0
       ImageIndex = 77
@@ -93,7 +90,7 @@ object MeetProgramPick: TMeetProgramPick
       Top = 60
       Width = 613
       Height = 29
-      Images = AppData.vimglistDTGrid
+      Images = IMG.vimglistDTGrid
       RightButton.ImageIndex = 1
       RightButton.ImageName = 'Folders'
       RightButton.Visible = True

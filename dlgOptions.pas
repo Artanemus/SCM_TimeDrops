@@ -5,7 +5,7 @@ interface
 uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
   System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, dmAppData, Vcl.StdCtrls, Vcl.ExtCtrls,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls,
   Vcl.ComCtrls, Vcl.VirtualImage, Vcl.Mask, tdSetting;
 
 type
@@ -178,8 +178,8 @@ procedure TOptions.LoadFromSettings;
 begin
   btnedtResults.Text := Settings.MeetsFolder;
   btnedtMeetProgram.Text := Settings.ProgramFolder;
-  btnedtAppData.Text := Settings.AppData;
-  btnedtReConstruct.Text := Settings.ReConstruct;
+  btnedtAppData.Text := Settings.AppDataFolder;
+  btnedtReConstruct.Text := Settings.ReConstructFolder;
 
   case Settings.CalcRTMethod of
   1:
@@ -220,8 +220,8 @@ procedure TOptions.SaveToSettings;
 begin
   Settings.MeetsFolder := btnedtResults.Text;
   Settings.ProgramFolder := btnedtMeetProgram.Text;
-  Settings.AppData := btnedtAppData.Text;
-  Settings.ReConstruct := btnedtReConstruct.Text;
+  Settings.AppDataFolder := btnedtAppData.Text;
+  Settings.ReConstructFolder := btnedtReConstruct.Text;
   Settings.CalcRTMethod := rgrpMeanTimeMethod.ItemIndex;
   try
     Settings.AcceptedDeviation := strToFloat(lbledtDeviation.Text);

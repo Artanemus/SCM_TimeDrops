@@ -81,7 +81,7 @@ end;
 
 procedure TReConstructDlg.LoadFromSettings;
 begin
-  btnedtExportFolder.Text := Settings.ReConstruct;
+  btnedtExportFolder.Text := Settings.ReConstructFolder;
 end;
 
 procedure TReConstructDlg.LoadSettings;
@@ -99,7 +99,7 @@ end;
 
 procedure TReConstructDlg.SaveToSettings;
 begin
-  Settings.ReConstruct := btnedtExportFolder.Text;
+  Settings.ReConstructFolder := btnedtExportFolder.Text;
   Settings.SaveToFile();
 end;
 

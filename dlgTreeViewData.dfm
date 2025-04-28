@@ -8986,7 +8986,7 @@ object TreeViewData: TTreeViewData
     Font.Name = 'Segoe UI'
     Font.Style = []
     HideSelection = False
-    Images = AppData.vimglistTreeView
+    Images = IMG.vimglistTreeView
     Indent = 30
     ParentFont = False
     ReadOnly = True

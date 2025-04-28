@@ -22,19 +22,19 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls, Vcl.StdCtrls,
   Vcl.ControlList, Vcl.VirtualImage, Vcl.Buttons, Vcl.BaseImageCollection,
-  Vcl.ImageCollection, Vcl.Menus, dmSCM, dmAppData, tdSetting, FireDAC.Comp.Client,
+  Vcl.ImageCollection, Vcl.Menus, tdSetting, FireDAC.Comp.Client,
   Data.DB, Vcl.Grids, Vcl.DBGrids, SCMDefines, System.StrUtils, AdvUtil, AdvObj,
   BaseGrid, AdvGrid, DBAdvGrid, System.Actions, Vcl.ActnList, Vcl.ToolWin,
   Vcl.ActnMan, Vcl.ActnCtrls, Vcl.ActnMenus, Vcl.PlatformDefaultStyleActnCtrls,
   Vcl.ExtDlgs, FireDAC.Stan.Param, Vcl.ComCtrls, Vcl.DBCtrls, tdReConstruct,
   Vcl.PlatformVclStylesActnCtrls, Vcl.WinXPanels, Vcl.WinXCtrls,
-  System.Types, System.IOUtils, Math, DirectoryWatcher,
-  tdReConstructDlg;
+  System.Types, System.IOUtils, System.Math, DirectoryWatcher,
+  tdReConstructDlg, dmIMG;
 
 type
   TMain = class(TForm)
     actnMenuBar: TActionMainMenuBar;
-    dtGrid: TDBAdvGrid;
+    tdsGrid: TDBAdvGrid;
     btnNextDTFile: TButton;
     btnNextEvent: TButton;
     btnPrevDTFile: TButton;
@@ -54,7 +54,7 @@ type
     pBar: TProgressBar;
     dbtxtDTFileName: TDBText;
     pnlSCM: TPanel;
-    pnlDT: TPanel;
+    pnlTDS: TPanel;
     rpnlBody: TRelativePanel;
     pnlTool1: TPanel;
     pnlTool2: TPanel;
@@ -125,7 +125,7 @@ type
     procedure btnPickSCMTreeViewClick(Sender: TObject);
     procedure btnPrevDTFileClick(Sender: TObject);
     procedure btnPrevEventClick(Sender: TObject);
-    procedure dtGridClickCell(Sender: TObject; ARow, ACol: Integer);
+    procedure tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormHide(Sender: TObject);
@@ -149,20 +149,16 @@ type
     procedure LoadSettings; // JSON Program Settings
     procedure SaveToSettings; // JSON Program Settings
     procedure UpdateCaption();
-    procedure UpdateSessionStartLabel();
-    procedure UpdateEventDetailsLabel();
-    procedure UpdateEventDetailsTD;
     procedure UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
-        dtActiveRT);
+        scmActiveRT);
 
   const
     AcceptedTimeKeeperDeviation = 0.3;
     SCM_SELECTSESSION = WM_USER + 999;
 
   protected
-    procedure MSG_UpdateUI(var Msg: TMessage); message SCM_UPDATEUI;
-    procedure MSG_UpdateUI2(var Msg: TMessage); message SCM_UPDATEUI2;
-    procedure MSG_UpdateUI3(var Msg: TMessage); message SCM_UPDATEUI3;
+    procedure MSG_UpdateUISCM(var Msg: TMessage); message SCM_UPDATEUI_SCM;
+    procedure MSG_UpdateUITDS(var Msg: TMessage); message SCM_UPDATEUI_TDS;
     procedure MSG_SelectSession(var Msg: TMessage); message SCM_SELECTSESSION;
 
   public
@@ -179,11 +175,11 @@ implementation
 
 {$R *.dfm}
 
-uses UITypes, DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
+uses System.UITypes, System.DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
   tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin,
-  Winapi.ShellAPI, dlgFDExplorer;
-  
+  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS;
+
 const
 
   CAPTION_RECONSTRUCT = '%s files ...';
@@ -211,8 +207,8 @@ begin
     else if Settings.MeetProgramType = 0 then
       BuildAndSaveMeetProgramBasic(fn); // Basic meet program.
     // re-set to head of session.
-    AppData.dsEvent.DataSet.First;
-    AppData.dsHeat.DataSet.First;
+    SCM.dsEvent.DataSet.First;
+    SCM.dsHeat.DataSet.First;
     // update grid.
     SCMGrid.EndUpdate;
     // Message user.
@@ -231,9 +227,9 @@ begin
   if not Assigned(SCM) then passed := false;
   if not Assigned(SCM.scmConnection) then passed := false;
   if not SCM.scmConnection.Connected then passed := false;
-  if not Assigned(appData) then passed := false;
-  if not appData.SCMDataIsActive then passed := false;
-  if not appData.TDDataIsActive then passed := false;
+  if not Assigned(TDS) then passed := false;
+  if not SCM.DataIsActive then passed := false;
+  if not TDS.DataIsActive then passed := false;
 
   if passed then
   begin
@@ -264,20 +260,19 @@ begin
     begin
       if DirHasResultFiles(Settings.MeetsFolder) then
       begin
-        AppData.DisableAllTDControls;
-        dtGrid.BeginUpdate;
+        TDS.DisableAllTDControls;
+        tdsGrid.BeginUpdate;
         try
           // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
           // Necessary to manually calculate Primary keys in each memory table.
           ProcessDirectory(Settings.MeetsFolder);
-          dtGrid.EndUpdate;
+          tdsGrid.EndUpdate;
           // Update lblEventDetailsTD.
-          PostMessage(self.Handle, SCM_UPDATEUI2, 0, 0);
           // Paint cell icons.
-          PostMessage(self.Handle, SCM_UPDATEUI3, 0, 0);
+          PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0);
         finally
-          AppData.EnableAllTDControls;
-          dtGrid.EndUpdate;
+          TDS.EnableAllTDControls;
+          tdsGrid.EndUpdate;
         end;
       end;
     end;
@@ -294,9 +289,9 @@ begin
       for AFile in DTAppendFile.Files do
       begin
         { Calls - PrepareExtraction, ProcessEvent, ProcessHeat, ProcessEntrant }
-        dtGrid.BeginUpdate;
+        tdsGrid.BeginUpdate;
         tdResults.ProcessFile(AFile);
-        dtGrid.EndUpdate;
+        tdsGrid.EndUpdate;
       end;
     finally
       // =====================================================
@@ -321,24 +316,21 @@ begin
   begin
     scmGrid.BeginUpdate;
     try
-      appData.SetUpSCMConnection;
+      SCM.ActivateDataSCM;
     finally
       scmGrid.EndUpdate;
     end;
     // UPDATE ICONS located in panel (pnlTool), located left of scmGrid.
-    PostMessage(Self.Handle, SCM_UPDATEUI, 0 , 0 );
     // Update description detail in panel (lblEventDetails), located above scmGrid.
-    PostMessage(Self.Handle, SCM_UPDATEUI2, 0 , 0 );
     // Update cell icons (ActiveRT) in scmGrid.
-    PostMessage(Self.Handle, SCM_UPDATEUI3, 0 , 0 );
+    PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 );
   end;
 
 end;
 
 procedure TMain.actnLoginToSCMUpdate(Sender: TObject);
 begin
-  if Assigned(SCM) and SCM.scmFDManager.Active and
-  Assigned(SCM.scmConnection) then
+  if Assigned(SCM) and SCM.scmFDManager.Active then
     TAction(Sender).Enabled := true
   else
     TAction(Sender).Enabled := false;
@@ -349,11 +341,14 @@ var
   dlg: TPostData;
   mr: TModalResult;
   I, idx: integer;
-  ALaneNum: integer;
+  aTDSessionID, aTDEventNum, aTDHeatNum, ALaneNum: integer;
   s: string;
 begin
   // Establish if SCM AND DT are syncronized.
-  if not AppData.SyncCheck() then
+  aTDSessionID := TDS.tblmSession.FieldByName('SessionID').AsInteger;
+  aTDEventNum := TDS.tblmSession.FieldByName('EventNum').AsInteger;
+  aTDHeatNum := TDS.tblmSession.FieldByName('HeatNum').AsInteger;
+  if not TDS.SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum) then
   begin
     s := '''
       SCM and DT are not synronized. (Based on Session ID, event and heat number.)
@@ -380,23 +375,23 @@ begin
     // Post all race-times to SCM ...
     if idx = 0 then
     begin
-      DTGrid.BeginUpdate;
-      AppData.POST_All;
-      DTGrid.ClearRowSelect;  // UI clean-up .
-      DTGrid.EndUpdate;
+      tdsGrid.BeginUpdate;
+      TDS.POST_All;
+      tdsGrid.ClearRowSelect;  // UI clean-up .
+      tdsGrid.EndUpdate;
     end
     // Post only racetimes from selected lanes to SCM ...
     else if idx = 1 then
     begin
-      DTGrid.BeginUpdate;
-      for i := 0 to DTGrid.SelectedRowCount - 1 do
+      tdsGrid.BeginUpdate;
+      for i := 0 to tdsGrid.SelectedRowCount - 1 do
       begin
-        idx := DTGrid.SelectedRow[i];
-        ALaneNum := StrToIntDef(DTGrid.Cells[2, idx], 0);
-        AppData.POST_Lane(ALaneNum);
+        idx := tdsGrid.SelectedRow[i];
+        ALaneNum := StrToIntDef(tdsGrid.Cells[2, idx], 0);
+        TDS.POST_Lane(ALaneNum);
       end;
-      DTGrid.ClearRowSelect; // UI clean-up .
-      DTGrid.EndUpdate;
+      tdsGrid.ClearRowSelect; // UI clean-up .
+      tdsGrid.EndUpdate;
     end;
     StatBar.SimpleText := 'The POST race-times to SCM completed.';
     Timer1.Enabled := true;
@@ -410,7 +405,7 @@ end;
 
 procedure TMain.actnPostUpdate(Sender: TObject);
 begin
-  if Assigned(AppData) then
+  if Assigned(TDS) and Assigned(SCM) then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -431,16 +426,14 @@ begin
   begin
     // Update any preference changes
     LoadSettings;
-    dtGrid.BeginUpdate;
-    appData.tblmHeat.ApplyMaster;
-    appData.tblmLane.ApplyMaster;
-    dtGrid.EndUpdate;
+    tdsGrid.BeginUpdate;
+    TDS.tblmHeat.ApplyMaster;
+    TDS.tblmLane.ApplyMaster;
+    tdsGrid.EndUpdate;
     // Update lblEventDetailsTD.
-    PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
     // paint cell icons into grid
-    PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
-
-  end;
+    PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+    end;
   dlg.Free;
   UpdateCaption;
 end;
@@ -459,10 +452,10 @@ begin
     Settings.LoadFromFile();
     // The default filename supplied in settings.
     SCMGrid.BeginUpdate;
-    ReconstructSession(AppData.qrySession.FieldByName('SessionID').AsInteger);
+    ReconstructSession(SCM.qrySession.FieldByName('SessionID').AsInteger);
     // re-set to head of session.
-    AppData.dsEvent.DataSet.First;
-    AppData.dsHeat.DataSet.First;
+    SCM.dsEvent.DataSet.First;
+    SCM.dsHeat.DataSet.First;
     // update grid.
     SCMGrid.EndUpdate;
     // Message user.
@@ -481,8 +474,8 @@ begin
   if not Assigned(SCM) then passed := false;
   if not Assigned(SCM.scmConnection) then passed := false;
   if not SCM.scmConnection.Connected then passed := false;
-  if not Assigned(appData) then passed := false;
-  if not appData.SCMDataIsActive then passed := false;
+  if not Assigned(TDS) then passed := false;
+  if not SCM.DataIsActive then passed := false;
 
   if passed then
   begin
@@ -496,7 +489,7 @@ end;
 procedure TMain.actnRefreshExecute(Sender: TObject);
 begin
   SCMGrid.BeginUpdate;
-  AppData.RefreshSCM;
+  SCM.RefreshSCM;
   SCMGrid.EndUpdate;
 end;
 
@@ -508,40 +501,32 @@ begin
   dlg := TSessionPicker.Create(Self);
   dlg.rtnSessionID := 0;
   // the picker will locate to the given session id.
-  if AppData.qrySession.Active and not AppData.qrySession.IsEmpty then
+  if SCM.qrySession.Active and not SCM.qrySession.IsEmpty then
   begin
-    dlg.rtnSessionID := AppData.qrySession.FieldByName('SessionID').AsInteger;
+    dlg.rtnSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
   end;
 
   mr := dlg.ShowModal;
   if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
   begin
-    AppData.MSG_Handle := 0;
-    AppData.LocateSCMSessionID(dlg.rtnSessionID);
-    AppData.MSG_Handle := Self.Handle;
+    SCM.MSG_Handle := 0;
+    SCM.LocateSessionID(dlg.rtnSessionID);
+    SCM.MSG_Handle := Self.Handle;
   end;
   dlg.Free;
   UpdateCaption;
-  PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
+  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
 end;
 
 procedure TMain.actnSelectSessionUpdate(Sender: TObject);
-var
-Passed: boolean;
 begin
-  passed := true;
-  if not Assigned(SCM) then passed := false;
-  if not Assigned(SCM.scmConnection) then passed := false;
-  if not SCM.scmConnection.Connected then passed := false;
-  if not Assigned(appData) then passed := false;
-  if not appData.SCMDataIsActive then passed := false;
-
-  if passed then
+  if (Assigned(SCM)) and (SCM.DataIsActive = true) then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
   end
   else
+    if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
 end;
 
@@ -574,23 +559,14 @@ begin
 end;
 
 procedure TMain.actnSelectSwimClubUpdate(Sender: TObject);
-var
-Passed: boolean;
 begin
-  passed := true;
-  if not Assigned(SCM) then passed := false;
-  if not Assigned(SCM.scmConnection) then passed := false;
-  if not SCM.scmConnection.Connected then passed := false;
-  if not Assigned(appData) then passed := false;
-  if not appData.SCMDataIsActive then passed := false;
-
-
-  if false then
+  if (Assigned(SCM)) and (SCM.DataIsActive = true) then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
   end
   else
+    if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
 end;
 
@@ -610,11 +586,18 @@ end;
 procedure TMain.actnSyncTDExecute(Sender: TObject);
 var
 found: boolean;
+aSCMSessionID, aSCMEventNum, aSCMHeatNum: integer;
 begin
-  DTGrid.BeginUpdate;
-  found := AppData.SyncDTtoSCM(); // data event - scroll.
-  DTGrid.EndUpdate;
-  UpdateEventDetailsTD;
+  tdsGrid.BeginUpdate;
+  aSCMSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
+  aSCMEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
+  aSCMHeatNum := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
+  found := TDS.SyncDTtoSCM(aSCMSessionID, aSCMEventNum, aSCMHeatNum); // data event - scroll.
+  tdsGrid.EndUpdate;
+
+  {TODO -oBSA -cGeneral : CHECK: Usage of UpdateEventDetails}
+  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0);
+
   if not found then
   begin
     StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
@@ -623,25 +606,41 @@ begin
   end;
 end;
 
-procedure TMain.actnSyncSCMExecute(Sender: TObject);
-var
-Passed: boolean;
+procedure TMain.actnSyncTDUpdate(Sender: TObject);
 begin
-  passed := true;
-  if not Assigned(SCM) then passed := false;
-  if not Assigned(SCM.scmConnection) then passed := false;
-  if not SCM.scmConnection.Connected then passed := false;
-  if not Assigned(appData) then passed := false;
-  if not appData.SCMDataIsActive then passed := false;
-  if not appData.TDDataIsActive then passed := false;
-
-  if passed then
+  //  if not Assigned(SCM.scmConnection) then exit;
+  //  if not SCM.scmConnection.Connected then exit;
+  if (Assigned(SCM)) and Assigned(TDS)
+    and (SCM.DataIsActive = true) and (TDS.DataIsActive = true) then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
   end
   else
+    if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
+end;
+
+procedure TMain.actnSyncSCMExecute(Sender: TObject);
+var
+found: boolean;
+aTDSSessionID, aTDSEventNum, aTDSHeatNum: integer;
+begin
+  tdsGrid.BeginUpdate;
+  aTDSSessionID := TDS.tblmSession.FieldByName('SessionID').AsInteger;
+  aTDSEventNum := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
+  aTDSHeatNum := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
+  found := SCM.SyncSCMToDT(aTDSSessionID, aTDSEventNum, aTDSHeatNum); // data event - scroll.
+  tdsGrid.EndUpdate;
+
+  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+
+  if not found then
+  begin
+    StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
+    + 'Your ''Results'' folder may not contain the session files required to sync.';
+    timer1.enabled := true;
+  end;
 end;
 
 procedure TMain.actnSyncSCMUpdate(Sender: TObject);
@@ -652,9 +651,9 @@ begin
   if not Assigned(SCM) then passed := false;
   if not Assigned(SCM.scmConnection) then passed := false;
   if not SCM.scmConnection.Connected then passed := false;
-  if not Assigned(appData) then passed := false;
-  if not appData.SCMDataIsActive then passed := false;
-  if not appData.TDDataIsActive then passed := false;
+  if not Assigned(TDS) then passed := false;
+  if not TDS.DataIsActive then exit;
+  if not SCM.DataIsActive then exit;
 
   if passed then
   begin
@@ -665,19 +664,6 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
-procedure TMain.actnSyncTDUpdate(Sender: TObject);
-begin
-  TAction(Sender).Enabled := false;
-  if not Assigned(SCM) then exit;
-  if not Assigned(SCM.scmConnection) then exit;
-  if not SCM.scmConnection.Connected then exit;
-  if not Assigned(appData) then exit;
-  if not appData.SCMDataIsActive then exit;
-  if not appData.TDDataIsActive then exit;
-
-  if not TAction(Sender).Enabled then
-    TAction(Sender).Enabled := true;
-end;
 
 procedure TMain.actTDTableViewerExecute(Sender: TObject);
 var
@@ -734,26 +720,26 @@ var
   lastHtID, lastEvID, IDht, IDev: integer;
   found: boolean;
 begin
-  DTGrid.BeginUpdate;
+  tdsGrid.BeginUpdate;
   // this hack find the last event ID and last heat ID in the current
   // Master-Detail linked Dolphin Timing data tables.
-  IDHt := AppData.tblmHeat.fieldbyName('HeatID').AsInteger;
-  AppData.tblmHeat.Last;
-  lastHtID := AppData.tblmHeat.fieldbyName('HeatID').AsInteger;
-  IDEv := AppData.tblmEvent.fieldbyName('EventID').AsInteger;
-  AppData.tblmEvent.Last;
-  lastEvID := AppData.tblmHeat.fieldbyName('EventID').AsInteger;
-  found := AppData.tblmEvent.Locate('EventID', IDEv);
+  IDHt := TDS.tblmHeat.fieldbyName('HeatID').AsInteger;
+  TDS.tblmHeat.Last;
+  lastHtID := TDS.tblmHeat.fieldbyName('HeatID').AsInteger;
+  IDEv := TDS.tblmEvent.fieldbyName('EventID').AsInteger;
+  TDS.tblmEvent.Last;
+  lastEvID := TDS.tblmHeat.fieldbyName('EventID').AsInteger;
+  found := TDS.tblmEvent.Locate('EventID', IDEv);
   if found then
-    AppData.tblmHeat.Locate('HeatID', IDHt);
-  DTGrid.EndUpdate;
+    TDS.tblmHeat.Locate('HeatID', IDHt);
+  tdsGrid.EndUpdate;
 
   // CNTRL+SHIFT - quick key to move to NEXT S E S S I O N .
   if (GetKeyState(VK_CONTROL) < 0) and (GetKeyState(VK_SHIFT) < 0) then
   begin
-    AppData.dsmSession.DataSet.next;
-    AppData.dsmEvent.DataSet.first;
-    AppData.dsmHeat.DataSet.first;
+    TDS.dsmSession.DataSet.next;
+    TDS.dsmEvent.DataSet.first;
+    TDS.dsmHeat.DataSet.first;
   end
     // CNTRL- quick key to move to NEXT E V E N T .
   else if (GetKeyState(VK_CONTROL) < 0) then
@@ -761,17 +747,17 @@ begin
     { After reaching the last event for the current session ...
       a second click of btnNextDTFileClick is needed to recieve a Eof.
       Checking for max eventID removes this UI nonscence.}
-    if ((AppData.dsmEvent.DataSet.Eof) or
-      (AppData.tblmEvent.fieldbyName('EventID').AsInteger = lastEvID)) then
+    if ((TDS.dsmEvent.DataSet.Eof) or
+      (TDS.tblmEvent.fieldbyName('EventID').AsInteger = lastEvID)) then
     begin
-      AppData.dsmSession.DataSet.next;
-      AppData.dsmHeat.DataSet.First;
-      AppData.dsmHeat.DataSet.first;
+      TDS.dsmSession.DataSet.next;
+      TDS.dsmHeat.DataSet.First;
+      TDS.dsmHeat.DataSet.first;
     end
     else
     begin
-      AppData.dsmEvent.DataSet.next;
-      AppData.dsmHeat.DataSet.First;
+      TDS.dsmEvent.DataSet.next;
+      TDS.dsmHeat.DataSet.First;
     end;
   end
     // move to N E X T   H E A T .
@@ -779,21 +765,20 @@ begin
   begin
     { After reaching the last record a second click of btnNextDTFileClick is needed to
       recieve a Eof. Checking for max heatID removes this UI nonscence.}
-    if AppData.dsmHeat.DataSet.Eof or
-      (AppData.tblmHeat.fieldbyName('HeatID').AsInteger = lastHtID) then
+    if TDS.dsmHeat.DataSet.Eof or
+      (TDS.tblmHeat.fieldbyName('HeatID').AsInteger = lastHtID) then
     begin
-      AppData.dsmEvent.DataSet.next;
-      AppData.dsmHeat.DataSet.First;
+      TDS.dsmEvent.DataSet.next;
+      TDS.dsmHeat.DataSet.First;
     end
     else
     begin
-      AppData.dsmHeat.DataSet.next;
+      TDS.dsmHeat.DataSet.next;
     end;
   end;
   // Update lblEventDetailsTD.
-  PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
   // paint cell icons into grid
-  PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
 end;
 
 procedure TMain.btnNextEventClick(Sender: TObject);
@@ -803,36 +788,33 @@ var
   id: integer;
 begin
   if not Assigned(SCM) then exit;
-  if not Assigned(SCM.scmConnection) then exit;
-  if not SCM.scmConnection.Connected then exit;
-  if not Assigned(appData) then exit;
-  if not appData.SCMDataIsActive then exit;
+  if not SCM.DataIsActive then exit;
 
   if (GetKeyState(VK_CONTROL) < 0) then
   begin
-      AppData.dsEvent.DataSet.next;
-      AppData.dsHeat.DataSet.First;
+      SCM.dsEvent.DataSet.next;
+      SCM.dsHeat.DataSet.First;
   end
   else
   begin
     // Get the MAX HeatNum...
     sql := 'SELECT MAX(HeatNum) FROM [SwimClubMeet].[dbo].[HeatIndividual] WHERE [EventID] = :ID';
-    id := AppData.dsEvent.DataSet.FieldByName('EventID').AsInteger;
+    id := SCM.dsEvent.DataSet.FieldByName('EventID').AsInteger;
     v := SCM.scmConnection.ExecSQLScalar(sql,[id]);
     if VarIsNull(v) then v := 0;
     { After reaching the last record a second click of btnNextEvent is needed to
       recieve a Eof. Checking for max heatnum removes this UI nonsence.}
-    if AppData.dsHeat.DataSet.Eof or (AppData.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = v)  then
+    if SCM.dsHeat.DataSet.Eof or (SCM.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = v)  then
     begin
-      AppData.dsEvent.DataSet.next;
-      AppData.dsHeat.DataSet.First;
+      SCM.dsEvent.DataSet.next;
+      SCM.dsHeat.DataSet.First;
     end
     else
     begin
-      AppData.dsHeat.DataSet.next;
+      SCM.dsHeat.DataSet.next;
     end;
   end;
-  PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
+  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
 end;
 
 procedure TMain.btnPickDTTreeViewClick(Sender: TObject);
@@ -850,15 +832,15 @@ begin
   called for the master dataset or when scrolling is disabled by
   MasterLink.DisableScroll.
   }
-  dtGrid.BeginUpdate;
+  tdsGrid.BeginUpdate;
 
   // Open the SCM TreeView.
   dlg := TTreeViewData.Create(Self);
   SearchOptions := [];
   // Params to cue-to-record in DT TreeView.
-    sessID := AppData.dsmSession.DataSet.FieldByName('SessionID').AsInteger;
-    evID := AppData.dsmEvent.DataSet.FieldByName('EventID').AsInteger;
-    htID := AppData.dsmHeat.DataSet.FieldByName('HeatID').AsInteger;
+    sessID := TDS.dsmSession.DataSet.FieldByName('SessionID').AsInteger;
+    evID := TDS.dsmEvent.DataSet.FieldByName('EventID').AsInteger;
+    htID := TDS.dsmHeat.DataSet.FieldByName('HeatID').AsInteger;
 
   // DT TreeView will attemp to cue-to-node based on params.
 
@@ -870,55 +852,54 @@ begin
     { NOTE: DT session pick by the user may differ from the current
       SCM session being operated on. }
 
-    AppData.dsmLane.DataSet.DisableControls;
-    AppData.dsmHeat.DataSet.DisableControls;
-    AppData.dsmEvent.DataSet.DisableControls;
-    AppData.dsmSession.DataSet.DisableControls;
+    TDS.dsmLane.DataSet.DisableControls;
+    TDS.dsmHeat.DataSet.DisableControls;
+    TDS.dsmEvent.DataSet.DisableControls;
+    TDS.dsmSession.DataSet.DisableControls;
     // Attempt to cue-to-data in Dolphin Timing tables.
     if (dlg.SelectedSessionID > 0) then
     begin
-      found := AppData.LocateTSessionID(dlg.SelectedSessionID);
+      found := TDS.LocateTSessionID(dlg.SelectedSessionID);
       if not found then
-        AppData.tblmSession.First;
-      AppData.tblmEvent.ApplyMaster;
-      AppData.tblmEvent.First;
-      AppData.tblmHeat.ApplyMaster;
-      AppData.tblmHeat.First;
+        TDS.tblmSession.First;
+      TDS.tblmEvent.ApplyMaster;
+      TDS.tblmEvent.First;
+      TDS.tblmHeat.ApplyMaster;
+      TDS.tblmHeat.First;
     end;
     if (dlg.SelectedEventID > 0) then
     begin
-      found := AppData.LocateTEventID(dlg.SelectedEventID);
+      found := TDS.LocateTEventID(dlg.SelectedEventID);
       if not found then
-        AppData.tblmEvent.First;
-      AppData.tblmHeat.ApplyMaster;
-      AppData.tblmHeat.First;
-      AppData.tblmLane.ApplyMaster;
-      AppData.tblmLane.First;
+        TDS.tblmEvent.First;
+      TDS.tblmHeat.ApplyMaster;
+      TDS.tblmHeat.First;
+      TDS.tblmLane.ApplyMaster;
+      TDS.tblmLane.First;
 
     end;
     if (dlg.SelectedHeatID > 0) then
     begin
-      found := AppData.LocateTHeatID(dlg.SelectedHeatID);
+      found := TDS.LocateTHeatID(dlg.SelectedHeatID);
       if not found then
-        AppData.tblmHeat.First;
+        TDS.tblmHeat.First;
     end;
 
     // Update the Dolphin Timing TDBAdvGrid.
-    AppData.dsmSession.DataSet.EnableControls;
-    AppData.dsmEvent.DataSet.EnableControls;
-    AppData.dsmHeat.DataSet.EnableControls;
-    AppData.dsmLane.DataSet.EnableControls;
+    TDS.dsmSession.DataSet.EnableControls;
+    TDS.dsmEvent.DataSet.EnableControls;
+    TDS.dsmHeat.DataSet.EnableControls;
+    TDS.dsmLane.DataSet.EnableControls;
 
-//    dtGrid.update
+//    tdsGrid.update
 
     // Update UI controls ...
-    PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
     // paint cell icons
-    PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+    PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
 
     end;
   dlg.Free;
-  dtGrid.EndUpdate;
+  tdsGrid.EndUpdate;
 
 end;
 
@@ -931,41 +912,37 @@ found: boolean;
 begin
 
   if not Assigned(SCM) then exit;
-  if not Assigned(SCM.scmConnection) then exit;
-  if not SCM.scmConnection.Connected then exit;
-  if not Assigned(appData) then exit;
-  if not appData.SCMDataIsActive then exit;
-
+  if not SCM.DataIsActive then exit;
 
   // Open the SCM TreeView.
   dlg := TTreeViewSCM.Create(Self);
 
-  sess := AppData.dsSession.DataSet.FieldByName('SessionID').AsInteger;
-  ev := AppData.dsEvent.DataSet.FieldByName('EventID').AsInteger;
-  ht := AppData.dsHeat.DataSet.FieldByName('HeatID').AsInteger;
+  sess := SCM.dsSession.DataSet.FieldByName('SessionID').AsInteger;
+  ev := SCM.dsEvent.DataSet.FieldByName('EventID').AsInteger;
+  ht := SCM.dsHeat.DataSet.FieldByName('HeatID').AsInteger;
   dlg.Prepare(SCM.scmConnection, sess, ev, ht);
   mr := dlg.ShowModal;
 
     // CUE-TO selected TreeView item ...
   if IsPositiveResult(mr) then
   begin
-    AppData.dsEvent.DataSet.DisableControls;
-    AppData.dsHeat.DataSet.DisableControls;
+    SCM.dsEvent.DataSet.DisableControls;
+    SCM.dsHeat.DataSet.DisableControls;
     if (dlg.SelectedEventID <> 0) then
     begin
-      found := AppData.LocateSCMEventID(dlg.SelectedEventID);
+      found := SCM.LocateEventID(dlg.SelectedEventID);
       if found then
       begin
-        AppData.dsHeat.DataSet.Close;
-        AppData.dsHeat.DataSet.Open;
+        SCM.dsHeat.DataSet.Close;
+        SCM.dsHeat.DataSet.Open;
         if (dlg.SelectedHeatID <> 0) then
-          AppData.LocateSCMHeatID(dlg.SelectedHeatID);
+          SCM.LocateHeatID(dlg.SelectedHeatID);
       end;
     end;
-    AppData.dsEvent.DataSet.EnableControls;
-    AppData.dsHeat.DataSet.EnableControls;
+    SCM.dsEvent.DataSet.EnableControls;
+    SCM.dsHeat.DataSet.EnableControls;
     // Update UI controls ...
-    PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
+    PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
   end;
   dlg.Free;
 
@@ -977,89 +954,85 @@ var
 begin
 
 
-  evNum := AppData.dsmEvent.DataSet.FieldByName('EventNum').AsInteger;
-  htNum := AppData.dsmHeat.DataSet.FieldByName('HeatNum').AsInteger;
+  evNum := TDS.dsmEvent.DataSet.FieldByName('EventNum').AsInteger;
+  htNum := TDS.dsmHeat.DataSet.FieldByName('HeatNum').AsInteger;
 
 
   // CNTRL+SHIFT - quick key to move to previous session.
   if (GetKeyState(VK_CONTROL) < 0) and (GetKeyState(VK_SHIFT) < 0) then
   begin
     // reached bottom of table ...
-    if AppData.dsmSession.DataSet.BOF then exit;
-    AppData.dsmSession.DataSet.prior;
-    AppData.dsmEvent.DataSet.first;
-    AppData.dsmHeat.DataSet.first;
+    if TDS.dsmSession.DataSet.BOF then exit;
+    TDS.dsmSession.DataSet.prior;
+    TDS.dsmEvent.DataSet.first;
+    TDS.dsmHeat.DataSet.first;
   end
   // CNTRL move to previous event ...
   else if (GetKeyState(VK_CONTROL) < 0) then
   begin
-    if AppData.dsmEvent.DataSet.BOF or (evNum = 1) then
+    if TDS.dsmEvent.DataSet.BOF or (evNum = 1) then
     begin
-      AppData.dsmSession.DataSet.prior;
-      AppData.dsmEvent.DataSet.first;
+      TDS.dsmSession.DataSet.prior;
+      TDS.dsmEvent.DataSet.first;
     end
     else
-      AppData.dsmEvent.DataSet.prior;
+      TDS.dsmEvent.DataSet.prior;
   end
   else
   begin
     { After reaching the first record a second click of btnPrevDTFileClick is needed to
       recieve a Bof. Checking for heatnum = 1 removes this UI nonsence.}
-    if AppData.dsmHeat.DataSet.BOF or (htNum = 1) then
+    if TDS.dsmHeat.DataSet.BOF or (htNum = 1) then
     begin
-      AppData.dsmEvent.DataSet.prior;
-      AppData.dsmHeat.DataSet.Last;
+      TDS.dsmEvent.DataSet.prior;
+      TDS.dsmHeat.DataSet.Last;
     end
     else
-      AppData.dsmHeat.DataSet.prior;
+      TDS.dsmHeat.DataSet.prior;
   end;
   // Update UI controls ...
-  PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
   // paint cell icons into grid.
-  PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
 end;
 
 procedure TMain.btnPrevEventClick(Sender: TObject);
 begin
   if not Assigned(SCM) then exit;
-  if not Assigned(SCM.scmConnection) then exit;
-  if not SCM.scmConnection.Connected then exit;
-  if not Assigned(appData) then exit;
-  if not appData.SCMDataIsActive then exit;
+  if not SCM.DataIsActive then exit;
 
   if (GetKeyState(VK_CONTROL) < 0) then
   begin
-      AppData.dsEvent.DataSet.prior;
-      AppData.dsHeat.DataSet.first;
+      SCM.dsEvent.DataSet.prior;
+      SCM.dsHeat.DataSet.first;
   end
   else
   begin
-    if (AppData.dsEvent.DataSet.FieldByName('EventNum').AsInteger = 1) and
-      (AppData.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = 1) then
+    if (SCM.dsEvent.DataSet.FieldByName('EventNum').AsInteger = 1) and
+      (SCM.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = 1) then
     exit;
 
     { After reaching the first record a second click of btnPrevEvent is needed to
       recieve a Bof. Checking for heatnum = 1 removes this UI nonsence.}
-    if AppData.dsHeat.DataSet.BOF or
-      (AppData.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = 1) then
+    if SCM.dsHeat.DataSet.BOF or
+      (SCM.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = 1) then
     begin
-        AppData.dsEvent.DataSet.prior;
-        AppData.dsHeat.DataSet.Last;
+        SCM.dsEvent.DataSet.prior;
+        SCM.dsHeat.DataSet.Last;
       end
       else
       begin
-        AppData.dsHeat.DataSet.prior;
+        SCM.dsHeat.DataSet.prior;
       end;
     end;
-    PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
+    PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
 end;
 
-procedure TMain.dtGridClickCell(Sender: TObject; ARow, ACol: Integer);
+procedure TMain.tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
 var
   Grid: TDBAdvGrid;
   ADataSet: TDataSet;
   s: string;
-  ActiveRT: dtActiveRT;
+  ActiveRT: scmActiveRT;
   t: TTime;
   dlg: TUserRaceTime;
   mr: TModalResult;
@@ -1067,13 +1040,13 @@ begin
   Grid := Sender as TDBAdvGrid;
   ADataSet := Grid.DataSource.DataSet;
 
-  if (ARow >= DTgrid.FixedRows) then
+  if (ARow >= tdsGrid.FixedRows) then
   begin
     case ACol of
       7: // C O L U M N   E N T E R   U S E R   R A C E T I M E  .
         begin
           // 2025/04/16 :: The ALT key isn't required.
-          ActiveRT := dtActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
           if (ActiveRT = artUser) then // Enter a user race-time.
           begin
             grid.BeginUpdate;
@@ -1121,12 +1094,12 @@ begin
           { ALT KEY is active :: Toggle tblEntrant.ActiveRT}
           if (GetKeyState(VK_MENU) < 0) then
             // toggle backwards
-            ActiveRT := AppData.ToggleActiveRT(ADataSet, 1)
+            ActiveRT := TDS.ToggleActiveRT(ADataSet, 1)
           else
             // toggle forward (default)
-            ActiveRT := AppData.ToggleActiveRT(ADataSet);
+            ActiveRT := TDS.ToggleActiveRT(ADataSet);
           { Modifies tblEntrant: ActiveRT, RaceTime, imgActiveRT }
-          AppData.SetActiveRT(ADataSet, ActiveRT);
+          TDS.SetActiveRT(ADataSet, ActiveRT);
           case ActiveRT of
             artAutomatic:
             begin
@@ -1135,7 +1108,7 @@ begin
             artManual:
             begin
               // The RaceTime needs to be recalculated...
-              AppData.CalcRaceTimeM(ADataSet);
+              TDS.CalcRaceTimeM(ADataSet);
               UpdateCellIcons(ADataSet, ARow, ActiveRT);
             end;
             artUser:
@@ -1145,7 +1118,7 @@ begin
             artSplit:
             begin
               // The RaceTime needs to be recalculated...
-              AppData.CalcRTSplitTime(ADataSet);
+              TDS.CalcRTSplitTime(ADataSet);
               UpdateCellIcons(ADataSet, ARow, ActiveRT);
             end;
 
@@ -1159,7 +1132,7 @@ begin
 
           if ADataSet.FieldByName('LaneIsEmpty').AsBoolean then exit;
 
-          ActiveRT := dtActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
           // Must be artmanual for the user to toggle watch-time state.
           if ActiveRT <> artManual then exit;
 
@@ -1172,10 +1145,10 @@ begin
             grid.BeginUpdate;
             // modify TimeKeeper's stopwatch state.
             // idx in [1..3]. Asserts : dtTimeKeeperMode = dtManual.
-            AppData.ToggleWatchTime(ADataSet, (Acol - 2), ActiveRT);
+            TDS.ToggleWatchTime(ADataSet, (Acol - 2), ActiveRT);
             UpdateCellIcons(ADataSet, ARow, ActiveRT);
             // The RaceTime needs to be recalculated...
-            AppData.CalcRaceTimeM(ADataset);
+            TDS.CalcRaceTimeM(ADataset);
             grid.EndUpdate;
           end;
         end;
@@ -1196,26 +1169,56 @@ begin
     default data will be assigned.}
   LoadSettings;
 
+
   // CREATE THE CORE SCM CONNECTION DATAMODULE.
-  try
-    SCM := TSCM.Create(self);
-  except on E: Exception do
-    begin
-      msg := '''
-      Creation and full initialisation of the SCM failed!
-      SCM_TimeDrops must terminate.
-      ''';
-      MessageDlg(msg, mtError, [mbOK], 0);
-      // shutdown in an orderly fashion.
-      Application.Terminate();
-      { Terminate is not immediate. Terminate is called automatically
-      on a WM_QUIT message and when the main form closes}
-      exit;
+  if not Assigned(SCM) then
+  begin
+    try
+      SCM := TSCM.Create(self);
+    except on E: Exception do
+      begin
+        msg := '''
+        Creation and full initialisation of the SCM failed!
+        SCM_TimeDrops must terminate.
+        ''';
+        MessageDlg(msg, mtError, [mbOK], 0);
+        // shutdown in an orderly fashion.
+        Application.Terminate();
+        { Terminate is not immediate. Terminate is called automatically
+        on a WM_QUIT message and when the main form closes}
+        exit;
+      end;
+      // NOTE: at this point SCM.scmConnection IS NOT ACTIVE.
     end;
-    // NOTE: at this point SCM.scmConnection IS NOT ACTIVE.
   end;
 
-  
+  SCM.ActivateDataSCM;
+  // ASSERT DATASOURCE.
+  if not Assigned(scmGrid.DataSource) then
+  begin
+    scmGrid.DataSource := SCM.dsINDV;
+    if SCM.DataIsActive then
+    begin
+      if SCM.qryDistance.FieldByName('EventTypeID').AsInteger = 1 then
+        scmGrid.DataSource := SCM.dsINDV
+      else
+        scmGrid.DataSource := SCM.dsTEAM;
+    end;
+  end;
+
+
+
+  // C R E A T E   T H E   IMAGE COLLECTION   D A T A M O D U L E .
+  if not Assigned(IMG) then
+  begin
+    try
+      IMG := TIMG.Create(Self);
+    except on E: Exception do
+    end;
+  end;
+
+
+
   {
     Sort out the menubar font height - so tiny!
 
@@ -1250,21 +1253,33 @@ begin
   vimgRelayBug.ImageIndex := -1;
   vimgStrokeBug.ImageIndex := -1;
 
-  // C R E A T E   T H E   D T  D A T A M O D U L E .
-  if NOT Assigned(AppData) then
-    AppData := TAppData.Create(Self);
-
-  if Assigned(appData) then
+    // C R E A T E   T H E   TimeDrops system  D A T A M O D U L E .
+  if not Assigned(TDS) then
   begin
-    appData.ActivateDataTD;
-    if appData.TDDataIsActive then
-    begin
-      // Empty data in TFDMemTables.
-      appData.EmptyAllTDDataSets;
-      // Attaches mater-detail.
-      appData.EnableTDMasterDetail;
+    try
+      TDS := TTDS.Create(Self);
+    except on E: Exception do
     end;
   end;
+
+  if Assigned(TDS) then
+  begin
+    TDS.ActivateDataTD;
+    if TDS.DataIsActive then
+    begin
+      // Empty data in TFDMemTables.
+      TDS.EmptyAllTDDataSets;
+      // Attaches mater-detail.
+      TDS.EnableTDMasterDetail;
+      if TDS.DataIsActive then
+      begin
+        if not Assigned(tdsGrid.DataSource) then
+          tdsGrid.DataSource := TDS.dsmLane;
+      end;
+    end;
+  end;
+
+
 
   FDirectoryWatcher := nil;
   // Test DT directory exists...
@@ -1272,10 +1287,10 @@ begin
   begin
       if DirHasResultFiles(Settings.MeetsFolder) then
       begin
-        if appData.TDDataIsActive then
+        if TDS.DataIsActive then
         begin
-          dtGrid.BeginUpdate;
-          appdata.DisableAllTDControls;
+          tdsGrid.BeginUpdate;
+          TDS.DisableAllTDControls;
           try
             // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
             // Necessary to manually calculate Primary keys in each memory table.
@@ -1285,8 +1300,8 @@ begin
             // Paint cell icons.
 //            PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
           finally
-            appdata.EnableAllTDControls;
-            dtGrid.EndUpdate;
+            TDS.EnableAllTDControls;
+            tdsGrid.EndUpdate;
           end;
         end;
       end;
@@ -1317,11 +1332,8 @@ begin
   Application.ShowHint := true;
 
   // Update UI controls ...
-  PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
-  // Update UI controls ...
-  PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
-  // Paint cell icons.
-  PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
+  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
 
 
 
@@ -1356,7 +1368,8 @@ gracefully without causing the application to hang.
   if Assigned(Settings) then
   begin
     SaveToSettings;
-    if Assigned(AppData) then AppData.MSG_Handle := 0;
+    if Assigned(TDS) then TDS.MSG_Handle := 0;
+    if Assigned(SCM) then SCM.MSG_Handle := 0;
     FreeAndNil(Settings);
   end;
 
@@ -1364,43 +1377,35 @@ end;
 
 procedure TMain.FormHide(Sender: TObject);
 begin
-  if Assigned(AppData) then AppData.MSG_Handle := 0;
+  if Assigned(TDS) then TDS.MSG_Handle := 0;
+  if Assigned(SCM) then SCM.MSG_Handle := 0;
 end;
 
 procedure TMain.FormShow(Sender: TObject);
 begin
-  (*
-  if AppData.qrySession.IsEmpty then
-  begin
-    pnlSCM.Visible := false;
-    pnlDT.Visible := false;
-    actnSelectSession.Execute;
-  end
-  else
-  begin
-    pnlSCM.Visible := true;
-    pnlDT.Visible := true;
-  end;
-  *)
 
   // Windows handle to message after after data scroll...
-  if Assigned(AppData) then
+  if Assigned(TDS) then
   begin
-    AppData.MSG_Handle := Self.Handle;
+    TDS.MSG_Handle := Self.Handle;
     // Assert Master - Detail ...
-    AppData.ActivateDataTD;
+    TDS.ActivateDataTD;
   end;
+  if Assigned(SCM) then
+  begin
+    SCM.MSG_Handle := Self.Handle;
+    // Assert Master - Detail ...
+    SCM.ActivateDataSCM;
+  end;
+
+
   if fFlagSelectSession then
     // Prompt user to select session. (... and update UI.)
     PostMessage(Self.Handle, SCM_SELECTSESSION, 0 , 0 )
   else
     // Assert UI display is up-to-date.
-    PostMessage(Self.Handle, SCM_UPDATEUI, 0 , 0 );
+    PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 );
 
-  // Update lblEventDetailsTD.
-  PostMessage(Self.Handle, SCM_UPDATEUI2, 0 , 0 );
-  // paint cell icons into grid.
-  PostMessage(Self.Handle, SCM_UPDATEUI3, 0 , 0 );
 end;
 
 procedure TMain.LoadFromSettings;
@@ -1424,61 +1429,180 @@ begin
   actnSelectSessionExecute(Self);
 end;
 
-procedure TMain.MSG_UpdateUI(var Msg: TMessage);
+procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
 var
-i: integer;
+  i: integer;
+  ASessionID: integer;
+  s, s2: string;
+  v: variant;
+  dt: TDateTime;
+
+  procedure SetEmptyToolsPanel();
+  begin
+    vimgStrokeBug.ImageIndex := -1;
+    lblHeatNum.Caption := '';
+    vimgHeatNum.ImageIndex := -1;
+    vimgHeatStatus.ImageIndex := -1;
+    vimgRelayBug.ImageIndex := -1;
+    lblMeters.Caption := '';
+    lblMetersRelay.Visible := false;
+  end;
+
+  procedure SetSessionStartCaption();
+  begin
+    // ------------------------------------------------------------
+    // Assign session details in pnlTools. (Bottom left of display)
+    if ASessionID <> 0 then
+    begin
+    s := 'Session: ' + IntToStr(ASessionID) + sLineBreak;
+    v := SCM.qrysession.FieldByName('SessionStart').AsVariant;
+    if not VarIsNull(v) then
+    begin
+      dt := TDateTime(v);
+      s := s + DateToStr(dt);
+    end;
+    lblSessionStart.Caption := s;
+    end;
+  end;
+
 begin
-  pnlTool1.Visible := true;
-  pnlSCM.Visible := true;
+  // Init SCM labels.
+  lbl_scmGridOverlay.Caption := '';
+  lblEventDetails.Caption := '';
   lbl_scmGridOverlay.Visible := true;
-  if (Assigned(SCM) = false) or (Assigned(AppData) = False) then
+  lblSessionStart.Caption := '';
+  ASessionID := 0;
+  StatBar.SimpleText := '';
+
+  if not Assigned(SCM) then
   begin
-    lbl_scmGridOverlay.Caption := 'DataModule is OFFLINE. ';
+    lbl_scmGridOverlay.Caption := 'Failed to create the SCM data module!';
+    pnlTool1.Visible := false;
+    scmGrid.DataSource := nil;
     exit;
   end;
-  if SCM.scmConnection.Connected = false then
+  if not Assigned(SCM.scmConnection) then
   begin
-    lbl_scmGridOverlay.Caption := 'Connect to the SwimClubMeet database.';
+    lbl_scmGridOverlay.Caption := 'The database is offline!' + sLineBreak +
+      'Failed to create TFDConnection.' + sLineBreak +'Critical error.';
+    pnlTool1.Visible := false;
+    scmGrid.DataSource := nil;
+    exit;
+  end;
+  if not SCM.scmConnection.Connected then
+  begin
+    lbl_scmGridOverlay.Caption := 'The database is offline.' + sLineBreak +
+      'Connect (Login) to the'  + sLineBreak + 'SwimClubMeet database.';
+    pnlTool1.Visible := false;
+    scmGrid.DataSource := nil;
+    exit;
+  end;
+  if not SCM.DataIsActive then
+  begin
+    lbl_scmGridOverlay.Caption := 'The SwimClubMeet data is offline.' + sLineBreak +
+      'A re-Connect is required.';
+    pnlTool1.Visible := false;
+    scmGrid.DataSource := nil;
+    exit;
+  end;
+  if SCM.qrySession.IsEmpty then
+  begin
+    lbl_scmGridOverlay.Caption := 'The SwimClub has no sessions!';
+    lblSessionStart.Caption := '';
+    pnlTool1.Visible := true;
+    SetEmptyToolsPanel;
+    scmGrid.DataSource := nil;
     exit;
   end;
 
-  if AppData.SCMDataIsActive = false then
-  begin
-    lbl_scmGridOverlay.Caption := 'Select a SwimClubMeet session.';
-    exit;
-  end;
-  if AppData.qrySession.IsEmpty then
-  begin
-    lbl_scmGridOverlay.Caption := 'The SwimClubMeet session is empty.';
-    exit;
-  end;
+  // ----------------------------------------------------------------
+  // ASSERT LABEL/PANEL STATE.
+  lbl_scmGridOverlay.Visible := false;
+  lbl_scmGridOverlay.Caption := '';
+  pnlTool1.Visible := true;
 
-  if AppData.qrySession.FieldByName('SessionID').AsInteger = 0 then
+  // ASSERT DATASOURCE.
+  if not Assigned(scmGrid.DataSource) then
   begin
-    lbl_scmGridOverlay.Caption := 'Bad SwimClubMeet session ID.';
-    exit;
-  end;
-
-  if AppData.qryEvent.IsEmpty then
-  begin
-    lbl_scmGridOverlay.Caption := 'No events were found for the current session.';
-    exit;
+    scmGrid.DataSource := SCM.dsINDV;
+    if SCM.DataIsActive then
+    begin
+      if SCM.qryDistance.FieldByName('EventTypeID').AsInteger = 1 then
+        scmGrid.DataSource := SCM.dsINDV
+      else
+        scmGrid.DataSource := SCM.dsTEAM;
+    end;
   end;
 
-  if AppData.qryHeat.IsEmpty then
+  // UPDATE pnlSCM HEADER DESCRIPTION.
+  s := '';
   begin
-    lbl_scmGridOverlay.Caption := 'No heats were found for the current event.';
-    exit;
+    ASessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
+    s := 'Session ID: ' + IntToStr(ASessionID);
+    if SCM.qryEvent.IsEmpty then
+    begin
+      s:= s + ' NO EVENTS.';
+    end
+    else
+    begin
+      i := SCM.qryEvent.FieldByName('EventNum').AsInteger;
+      s := s + ' : Event ' + IntToStr(i) + ' : ';
+      // build the event detail string...  Distance Stroke (OPT: Caption)
+      s := s + SCM.qryDistance.FieldByName('Caption').AsString;
+      s := s + ' ' + SCM.qryStroke.FieldByName('Caption').AsString;
+      if SCM.qryHeat.IsEmpty then
+      begin
+        s:= s + ' NO HEATS.';
+      end
+      else
+      begin
+        // heat number...
+        i:=SCM.qryHeat.FieldByName('HeatNum').AsInteger;
+        if (i > 0) then
+          s := s + ' - Heat : ' + IntToStr(i);
+        // event description - entered in core app's grid extension mode.
+        s2 := SCM.qryEvent.FieldByName('Caption').AsString;
+        if (length(s2) > 0) then
+        begin
+          if (length(s2) > 128) then
+            s2 := s2.Substring(0, 124) + '...';
+          s := s + sLineBreak +  s2;
+        end
+        else
+        begin
+          s := s + sLineBreak +  'No event description was given';
+        end;
+      end;
+    end;
   end;
 
-    StatBar.SimpleText := '';
-    lbl_scmGridOverlay.Visible := false;
-  // update HEATUI elements.
-    UpdateEventDetailsLabel; // append heat number to label
-    UpdateSessionStartLabel; //
+  // assign DESCRIPTION .
+  if Length(s) > 0 then
+    lblEventDetails.Caption := s;
+  SetSessionStartCaption;
 
-    i := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
+
+  // PAINT ICON BUGS - EVENT.
+  if SCM.qryEvent.IsEmpty then
+  begin
+    lbl_scmGridOverlay.Visible := true;
+    lbl_scmGridOverlay.Caption := 'No events for the current session.';
+    scmGrid.DataSource := nil;
+    vimgStrokeBug.ImageIndex := -1;
+    vimgRelayBug.ImageIndex := -1;
+    lblMeters.Caption := '';
+    lblMetersRelay.Visible := false;
+    lblHeatNum.Caption := '';
+    vimgHeatNum.ImageIndex := -1;
+    vimgHeatStatus.ImageIndex := -1;
+    exit;
+  end
+  else
+  begin
+    i := SCM.qryEvent.FieldByName('StrokeID').AsInteger;
     case i of
+      0:
+        vimgStrokeBug.ImageIndex := -1;
       1:
         vimgStrokeBug.ImageName := 'StrokeFS';
       2:
@@ -1489,140 +1613,194 @@ begin
         vimgStrokeBug.ImageName := 'StrokeBF';
       5:
         vimgStrokeBug.ImageName := 'StrokeIM';
-    else
-      vimgStrokeBug.ImageIndex := -1;
     end;
+  end;
 
-    i := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
+
+  // PAINT ICON BUGS - EVENT DISTANCE + EVENTYPE.
+  if SCM.qryDistance.IsEmpty then
+    i := 0
+  else
+    i := SCM.qryDistance.FieldByName('EventTypeID').AsInteger;
+  case i of
+    2:
+    begin
+      vimgRelayBug.ImageName := 'RELAY_DOT'; // RELAY.
+      lblMetersRelay.Caption := UpperCase(SCM.qryDistance.FieldByName('Caption').AsString);
+      lblMetersRelay.Visible := true;
+      lblMeters.Caption := '';
+    end;
+  else
+    begin
+      vimgRelayBug.ImageIndex := -1; // INDV or Swim-O-Thon.
+      lblMeters.Caption := UpperCase(SCM.qryDistance.FieldByName('Caption').AsString);
+      lblMetersRelay.Visible := false;
+    end;
+  end;
+
+    // PAINT ICON BUGS - HEAT NUMBER AND STATUS.
+  if SCM.qryHeat.IsEmpty then
+  begin
+    lbl_scmGridOverlay.Visible := true;
+    lbl_scmGridOverlay.Caption := 'No heats for the current event.';
+    scmGrid.DataSource := nil;
+    lblHeatNum.Caption := '';
+    vimgHeatNum.ImageIndex := -1;
+    vimgHeatStatus.ImageIndex := -1;
+    exit;
+  end
+  else
+  begin
+    i := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
+    lblHeatNum.Caption := IntToStr(i);
+    vimgHeatNum.ImageIndex := 14;
+
+    i := SCM.qryHeat.FieldByName('HeatStatusID').AsInteger;
     case i of
-      2:
-      begin
-        vimgRelayBug.ImageName := 'RELAY_DOT'; // RELAY.
-        lblMetersRelay.Caption := UpperCase(AppData.qryDistance.FieldByName('Caption').AsString);
-        lblMetersRelay.Visible := true;
-        lblMeters.Caption := '';
-      end;
+    1:
+      vimgHeatStatus.ImageName := 'HeatOpen';
+    2:
+      vimgHeatStatus.ImageName := 'HeatRaced';
+    3:
+      vimgHeatStatus.ImageName := 'HeatClosed';
     else
-      begin
-        vimgRelayBug.ImageIndex := -1; // INDV or Swim-O-Thon.
-        lblMeters.Caption := UpperCase(AppData.qryDistance.FieldByName('Caption').AsString);
-        lblMetersRelay.Visible := false;
-      end;
-    end;
-
-    i := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
-    if i = 0 then
-    begin
-      lblHeatNum.Caption := '';
-      vimgHeatNum.ImageIndex := -1;
       vimgHeatStatus.ImageIndex := -1;
-    end
-    else
-    begin
-      lblHeatNum.Caption := IntToStr(i);
-      vimgHeatNum.ImageIndex := 14;
-      i := AppData.qryHeat.FieldByName('HeatStatusID').AsInteger;
-      case i of
-      1:
-        vimgHeatStatus.ImageName := 'HeatOpen';
-      2:
-        vimgHeatStatus.ImageName := 'HeatRaced';
-      3:
-        vimgHeatStatus.ImageName := 'HeatClosed';
-      else
-        vimgHeatStatus.ImageIndex := -1;
-      end;
     end;
-
+  end;
 
 end;
 
-procedure TMain.MSG_UpdateUI2(var Msg: TMessage);
-begin
-    UpdateEventDetailsTD;
-end;
 
-procedure TMain.MSG_UpdateUI3(var Msg: TMessage);
+
+procedure TMain.MSG_UpdateUITDS(var Msg: TMessage);
 var
+i: integer;
+s: string;
   J: integer;
-  ActiveRT: dtActiveRT;
+  ActiveRT: scmActiveRT;
   ADataSet: TDataSet;
+
 begin
-  // AppData.dsmHeat - AfterScroll event.
+
+  // UPDATE DESCRIPTION.
+  // -----------------------------------------------------
+  lblEventDetailsTD.caption := '';
+
+  if not Assigned(TDS) then exit;
+  if not TDS.DataIsActive then exit;
+
+
+  if TDS.tblmSession.IsEmpty then exit;
+  s := 'Session : ';
+  i := TDS.tblmSession.FieldByName('SessionNum').AsInteger;
+  s := s + IntToStr(i);
+
+  if TDS.tblmEvent.IsEmpty then
+  begin
+    lblEventDetailsTD.caption := s;
+    exit;
+  end;
+  s := s + '  Event : ';
+  i := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
+  s := s + IntToStr(i);
+
+  if TDS.tblmHeat.IsEmpty then
+  begin
+    lblEventDetailsTD.caption := s;
+    exit;
+  end;
+  s := s + ' - Heat : ';
+  i := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
+  s := s + IntToStr(i);
+  lblEventDetailsTD.caption := s;
+
+  // ASSERT DATASOURCE.
+  {TODO -oBSA -cGeneral : CHECK tdsGrid DataSource assignment. This should
+  occur on TDS creation?}
+  // -----------------------------------------------------
+  if TDS.DataIsActive then
+  begin
+    if not Assigned(tdsGrid.DataSource) then
+      tdsGrid.DataSource := TDS.dsmLane;
+  end;
+  // -----------------------------------------------------
+
+  // TDS.dsmHeat - AfterScroll event.
   // UI images in grid cells need to be re-assigned.
-  DTGrid.BeginUpdate;
+  tdsGrid.BeginUpdate;
   // improve code readability ...
-  ADataSet := DTGrid.DataSource.DataSet;
+  ADataSet := tdsGrid.DataSource.DataSet;
 
   { Typically this routine is call when
     a AppData.OnAfterScroll occurs..
-    A DTGrid.Reload isn't required at this execution point. }
+    A tdsGrid.Reload isn't required at this execution point. }
 
   // clear out all images in TimeKeepers columns [3..5]
   // --------------------------------------------------
   {
-  for j := DTgrid.FixedRows to DTGrid.RowCount do
+  for j := tdsGrid.FixedRows to tdsGrid.RowCount do
   begin
     for I := 3 to 5 do
     begin
-      DTGrid.RemoveImageIdx(I, j); // Remove icon.
+      tdsGrid.RemoveImageIdx(I, j); // Remove icon.
     end;
     // Remove UseUserRaceTime icon.
-    DTGrid.RemoveImageIdx(7, j);
+    tdsGrid.RemoveImageIdx(7, j);
   end;
   }
 
   // iterate AppData and assign a cell images if needed.
   // --------------------------------------------------
-  for j := DTgrid.FixedRows to (DTGrid.RowCount-DTgrid.FixedRows) do
+  for j := tdsGrid.FixedRows to (tdsGrid.RowCount-tdsGrid.FixedRows) do
   begin
-    // SYNC AppData record to DTGrid row.
+    // SYNC TDS record to tdsGrid row.
     ADataSet.RecNo := j;
 
     // A C T I V E R T .
-    ActiveRT := dtActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+    ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
     case ActiveRT of
       // A U T O M A T I C .
       artAutomatic:
       begin
         // Switch to the Auto-Calculated RaceTime.
         // RacetimeA was calculated when the DT file was first imported.
-        AppData.SetActiveRT(ADataSet, artAutomatic);
+        TDS.SetActiveRT(ADataSet, artAutomatic);
         UpdateCellIcons(ADataSet, J, ActiveRT);
       end;
 
       // M A N U A L .
       artManual:
       begin
-        AppData.SetActiveRT(ADataSet, artManual);
-        AppData.CalcRaceTimeM(ADataSet);
+        TDS.SetActiveRT(ADataSet, artManual);
+        TDS.CalcRaceTimeM(ADataSet);
         UpdateCellIcons(ADataSet, J, ActiveRT);
       end;
 
       artUser:
       begin
-        AppData.SetActiveRT(ADataSet, artUser);
+        TDS.SetActiveRT(ADataSet, artUser);
         UpdateCellIcons(ADataSet, J, ActiveRT);
       end;
 
       artSplit:
       begin
-        AppData.SetActiveRT(ADataSet, artSplit);
+        TDS.SetActiveRT(ADataSet, artSplit);
         UpdateCellIcons(ADataSet, J, ActiveRT);
       end;
 
       artNone:
       begin
-        AppData.SetActiveRT(ADataSet, artNone);
+        TDS.SetActiveRT(ADataSet, artNone);
         UpdateCellIcons(ADataSet, J, ActiveRT);
       end;
 
     end;
 
   end;
+
   ADataSet.First;
-  DTGrid.EndUpdate;
-  DTGrid.ClearRowSelect;
+  tdsGrid.EndUpdate;
+  tdsGrid.ClearRowSelect;
 
 end;
 
@@ -1639,9 +1817,9 @@ begin
     if s.Contains('SESSION') then
     begin
       ShowMessage('A new results file was added to the directory: ' + FileName);
-      dtGrid.BeginUpdate;
+      tdsGrid.BeginUpdate;
       tdResults.ProcessFile(FileName);
-      dtGrid.EndUpdate;
+      tdsGrid.EndUpdate;
     end;
   end;
 end;
@@ -1663,6 +1841,13 @@ end;
 procedure TMain.scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var
   Value: string);
 begin
+  if not Assigned(SCM) then exit;
+  if not SCM.DataIsActive then exit;
+
+//  if not Assigned(SCM.scmConnection) then exit;
+//  if not SCM.scmConnection.Connected then exit;
+  if not Assigned(scmGrid.DataSource) then exit;
+
   { Quick 'hack' to clear the HTML text in the Entrant cells for lanes that
     don't have a swimmer assigned.}
   // Must be entrant column. Ignore header row.
@@ -1696,25 +1881,25 @@ s, s2: string;
 v: variant;
 dt: TDateTime;
 begin
-  if not AppData.qrysession.Active then
+  if not SCM.qrysession.Active then
     Caption := 'SwimClubMeet - Dolphin Timing. ' // error ...
   else
   begin
     s2 := 'SwimClubMeet';
-    v := AppData.qrysession.FieldByName('SessionStart').AsVariant;
+    v := SCM.qrysession.FieldByName('SessionStart').AsVariant;
     if not VarIsNull(v) then
     begin
       dt := TDateTime(v);
       s2 := s2 + ' - Session: ' + DateToStr(dt);
     end;
-    s := AppData.qrysession.FieldByName('Caption').AsString;
+    s := SCM.qrysession.FieldByName('Caption').AsString;
     if Length(s) > 0 then s2 := s2 + ' ' + s;
     Caption := s2;
   end;
 end;
 
 procedure TMain.UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
-    dtActiveRT);
+    scmActiveRT);
 var
 I: integer;
 s: string;
@@ -1723,9 +1908,9 @@ begin
 
   // SOURCE FOR GRID CELL IMAGES : AppData.vimglistDTCell.
 
-  DTGrid.BeginUpdate;
+  tdsGrid.BeginUpdate;
   // Clear out - point to cell icon
-  DTGrid.RemoveImageIdx(7, ARow);
+  tdsGrid.RemoveImageIdx(7, ARow);
 
   case AActiveRT of
     artAutomatic:
@@ -1733,7 +1918,7 @@ begin
       // Update watch time : cell's icon.
       for I := 3 to 5 do
       begin
-        DTGrid.RemoveImageIdx(I, ARow);
+        tdsGrid.RemoveImageIdx(I, ARow);
         s := 'Time' + IntToStr(I - 2);
         if ADataSet.FieldByName(s).IsNull then
           continue
@@ -1744,7 +1929,7 @@ begin
           // Empty, zero or bad race-time - display CROSS in BOX.
           if (b = false) then
           begin
-              DTGrid.AddImageIdx(I, ARow, 5, TCellHAlign.haFull,
+              tdsGrid.AddImageIdx(I, ARow, 5, TCellHAlign.haFull,
                 TCellVAlign.vaFull);
           end;
           { watch-time 1 :
@@ -1758,7 +1943,7 @@ begin
             // Unacceptable deviation - display DEV,CROSS in BOX.
             if (b = true) and (b2 = false) then
             begin
-                DTGrid.AddImageIdx(I, ARow, 10, TCellHAlign.haFull,
+                tdsGrid.AddImageIdx(I, ARow, 10, TCellHAlign.haFull,
                   TCellVAlign.vaFull);
             end;
           end;
@@ -1773,20 +1958,20 @@ begin
             // Unacceptable deviation - display DEV,CROSS in BOX.
             if (b = true) and (b2 = false) then
             begin
-                DTGrid.AddImageIdx(I, ARow, 10, TCellHAlign.haFull,
+                tdsGrid.AddImageIdx(I, ARow, 10, TCellHAlign.haFull,
                   TCellVAlign.vaFull);
             end;
           end;
         end;
       end;
-      DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'AUTO';
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'AUTO';
 
     end;
     artManual:
     begin
       for I := 3 to 5 do
       begin
-        DTGrid.RemoveImageIdx(I, ARow);
+        tdsGrid.RemoveImageIdx(I, ARow);
         s := 'Time' + IntToStr(I - 2);
         if ADataSet.FieldByName(s).IsNull then
           continue
@@ -1797,153 +1982,61 @@ begin
             // Empty, zero or illegal watch time - display CROSS in BOX.
             if (not b) then
             begin
-                DTGrid.AddImageIdx(I, ARow, 6, TCellHAlign.haFull,
+                tdsGrid.AddImageIdx(I, ARow, 6, TCellHAlign.haFull,
                   TCellVAlign.vaFull);
             end;
           end;
       end;
-      DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'MANUAL';
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'MANUAL';
     end;
     artUser:
     begin
       for I := 3 to 5 do
       begin
-        dtGrid.RemoveImageIdx(i, ARow);
+        tdsGrid.RemoveImageIdx(i, ARow);
       { s := 'Time' + IntToStr(I - 2);
         if ADataSet.FieldByName(s).IsNull then
         continue;
-        DTGrid.AddImageIdx(I, ARow, 7, TCellHAlign.haFull,
+        tdsGrid.AddImageIdx(I, ARow, 7, TCellHAlign.haFull,
         TCellVAlign.vaFull); }
       end;
       // USER MODE : display - cell pointer
-      // DTGrid.AddImageIdx(7, ARow, 9, TCellHAlign.haAfterText, TCellVAlign.vaTop);
-      DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'EDIT RT';
+      // tdsGrid.AddImageIdx(7, ARow, 9, TCellHAlign.haAfterText, TCellVAlign.vaTop);
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'EDIT RT';
     end;
     artSplit:
     begin
       for I := 3 to 5 do
       begin
-        DTGrid.RemoveImageIdx(I, ARow);
+        tdsGrid.RemoveImageIdx(I, ARow);
         // display small blue bug.
-//        DTGrid.AddImageIdx(I, ARow, 11, TCellHAlign.haFull,
+//        tdsGrid.AddImageIdx(I, ARow, 11, TCellHAlign.haFull,
 //            TCellVAlign.vaFull);
       end;
-      DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'SPLIT';
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'SPLIT';
     end;
     artNone:
     begin
       for I := 3 to 5 do
       begin
-        DTGrid.RemoveImageIdx(I, ARow);
+        tdsGrid.RemoveImageIdx(I, ARow);
         // display red cross.
-        DTGrid.AddImageIdx(I, ARow, 8, TCellHAlign.haFull,
+        tdsGrid.AddImageIdx(I, ARow, 8, TCellHAlign.haFull,
             TCellVAlign.vaFull);
-      DTGrid.ColumnByFieldName['imgActiveRT'].Header := 'NONE';
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'NONE';
       end;
     end;
   end;
 
-  DTGrid.EndUpdate;
+  tdsGrid.EndUpdate;
 
 end;
 
-procedure TMain.UpdateEventDetailsTD;
-var
-i: integer;
-s: string;
-begin
-  lblEventDetailsTD.caption := '';
 
-  if AppData.tblmSession.IsEmpty then exit;
-  s := 'Session : ';
-  i := AppData.tblmSession.FieldByName('SessionNum').AsInteger;
-  s := s + IntToStr(i);
 
-  if AppData.tblmEvent.IsEmpty then
-  begin
-    lblEventDetailsTD.caption := s;
-    exit;
-  end;
-  s := s + '  Event : ';
-  i := AppData.tblmEvent.FieldByName('EventNum').AsInteger;
-  s := s + IntToStr(i);
 
-  if AppData.tblmHeat.IsEmpty then
-  begin
-    lblEventDetailsTD.caption := s;
-    exit;
-  end;
-  s := s + ' - Heat : ';
-  i := AppData.tblmHeat.FieldByName('HeatNum').AsInteger;
-  s := s + IntToStr(i);
-  lblEventDetailsTD.caption := s;
 
-end;
 
-procedure TMain.UpdateEventDetailsLabel;
-var
-i, ASessionID: integer;
-s, s2: string;
-begin
-  lblEventDetails.Caption := '';
-  if AppData.qryEvent.IsEmpty then exit;
-
-  i := AppData.qryEvent.FieldByName('EventNum').AsInteger;
-  if (i = 0) then exit;
-
-  ASessionID := AppData.qryEvent.FieldByName('SessionID').AsInteger;
-  s := IntToStr(ASessionID);
-
-  s := s + ' : Event ' + IntToStr(i) + ' : ';
-  // build the event detail string...  Distance Stroke (OPT: Caption)
-  s := s + AppData.qryDistance.FieldByName('Caption').AsString;
-  s := s + ' ' + AppData.qryStroke.FieldByName('Caption').AsString;
-  // heat number...
-  i:=AppData.qryHeat.FieldByName('HeatNum').AsInteger;
-  if (i > 0) then
-    s := s + ' - Heat : ' + IntToStr(i);
-  // event description - entered in core app's grid extension mode.
-  s2 := AppData.qryEvent.FieldByName('Caption').AsString;
-  if (length(s2) > 0) then
-  begin
-    if (length(s2) > 128) then
-      s2 := s2.Substring(0, 124) + '...';
-    s := s + sLineBreak +  s2;
-  end;
-  // assignment
-  if Length(s) > 0 then
-  begin
-    lblEventDetails.Caption := s;
-  end;
-end;
-
-procedure TMain.UpdateSessionStartLabel;
-var
-  s: string;
-  v: variant;
-  dt: TDateTime;
-begin
-  if not AppData.qrysession.Active then
-  begin
-    lblSessionStart.Caption := ''; // error ...
-    exit;
-  end;
-  if AppData.qrySession.IsEmpty or
-  (AppData.qrySession.FieldByName('SessionID').AsInteger = 0) then
-    lblSessionStart.Caption := ''
-  else
-  begin
-    s := 'Session: ' + IntToStr(AppData.qrysession.FieldByName('SessionID').AsInteger)
-      + sLineBreak;
-    v := AppData.qrysession.FieldByName('SessionStart').AsVariant;
-    if not VarIsNull(v) then
-    begin
-      dt := TDateTime(v);
-      s := s + DateToStr(dt);
-    end;
-    lblSessionStart.Caption := s;
-  end;
-end;
 
 (*
 CONST

@@ -2,8 +2,8 @@ unit tdResults;
 
 interface
 
-uses XSuperJSON, XSuperObject, dmAppData, System.Types, System.StrUtils,
-  uAppUtils;
+uses XSuperJSON, XSuperObject, dmTDS, System.Types, System.StrUtils,
+  uAppUtils, SCMDefines;
 
   // Main Process entry points
 
@@ -73,12 +73,12 @@ begin
           if (splitValue.DataType = dtObject) then // Ensure the array element is an object
           begin
             splitObject := splitValue.AsObject; // Get the split-time object
-            AppData.tblmLane.Edit;
+            TDS.tblmLane.Edit;
             fldname := 'split' + intToStr(indxLane); // generate the field name
-            AppData.tblmLane.FieldByName(fldName).AsDateTime := ConvertCentiSecondsToDateTime(splitObject.I['split']);
+            TDS.tblmLane.FieldByName(fldName).AsDateTime := ConvertCentiSecondsToDateTime(splitObject.I['split']);
             fldname := 'splitDist' + intToStr(indxLane); // generate the field name
-            AppData.tblmLane.FieldByName(fldName).AsInteger := splitObject.I['distance'];
-            AppData.tblmLane.Post;
+            TDS.tblmLane.FieldByName(fldName).AsInteger := splitObject.I['distance'];
+            TDS.tblmLane.Post;
             Inc(indxLane); // next field Name
             if (indxLane > 10) then break;
           end;
@@ -99,7 +99,7 @@ begin
   lanesObj := JSONObj.A['Lanes']; // Get the array
   if Assigned(lanesObj) then // Check if it's actually an array
   begin
-    // SYNC ... AppData.tblmLane.Refresh;
+    // SYNC ... TDS.tblmLane.Refresh;
     PK_LaneID := 0;
     for laneValue in lanesObj do // Iterate through array elements
     begin
@@ -107,107 +107,107 @@ begin
       begin
         laneObject := laneValue.AsObject; // Get the lane object
 
-        AppData.tblmLane.ApplyMaster; // Redundant?
+        TDS.tblmLane.ApplyMaster; // Redundant?
         // Find lane number within heat.
-        found := AppData.LocateTLaneNum(PK_HeatID, laneObject.I['lane']);
+        found := TDS.LocateTLaneNum(PK_HeatID, laneObject.I['lane']);
         try
           begin
             if found then
             begin
-              PK_LaneID := AppData.tblmLane.FieldByName('LaneID').AsInteger;
-              AppData.tblmLane.Edit
+              PK_LaneID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
+              TDS.tblmLane.Edit
             end
             else
             begin
               // Calculate a new unique primary key.
-              PK_LaneID := AppData.MaxID_Lane + 1;
-              AppData.tblmLane.Insert;
-              AppData.tblmLane.fieldbyName('LaneID').AsInteger := PK_LaneID;
-              AppData.tblmLane.FieldByName('HeatID').AsInteger := PK_HeatID; // master.detail.
-              AppData.tblmLane.FieldByName('LaneNum').AsInteger := laneObject.I['lane'];
+              PK_LaneID := TDS.MaxID_Lane + 1;
+              TDS.tblmLane.Insert;
+              TDS.tblmLane.fieldbyName('LaneID').AsInteger := PK_LaneID;
+              TDS.tblmLane.FieldByName('HeatID').AsInteger := PK_HeatID; // master.detail.
+              TDS.tblmLane.FieldByName('LaneNum').AsInteger := laneObject.I['lane'];
             end;
 
-            AppData.tblmLane.fieldbyName('Caption').AsString := 'Lane: ' + IntToStr(laneObject.I['lane']);
+            TDS.tblmLane.fieldbyName('Caption').AsString := 'Lane: ' + IntToStr(laneObject.I['lane']);
 
             // ASSERT the state of all JSON 'times'.
             if laneObject.Contains('finalTime') then
               begin
                 if (laneObject.Null['finalTime'] in [jUnAssigned, jNull]) then
-                  AppData.tblmLane.FieldByName('finalTime').Clear
+                  TDS.tblmLane.FieldByName('finalTime').Clear
                 else
-                  AppData.tblmLane.FieldByName('finalTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['finalTime']);
+                  TDS.tblmLane.FieldByName('finalTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['finalTime']);
               end
-            else  AppData.tblmLane.FieldByName('finalTime').Clear;
+            else  TDS.tblmLane.FieldByName('finalTime').Clear;
 
             if laneObject.Contains('padTime') then
               begin
                 if (laneObject.Null['padTime'] in [jUnAssigned, jNull]) then
-                  AppData.tblmLane.FieldByName('padTime').Clear
+                  TDS.tblmLane.FieldByName('padTime').Clear
                 else
-                  AppData.tblmLane.FieldByName('padTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['padTime']);
+                  TDS.tblmLane.FieldByName('padTime').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['padTime']);
               end
-            else  AppData.tblmLane.FieldByName('padTime').Clear;
+            else  TDS.tblmLane.FieldByName('padTime').Clear;
 
             if laneObject.Contains('timer1') then
               begin
                 if (laneObject.Null['timer1'] in [jUnAssigned, jNull]) then
-                  AppData.tblmLane.FieldByName('time1').Clear
+                  TDS.tblmLane.FieldByName('time1').Clear
                 else
-                  AppData.tblmLane.FieldByName('time1').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer1']);
+                  TDS.tblmLane.FieldByName('time1').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer1']);
               end
-            else  AppData.tblmLane.FieldByName('time1').Clear;
+            else  TDS.tblmLane.FieldByName('time1').Clear;
 
             if laneObject.Contains('timer2') then
               begin
                 if (laneObject.Null['timer2'] in [jUnAssigned, jNull]) then
-                  AppData.tblmLane.FieldByName('time2').Clear
+                  TDS.tblmLane.FieldByName('time2').Clear
                 else
-                  AppData.tblmLane.FieldByName('time2').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer2']);
+                  TDS.tblmLane.FieldByName('time2').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer2']);
               end
-            else  AppData.tblmLane.FieldByName('time2').Clear;
+            else  TDS.tblmLane.FieldByName('time2').Clear;
 
             if laneObject.Contains('timer3') then
               begin
                 if (laneObject.Null['timer3'] in [jUnAssigned, jNull]) then
-                  AppData.tblmLane.FieldByName('time3').Clear
+                  TDS.tblmLane.FieldByName('time3').Clear
                 else
-                  AppData.tblmLane.FieldByName('time3').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer3']);
+                  TDS.tblmLane.FieldByName('time3').AsDateTime := ConvertCentiSecondsToDateTime(laneObject.I['timer3']);
               end
-            else  AppData.tblmLane.FieldByName('time3').Clear;
+            else  TDS.tblmLane.FieldByName('time3').Clear;
 
-            AppData.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := laneObject.B['isEmpty'];
-            AppData.tblmLane.fieldbyName('isDq').AsBoolean := laneObject.B['isDq'];
+            TDS.tblmLane.fieldbyName('LaneIsEmpty').AsBoolean := laneObject.B['isEmpty'];
+            TDS.tblmLane.fieldbyName('isDq').AsBoolean := laneObject.B['isDq'];
 
             // Swimmers calculated racetime for post.
-            AppData.tblmLane.fieldbyName('RaceTime').Clear;
+            TDS.tblmLane.fieldbyName('RaceTime').Clear;
             // A user entered race-time.
-            AppData.tblmLane.fieldbyName('RaceTimeUser').Clear;
+            TDS.tblmLane.fieldbyName('RaceTimeUser').Clear;
             // The Automatic race-time. Calculated on load of DT file.
-            AppData.tblmLane.fieldbyName('RaceTimeA').Clear;
+            TDS.tblmLane.fieldbyName('RaceTimeA').Clear;
             // dtActiveRT = (artAutomatic, artManual, artUser, artSplit, artNone);
-            AppData.tblmLane.fieldbyName('ActiveRT').AsInteger := ORD(artAutoMatic);
-            // graphic used in column[6] - GRID IMAGES AppData.vimglistDTCell .
+            TDS.tblmLane.fieldbyName('ActiveRT').AsInteger := ORD(artAutoMatic);
+            // graphic used in column[6] - GRID IMAGES TDS.vimglistDTCell .
             // image index 1 indicts - dtTimeKeeperMode = dtAutomatic.
-            AppData.tblmLane.fieldbyName('imgActiveRT').AsInteger := -1;
+            TDS.tblmLane.fieldbyName('imgActiveRT').AsInteger := -1;
             // graphic used in column[1] - for noodle drawing...
-            AppData.tblmLane.fieldbyName('imgPatch').AsInteger := 0;
+            TDS.tblmLane.fieldbyName('imgPatch').AsInteger := 0;
 
             // Init misc fields
-            AppData.tblmLane.fieldbyName('TDev1').AsBoolean := true;
-            AppData.tblmLane.fieldbyName('TDev2').AsBoolean := true;
-            AppData.tblmLane.fieldbyName('T1M').AsBoolean := true;
-            AppData.tblmLane.fieldbyName('T2M').AsBoolean := true;
-            AppData.tblmLane.fieldbyName('T3M').AsBoolean := true;
-            AppData.tblmLane.fieldbyName('T1A').AsBoolean := true;
-            AppData.tblmLane.fieldbyName('T2A').AsBoolean := true;
-            AppData.tblmLane.fieldbyName('T3A').AsBoolean := true;
+            TDS.tblmLane.fieldbyName('TDev1').AsBoolean := true;
+            TDS.tblmLane.fieldbyName('TDev2').AsBoolean := true;
+            TDS.tblmLane.fieldbyName('T1M').AsBoolean := true;
+            TDS.tblmLane.fieldbyName('T2M').AsBoolean := true;
+            TDS.tblmLane.fieldbyName('T3M').AsBoolean := true;
+            TDS.tblmLane.fieldbyName('T1A').AsBoolean := true;
+            TDS.tblmLane.fieldbyName('T2A').AsBoolean := true;
+            TDS.tblmLane.fieldbyName('T3A').AsBoolean := true;
 
-            AppData.tblmLane.Post; // Post the inserted or edited record.
+            TDS.tblmLane.Post; // Post the inserted or edited record.
           end;
 
         except on E: Exception do
           begin
-            appData.tblmLane.Cancel;
+            TDS.tblmLane.Cancel;
             found := false;
           end;
         end;
@@ -247,89 +247,89 @@ begin
         // calling here may be redundant. Or it may ensure all records are
         // held in memory?
         {TODO -oBSA -cGeneral : Trace Delphi DB ApplyMaster procedure.}
-        AppData.tblmSession.ApplyMaster;
+        TDS.tblmSession.ApplyMaster;
         // ignore if found...
-        if not AppData.LocateTSessionID(PK_SessionID) then
+        if not TDS.LocateTSessionID(PK_SessionID) then
         begin
           // add the newly discovered session
-          AppData.tblmSession.Insert;
+          TDS.tblmSession.Insert;
           // May help to track an approx session time.
           fCreationDT := Now;
           // wit: the start of recording of race data from TimeDrops.
-          AppData.tblmSession.FieldByName('createdOn').AsDateTime := fCreationDT;
+          TDS.tblmSession.FieldByName('createdOn').AsDateTime := fCreationDT;
           // Primary Key.
-          AppData.tblmSession.FieldByName('sessionId').AsInteger := PK_SessionID;
+          TDS.tblmSession.FieldByName('sessionId').AsInteger := PK_SessionID;
           // Session Number.
-          AppData.tblmSession.FieldByName('sessionNum').AsInteger := JSONobj.I['sessionNumber'];
+          TDS.tblmSession.FieldByName('sessionNum').AsInteger := JSONobj.I['sessionNumber'];
           // Create a basic session caption.
           fs := TFormatSettings.Create;
           fs.DateSeparator := '_';
           fs.ShortDateFormat := 'yyyy-mm-dd';
           str := 'Session: ' + IntToStr(PK_SessionID) + ' Date: ' + DatetoStr(fCreationDT, fs);
-          AppData.tblmSession.fieldbyName('Caption').AsString := str;
-          AppData.tblmSession.Post;
+          TDS.tblmSession.fieldbyName('Caption').AsString := str;
+          TDS.tblmSession.Post;
         end;
       end;
-      // SYNC ? ... AppData.tblmEvent.Refresh;
+      // SYNC ? ... TDS.tblmEvent.Refresh;
       if JSONObj.Contains('eventNumber') then
       begin
-        AppData.tblmEvent.ApplyMaster; // Redundant?
+        TDS.tblmEvent.ApplyMaster; // Redundant?
         // Calc a primary key.
-        PK := AppData.MaxID_Event + 1;
+        PK := TDS.MaxID_Event + 1;
         // ignore if found...
-        if not AppData.LocateTEventNum(PK_SessionID, JSONobj.I['eventNumber']) then
+        if not TDS.LocateTEventNum(PK_SessionID, JSONobj.I['eventNumber']) then
         begin
           // create new event
-          AppData.tblmEvent.Insert;
-          AppData.tblmEvent.FieldByName('EventNum').AsInteger := JSONobj.I['eventNumber'];
+          TDS.tblmEvent.Insert;
+          TDS.tblmEvent.FieldByName('EventNum').AsInteger := JSONobj.I['eventNumber'];
           // Calculate the Primary Key : IDENTIFIER.
           // ID isn't AutoInc. the primary key is calculated manually.
-          AppData.tblmEvent.fieldbyName('EventID').AsInteger := PK;
+          TDS.tblmEvent.fieldbyName('EventID').AsInteger := PK;
           // master - detail. Also Index Field.
-          AppData.tblmEvent.fieldbyName('SessionID').AsInteger := PK_SessionID;
+          TDS.tblmEvent.fieldbyName('SessionID').AsInteger := PK_SessionID;
           // CAPTION for Event :
           str := 'Event: ' +  IntToStr(JSONobj.I['eventNumber']);
-          AppData.tblmEvent.fieldbyName('Caption').AsString := str;
-          AppData.tblmEvent.Post;
+          TDS.tblmEvent.fieldbyName('Caption').AsString := str;
+          TDS.tblmEvent.Post;
         end;
       end;
 
-      PK_EventID := AppData.tblmEvent.FieldByName('EventID').AsInteger;
-      // SYNC ? ... AppData.tblmHeat.Refresh;
+      PK_EventID := TDS.tblmEvent.FieldByName('EventID').AsInteger;
+      // SYNC ? ... TDS.tblmHeat.Refresh;
       if JSONObj.Contains('heatNumber') then
       begin
-        PK := AppData.MaxID_Heat() + 1;
-        AppData.tblmHeat.ApplyMaster; // Redundant?
-        found := AppData.LocateTHeatNum(PK_EventID, JSONobj.I['heatNumber']);
-        // Create a new heat in appData.tblmHeat.
+        PK := TDS.MaxID_Heat() + 1;
+        TDS.tblmHeat.ApplyMaster; // Redundant?
+        found := TDS.LocateTHeatNum(PK_EventID, JSONobj.I['heatNumber']);
+        // Create a new heat in TDS.tblmHeat.
         if not found then
         begin
           try
             begin
-              AppData.tblmHeat.Insert;
-              AppData.tblmHeat.FieldByName('HeatNum').AsInteger := JSONobj.I['heatNumber'];
+              TDS.tblmHeat.Insert;
+              TDS.tblmHeat.FieldByName('HeatNum').AsInteger := JSONobj.I['heatNumber'];
               // calculate the IDENTIFIER.
               // ID isn't AutoInc - calc manually.
-              AppData.tblmHeat.fieldbyName('HeatID').AsInteger := PK;
+              TDS.tblmHeat.fieldbyName('HeatID').AsInteger := PK;
               // master - detail.
-              AppData.tblmHeat.fieldbyName('EventID').AsInteger := PK_EventID;
+              TDS.tblmHeat.fieldbyName('EventID').AsInteger := PK_EventID;
               // TIME STAMP.
-              AppData.tblmHeat.fieldbyName('startTime').AsDateTime := ISO8601ToDate(JSONobj.S['startTime']);
-              AppData.tblmHeat.fieldbyName('Caption').AsString := 'Heat: ' + IntToStr(JSONobj.I['heatNumber']);
+              TDS.tblmHeat.fieldbyName('startTime').AsDateTime := ISO8601ToDate(JSONobj.S['startTime']);
+              TDS.tblmHeat.fieldbyName('Caption').AsString := 'Heat: ' + IntToStr(JSONobj.I['heatNumber']);
 
               // A unique sequential number for each heat.
-              AppData.tblmHeat.fieldbyName('RaceNum').AsInteger:= JSONobj.I['raceNumber'];
+              TDS.tblmHeat.fieldbyName('RaceNum').AsInteger:= JSONobj.I['raceNumber'];
               if JSONobj.Null['raceNumber'] in [jUnAssigned, jNull] then
                 aRaceNum := 0 else aRaceNum := JSONobj.I['raceNumber'];
 
               // TimeStamp of TimeDrops Results file.
-              AppData.tblmHeat.fieldbyName('CreatedOn').AsDateTime := ISO8601ToDate(JSONobj.s['createdAt']);
-              AppData.tblmHeat.Post;
+              TDS.tblmHeat.fieldbyName('CreatedOn').AsDateTime := ISO8601ToDate(JSONobj.s['createdAt']);
+              TDS.tblmHeat.Post;
               found := true;
             end;
           except on E: Exception do
             begin
-              AppData.tblmHeat.Cancel;
+              TDS.tblmHeat.Cancel;
               found := false;
             end;
           end;
@@ -337,7 +337,7 @@ begin
       end;
       if found then
       begin
-        PK_HeatID := AppData.tblmHeat.FieldByName('HeatID').AsInteger;
+        PK_HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
         ReadJsonLanes(JSONObj, PK_HeatID);
 
         wt := TWatchTime.Create();
@@ -378,11 +378,11 @@ begin
   LSearchOption := TSearchOption.soTopDirectoryOnly;
 
   // Clear all datasets of records
-  AppData.tblmSession.EmptyDataSet;
-  AppData.tblmEvent.EmptyDataSet;
-  AppData.tblmHeat.EmptyDataSet;
-  AppData.tblmLane.EmptyDataSet;
-  AppData.tblmNoodle.EmptyDataSet;
+  TDS.tblmSession.EmptyDataSet;
+  TDS.tblmEvent.EmptyDataSet;
+  TDS.tblmHeat.EmptyDataSet;
+  TDS.tblmLane.EmptyDataSet;
+  TDS.tblmNoodle.EmptyDataSet;
 
   try
     // For files use GetFiles method
@@ -456,7 +456,7 @@ begin
     // =====================================================
     // De-attach from Master-Detail. Create flat files.
     // Necessary to calculate table Primary keys.
-    AppData.DisableTDMasterDetail;
+    TDS.DisableTDMasterDetail;
     // =====================================================
     try
       begin
@@ -485,7 +485,7 @@ begin
 
     // =====================================================
     // Re-attach Master-Detail.
-    AppData.EnableTDMasterDetail;
+    TDS.EnableTDMasterDetail;
     // =====================================================
 
     end;

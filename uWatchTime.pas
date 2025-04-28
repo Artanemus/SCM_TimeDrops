@@ -44,7 +44,7 @@ type
 
 implementation
 
-uses dmAppData, tdSetting;
+uses dmTDS, tdSetting;
 
 
 
@@ -262,20 +262,20 @@ procedure TWatchTime.CalcAutoWatchTimeEvent(aEventID: integer);
 var
 found: boolean;
 begin
-  if appData.tblmEvent.FieldByName('EventID').AsInteger <> aEventID then
-    found := appData.LocateTEventID(aEventID)
+  if TDS.tblmEvent.FieldByName('EventID').AsInteger <> aEventID then
+    found := TDS.LocateTEventID(aEventID)
   else
     found := true;
 
   if found then
   begin
-    appData.tblmHeat.ApplyMaster;
-    appData.tblmHeat.First;
-    while not appData.tblmHeat.Eof do
+    TDS.tblmHeat.ApplyMaster;
+    TDS.tblmHeat.First;
+    while not TDS.tblmHeat.Eof do
     begin
-      if appData.tblmHeat.FieldByName('EventID').AsInteger = aEventID then
-        CalcAutoWatchTimeHeat(appData.tblmHeat.FieldByName('HeatID').AsInteger);
-      appData.tblmHeat.Next;
+      if TDS.tblmHeat.FieldByName('EventID').AsInteger = aEventID then
+        CalcAutoWatchTimeHeat(TDS.tblmHeat.FieldByName('HeatID').AsInteger);
+      TDS.tblmHeat.Next;
     end;
   end;
 end;
@@ -284,20 +284,20 @@ procedure TWatchTime.CalcAutoWatchTimeHeat(aHeatID: integer);
 var
 found: boolean;
 begin
-  if appData.tblmHeat.FieldByName('HeatID').AsInteger <> aHeatID then
-    found := appData.LocateTHeatID(aHeatID)
+  if TDS.tblmHeat.FieldByName('HeatID').AsInteger <> aHeatID then
+    found := TDS.LocateTHeatID(aHeatID)
   else
     found := true;
 
   if found then
   begin
-    appData.tblmLane.ApplyMaster;
-    appData.tblmLane.First;
-    while not appData.tblmLane.Eof do
+    TDS.tblmLane.ApplyMaster;
+    TDS.tblmLane.First;
+    while not TDS.tblmLane.Eof do
     begin
-      if appData.tblmLane.FieldByName('HeatID').AsInteger = aHeatID then
-        CalcAutoWatchTimeLane(appData.tblmLane.FieldByName('LaneID').AsInteger);
-      appData.tblmLane.Next;
+      if TDS.tblmLane.FieldByName('HeatID').AsInteger = aHeatID then
+        CalcAutoWatchTimeLane(TDS.tblmLane.FieldByName('LaneID').AsInteger);
+      TDS.tblmLane.Next;
     end;
   end;
 end;
@@ -307,25 +307,25 @@ var
 found: boolean;
 begin
 
-  if appData.tblmLane.FieldByName('LaneID').AsInteger <> aLaneID then
-    found := appData.LocateTLaneID(aLaneID)
+  if TDS.tblmLane.FieldByName('LaneID').AsInteger <> aLaneID then
+    found := TDS.LocateTLaneID(aLaneID)
   else
     found := true;
 
   if found then
   begin
-    AssignDataLaneToWT(appData.tblmLane.Fields);  // READ from lane.
+    AssignDataLaneToWT(TDS.tblmLane.Fields);  // READ from lane.
     LoadFromSettings; // loads the accepted deviation gap for watch times.
     fAccptDevMsec := fAcceptedDeviation * 1000;
     SortWatchTimes;  // bubble sort - fastest watch-time comes first in stack.
     CheckDeviation;  // test if time-keeper's times pass acceptable deviation.
     CalcRaceTime; // calculate the auto- racetime.
     try
-      appData.tblmLane.Edit;
-      AssignDataWTToLane(appData.tblmLane.Fields); // WRITE to lane.
-      appData.tblmLane.Post;
+      TDS.tblmLane.Edit;
+      AssignDataWTToLane(TDS.tblmLane.Fields); // WRITE to lane.
+      TDS.tblmLane.Post;
     except on E: Exception do
-        appData.tblmLane.Cancel;
+        TDS.tblmLane.Cancel;
     end;
   end;
 
@@ -335,23 +335,24 @@ procedure TWatchTime.CalcAutoWatchTimeSession(aSessionID: integer);
 var
 found: boolean;
 begin
-  if appData.tblmSession.FieldByName('SessionID').AsInteger <> aSessionID then
-    found := appData.LocateTSessionID(aSessionID)
+  if TDS.tblmSession.FieldByName('SessionID').AsInteger <> aSessionID then
+    found := TDS.LocateTSessionID(aSessionID)
   else
     found := true;
 
   if found then
   begin
-    appData.tblmEvent.ApplyMaster;
-    appData.tblmEvent.First;
-    while not appData.tblmEvent.Eof do
+    TDS.tblmEvent.ApplyMaster;
+    TDS.tblmEvent.First;
+    while not TDS.tblmEvent.Eof do
     begin
-      if appData.tblmEvent.FieldByName('SessionID').AsInteger = aSessionID then
-        CalcAutoWatchTimeEvent(appData.tblmEvent.FieldByName('EventID').AsInteger);
-      appData.tblmEvent.Next;
+      if TDS.tblmEvent.FieldByName('SessionID').AsInteger = aSessionID then
+        CalcAutoWatchTimeEvent(TDS.tblmEvent.FieldByName('EventID').AsInteger);
+      TDS.tblmEvent.Next;
     end;
   end;
 end;
+
 
 procedure TWatchTime.CheckDeviation;
 var

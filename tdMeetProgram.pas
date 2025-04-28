@@ -6,7 +6,7 @@ uses
   system.IOUtils,
   system.SysUtils, system.Types, system.UITypes, system.Classes,
   system.Variants, VCL.Controls, system.DateUtils, Data.DB,
-  XSuperJSON, XSuperObject, dmAppData,
+  XSuperJSON, XSuperObject,
   FireDAC.Stan.Param, dmSCM, tdSetting;
 
 function BuildAndSaveMeetProgramDetailed(AFileName: TFileName): boolean;
@@ -30,7 +30,7 @@ var
   vMAX: variant;
 begin
   result := 0;
-  if AppData.qryEvent.IsEmpty then exit;
+  if SCM.qryEvent.IsEmpty then exit;
   if aEventType = 1 then // INDV EVENT
   begin
     SQL := '''
@@ -73,7 +73,7 @@ var
   vMin: variant;
 begin
   result := 0;
-  if AppData.qryEvent.IsEmpty then exit;
+  if SCM.qryEvent.IsEmpty then exit;
   if aEventType = 1 then // INDV EVENT
   begin
     SQL := '''
@@ -116,7 +116,7 @@ var
   vType: variant;
 begin
   result := 'Prelim';
-  if AppData.qryHeat.IsEmpty then exit;
+  if SCM.qryHeat.IsEmpty then exit;
   SQL := '''
     SELECT dbo.HeatType.Caption AS vType
     FROM [SwimClubMeet].[dbo].[HeatIndividual]
@@ -141,7 +141,7 @@ var
   vLegs: variant;
 begin
   result := 1;
-  if AppData.qryEvent.IsEmpty then exit;
+  if SCM.qryEvent.IsEmpty then exit;
   SQL := '''
     SELECT [distance].[Meters] / [SwimClub].[LenOfPool] AS Legs
     FROM [SwimClubMeet].[dbo].[Event]
@@ -166,7 +166,7 @@ begin
   // Default result is 'X' (mixed genders)
   Result := 'X';
   // Ensure the query isn't empty
-  if AppData.qryEvent.IsEmpty then exit;
+  if SCM.qryEvent.IsEmpty then exit;
   // Query to get boys count
   SQL := 'SELECT COUNT(*) FROM [SwimClubMeet].[dbo].[Event] ' +
          'INNER JOIN HeatIndividual ON [Event].EventID = HeatIndividual.EventID ' +
@@ -220,33 +220,33 @@ begin
 
   with X.O['Meet'] do
   begin
-    dt := DateOf(AppData.qrySession.FieldByName('SessionStart').AsDateTime);
-    S['meetName'] := AppData.qrySession.FieldByName('Caption').AsString;
+    dt := DateOf(SCM.qrySession.FieldByName('SessionStart').AsDateTime);
+    S['meetName'] := SCM.qrySession.FieldByName('Caption').AsString;
     I['meetProgramVersion'] := 1;
     Null['meetProgramDateTime'] := jNull;
-    S['meetHostTeamName'] := AppData.qrySwimClub.FieldByName('Caption').AsString;
+    S['meetHostTeamName'] := SCM.qrySwimClub.FieldByName('Caption').AsString;
     S['meetStartDate'] := FormatDateTime('yyyy-mm-dd', dt, AFormatSettings);
     Null['meetEndDate'] := jNull;
     with A['meetEvents']do
     begin
-      AppData.qryEvent.ApplyMaster;
-      AppData.qryEvent.First;
-      while not AppData.qryEvent.Eof do
+      SCM.qryEvent.ApplyMaster;
+      SCM.qryEvent.First;
+      while not SCM.qryEvent.Eof do
       begin
         EventObj := SO();
-        EventObj.S['eventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
-        EventObj.I['eventStrokeCode'] := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
-        EventObj.S['eventStroke'] := AppData.qryStroke.FieldByName('Caption').AsString;
-        RelayLegs := GetRelayLegs(AppData.qryEvent.FieldByName('EventID').AsInteger);
-        AppData.qryDistance.ApplyMaster;
-        AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
+        EventObj.S['eventNumber'] := IntToStr(SCM.qryEvent.FieldByName('EventNum').AsInteger);
+        EventObj.I['eventStrokeCode'] := SCM.qryEvent.FieldByName('StrokeID').AsInteger;
+        EventObj.S['eventStroke'] := SCM.qryStroke.FieldByName('Caption').AsString;
+        RelayLegs := GetRelayLegs(SCM.qryEvent.FieldByName('EventID').AsInteger);
+        SCM.qryDistance.ApplyMaster;
+        AEventTypeID := SCM.qryDistance.FieldByName('EventTypeID').AsInteger;
         if  AEventTypeID = 1 then
           EventObj.B['eventIsRelay'] := false else EventObj.B['eventIsRelay'] := true;
         EventObj.I['eventRelaylegs'] := RelayLegs;
-        EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
-        genderStr := GetGenderTypeStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        EventObj.I['eventDistance'] := SCM.qryDistance.FieldByName('Meters').AsInteger;
+        genderStr := GetGenderTypeStr(SCM.qryEvent.FieldByName('EventID').AsInteger);
         EventObj.S['eventGender'] := genderStr;
-        aEventID := AppData.qryEvent.FieldByName('EventID').AsInteger;
+        aEventID := SCM.qryEvent.FieldByName('EventID').AsInteger;
         EventObj.I['eventMinAge'] := GetMINAge(aEventID, AEventTypeID);
         EventObj.I['eventMaxAge'] := GetMAXAge(aEventID, AEventTypeID);
         EventObj.Null['eventDescription'] := jNull;
@@ -254,37 +254,37 @@ begin
         EventObj.Null['eventFullLabel'] := jNull;
         EventObj.Null['eventStartTime'] := jNull;
         Add(EventObj);
-        AppData.qryEvent.Next;
+        SCM.qryEvent.Next;
       end;
     end;
     with A['meetSessions'] do
     begin
       SessObj := SO();
       SessObj.I['sessionNumber'] := 1;
-      SessObj.S['sessionId'] := IntToStr(AppData.qrySession.FieldByName('SessionID').AsInteger);
-      SessObj.S['sessionName'] := AppData.qrySession.FieldByName('Caption').AsString;
-      dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
+      SessObj.S['sessionId'] := IntToStr(SCM.qrySession.FieldByName('SessionID').AsInteger);
+      SessObj.S['sessionName'] := SCM.qrySession.FieldByName('Caption').AsString;
+      dt := SCM.qrySession.FieldByName('SessionStart').AsDateTime;
       SessObj.S['sessionBeginAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', dt, AFormatSettings);
       SessObj.Null['sessionEndAt'] := jNull;
       with SessObj.A['sessionRaces'] do
       begin
-        AppData.qryEvent.First;
-        while not AppData.qryEvent.Eof do
+        SCM.qryEvent.First;
+        while not SCM.qryEvent.Eof do
         begin
-          AppData.qryDistance.ApplyMaster;
-          AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
-          AppData.qryHeat.ApplyMaster;
-          AppData.qryHeat.Last;
-          NumOfHeats := AppData.qryHeat.RecordCount;
-          AppData.qryHeat.First;
-          while not AppData.qryHeat.Eof do
+          SCM.qryDistance.ApplyMaster;
+          AEventTypeID := SCM.qryDistance.FieldByName('EventTypeID').AsInteger;
+          SCM.qryHeat.ApplyMaster;
+          SCM.qryHeat.Last;
+          NumOfHeats := SCM.qryHeat.RecordCount;
+          SCM.qryHeat.First;
+          while not SCM.qryHeat.Eof do
           begin
             RaceObj := SO();
-            RaceObj.S['raceEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+            RaceObj.S['raceEventNumber'] := IntToStr(SCM.qryEvent.FieldByName('EventNum').AsInteger);
             Inc(currRaceNumber);
             RaceObj.I['raceNumber'] := currRaceNumber;
-            RaceObj.S['raceHeatType'] := GetHeatTypeStr(AppData.qryHeat.FieldByName('HeatID').AsInteger);
-            RaceObj.I['raceHeatNumber'] := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
+            RaceObj.S['raceHeatType'] := GetHeatTypeStr(SCM.qryHeat.FieldByName('HeatID').AsInteger);
+            RaceObj.I['raceHeatNumber'] := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
             RaceObj.I['raceTotalHeats'] := NumOfHeats;
             Add(RaceObj);
 
@@ -293,65 +293,65 @@ begin
               // INDIVIDUAL.
               if AEventTypeID = 1 then
               begin
-                AppData.qryINDV.ApplyMaster;
-                AppData.qryINDV.First;
-                while not AppData.qryINDV.Eof do
+                SCM.qryINDV.ApplyMaster;
+                SCM.qryINDV.First;
+                while not SCM.qryINDV.Eof do
                 begin
-                  if AppData.qryINDV.FieldByName('MemberID').IsNull then
-                    AppData.qryINDV.Next
+                  if SCM.qryINDV.FieldByName('MemberID').IsNull then
+                    SCM.qryINDV.Next
                   else
                   begin
                     LaneObj := SO();
-                    LaneObj.I['laneNumber'] := AppData.qryINDV.FieldByName('Lane').AsInteger;
+                    LaneObj.I['laneNumber'] := SCM.qryINDV.FieldByName('Lane').AsInteger;
                     LaneObj.B['isEmpty'] := false;
-                    LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+                    LaneObj.S['laneEventNumber'] := IntToStr(SCM.qryEvent.FieldByName('EventNum').AsInteger);
                     try
-                      dt := TimeOf(AppData.qryINDV.FieldByName('TimeToBeat').AsDateTime);
+                      dt := TimeOf(SCM.qryINDV.FieldByName('TimeToBeat').AsDateTime);
                       seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
                       LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
                     except on E: Exception do
                       LaneObj.Null['laneSeedTime'] := jNull;
                     end;
-                    LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger);
+                    LaneObj.S['laneSwimmerId'] := IntToStr(SCM.qryINDV.FieldByName('MemberID').AsInteger);
                     LaneObj.Null['laneTeamId'] := jNull;
                     Add(LaneObj);
-                    AppData.qryINDV.Next;
+                    SCM.qryINDV.Next;
                   end;
                 end;
               end
               // TEAM.
               else if AEventTypeID = 2 then
               begin
-                AppData.qryTEAM.ApplyMaster;
-                AppData.qryTEAM.First;
-                while not AppData.qryTEAM.Eof do
+                SCM.qryTEAM.ApplyMaster;
+                SCM.qryTEAM.First;
+                while not SCM.qryTEAM.Eof do
                 begin
-                  if AppData.qryTEAM.FieldByName('TeamNameID').IsNull then
-                    AppData.qryTEAM.Next
+                  if SCM.qryTEAM.FieldByName('TeamNameID').IsNull then
+                    SCM.qryTEAM.Next
                   else
                   begin
                     LaneObj := SO();
-                    LaneObj.I['laneNumber'] := AppData.qryTEAM.FieldByName('Lane').AsInteger;
+                    LaneObj.I['laneNumber'] := SCM.qryTEAM.FieldByName('Lane').AsInteger;
                     LaneObj.B['isEmpty'] := false;
-                    LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+                    LaneObj.S['laneEventNumber'] := IntToStr(SCM.qryEvent.FieldByName('EventID').AsInteger);
                     try
-                      dt := TimeOf(AppData.qryTEAM.FieldByName('TimeToBeat').AsDateTime);
+                      dt := TimeOf(SCM.qryTEAM.FieldByName('TimeToBeat').AsDateTime);
                       seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
                       LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
                     except on E: Exception do
                       LaneObj.Null['laneSeedTime'] := jNull;
                     end;
                     LaneObj.Null['laneSwimmerId'] := jNull;
-                    LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
+                    LaneObj.S['laneTeamId'] := IntToStr(SCM.qryTEAM.FieldByName('TeamID').AsInteger);
                     Add(LaneObj);
-                    AppData.qryTEAM.Next;
+                    SCM.qryTEAM.Next;
                   end;
                 end;
               end;
             end;
-            AppData.qryHeat.Next;
+            SCM.qryHeat.Next;
           end;
-          AppData.qryEvent.Next;
+          SCM.qryEvent.Next;
         end;
       end;
       SessObj.Null['sessionPool'] := jNull;
@@ -363,24 +363,24 @@ begin
     with A['meetTeams'] do
     begin
       // DISTINCT list of TEAMS...
-      AppData.qryListTeams.Close;
-      AppData.qryListTeams.ParamByName('SESSIONID').AsInteger :=
-        AppData.qrySession.FieldByName('SessionID').AsInteger;
-      AppData.qryListTeams.Prepare;
-      AppData.qryListTeams.Open;
-      if AppData.qryListTeams.Active then
+      SCM.qryListTeams.Close;
+      SCM.qryListTeams.ParamByName('SESSIONID').AsInteger :=
+        SCM.qrySession.FieldByName('SessionID').AsInteger;
+      SCM.qryListTeams.Prepare;
+      SCM.qryListTeams.Open;
+      if SCM.qryListTeams.Active then
       begin
-        AppData.qryListTeams.First;
-        while not AppData.qryListTeams.Eof do
+        SCM.qryListTeams.First;
+        while not SCM.qryListTeams.Eof do
         begin
           teamObj := SO();
-          teamObj.I['teamId'] := AppData.qryListTeams.FieldByName('teamId').AsInteger;
-          teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
-          teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
-          teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.I['teamId'] := SCM.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] := SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] := SCM.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] := SCM.qryListTeams.FieldByName('teamFullName').AsString;
           teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
-          AppData.qryListTeams.Next;
+          SCM.qryListTeams.Next;
         end;
       end;
 
@@ -390,24 +390,24 @@ begin
     with A['meetSwimmers'] do
     begin
       // DISTINCT list of Entrants nominating to swim event(s)...
-      AppData.qryListSwimmers.Close;
-      AppData.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
-        AppData.qrySession.FieldByName('SessionID').AsInteger;
-      AppData.qryListSwimmers.Prepare;
-      AppData.qryListSwimmers.Open;
-      if AppData.qryListSwimmers.Active then
+      SCM.qryListSwimmers.Close;
+      SCM.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
+        SCM.qrySession.FieldByName('SessionID').AsInteger;
+      SCM.qryListSwimmers.Prepare;
+      SCM.qryListSwimmers.Open;
+      if SCM.qryListSwimmers.Active then
       begin
-        AppData.qryListSwimmers.First;
-        while not AppData.qryListSwimmers.Eof do
+        SCM.qryListSwimmers.First;
+        while not SCM.qryListSwimmers.Eof do
         begin
           swimmerObj := SO();
-          swimmerObj.I['swimmerId'] := AppData.qryListSwimmers.FieldByName('swimmerId').AsInteger;
-          swimmerObj.S['swimmerName'] := AppData.qryListSwimmers.FieldByName('swimmerName').AsString;
-          swimmerObj.S['swimmerGender'] := AppData.qryListSwimmers.FieldByName('swimmerGender').AsString;
-          swimmerObj.I['swimmerAge'] := AppData.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
-          swimmerObj.I['swimmerTeamID']  := AppData.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
+          swimmerObj.I['swimmerId'] := SCM.qryListSwimmers.FieldByName('swimmerId').AsInteger;
+          swimmerObj.S['swimmerName'] := SCM.qryListSwimmers.FieldByName('swimmerName').AsString;
+          swimmerObj.S['swimmerGender'] := SCM.qryListSwimmers.FieldByName('swimmerGender').AsString;
+          swimmerObj.I['swimmerAge'] := SCM.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
+          swimmerObj.I['swimmerTeamID']  := SCM.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
           Add(swimmerObj);
-          AppData.qryListSwimmers.Next;
+          SCM.qryListSwimmers.Next;
         end;
       end;
     end;
@@ -460,15 +460,15 @@ begin
       Meets run on multi-days and contain multi-sessions!
       Sessions only run single days!
     }
-    dt := DateOf(AppData.qrySession.FieldByName('SessionStart').AsDateTime);
+    dt := DateOf(SCM.qrySession.FieldByName('SessionStart').AsDateTime);
     // Name of the meet as assigned by the user
-    S['meetName'] := AppData.qrySession.FieldByName('Caption').AsString;
+    S['meetName'] := SCM.qrySession.FieldByName('Caption').AsString;
     // Data format version, must be 1
     I['meetProgramVersion'] := 1;
     // Date/Time the program was last updated, in ISO 8601 UTC format
     S['meetProgramDateTime'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss"Z"', Now, AFormatSettings);
     // name of the team or organization hosting the meet
-    S['meetHostTeamName'] := AppData.qrySwimClub.FieldByName('Caption').AsString;
+    S['meetHostTeamName'] := SCM.qrySwimClub.FieldByName('Caption').AsString;
     { Use Session start TDateTime.     }
     // First day of the meet, in ISO 8601 DAY ONLY format (e.g. "2023-07-31")
     S['meetStartDate'] := FormatDateTime('yyyy-mm-dd', dt, AFormatSettings);
@@ -478,52 +478,52 @@ begin
 
     with A['meetEvents']do
     begin
-      AppData.qryEvent.ApplyMaster;
-      AppData.qryEvent.First;
-      while not AppData.qryEvent.Eof do
+      SCM.qryEvent.ApplyMaster;
+      SCM.qryEvent.First;
+      while not SCM.qryEvent.Eof do
       begin
         EventObj := SO();
-        aEventID := AppData.qryEvent.FieldByName('EventID').AsInteger;
+        aEventID := SCM.qryEvent.FieldByName('EventID').AsInteger;
         EventObj.S['eventId'] := IntToStr(aEventID);
         // number of the event, e.g. "3" or "4A"
-        EventObj.S['eventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+        EventObj.S['eventNumber'] := IntToStr(SCM.qryEvent.FieldByName('EventNum').AsInteger);
         {
           1 -> Free 2 -> Back 3 -> Breast 4 -> Fly 5 -> Medley
           In my table dbo.Stroke - BS preceeds BK. Don't ask me why.
-          j := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
+          j := SCM.qryEvent.FieldByName('StrokeID').AsInteger;
           I could switch - if (j = 3) then j := 4 else if (j = 4) then j:= 3;
         }
         // Stroke code
-        EventObj.I['eventStrokeCode'] := AppData.qryEvent.FieldByName('StrokeID').AsInteger;
+        EventObj.I['eventStrokeCode'] := SCM.qryEvent.FieldByName('StrokeID').AsInteger;
         {
           Freeform description of the stroke, can be used for localization.
           As I can localize my non-standard stroke identity - a switch statement
           isn't needed.
         }
         // Stroke description
-        EventObj.S['eventStroke'] := AppData.qryStroke.FieldByName('Caption').AsString;
+        EventObj.S['eventStroke'] := SCM.qryStroke.FieldByName('Caption').AsString;
         // number of laps to swim, typically - Distance div LengthOfPool
-        RelayLegs := GetRelayLegs(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        RelayLegs := GetRelayLegs(SCM.qryEvent.FieldByName('EventID').AsInteger);
         // INDV ot TEAM (Relay).
-        AppData.qryDistance.ApplyMaster;
-        AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
+        SCM.qryDistance.ApplyMaster;
+        AEventTypeID := SCM.qryDistance.FieldByName('EventTypeID').AsInteger;
         if  AEventTypeID = 1 then
           EventObj.B['eventIsRelay'] := false else EventObj.B['eventIsRelay'] := true;
         EventObj.I['eventRelaylegs'] := RelayLegs;
-        EventObj.I['eventDistance'] := AppData.qryDistance.FieldByName('Meters').AsInteger;
+        EventObj.I['eventDistance'] := SCM.qryDistance.FieldByName('Meters').AsInteger;
 
 
         { M", "F", or "X" or any other category designation.
           TODO: call dtUtils.EventGender to obtain correct gender assignment. }
 
-        genderStr := GetGenderTypeStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+        genderStr := GetGenderTypeStr(SCM.qryEvent.FieldByName('EventID').AsInteger);
         // Gender
         EventObj.S['eventGender'] := genderStr;
         // Ages
         EventObj.I['eventMinAge'] := GetMINAge(aEventID, AEventTypeID);
         EventObj.I['eventMaxAge'] := GetMAXAge(aEventID, AEventTypeID);
         // Description
-        EventObj.S['eventDescription'] := AppData.qryEvent.FieldByName('Caption').AsString;
+        EventObj.S['eventDescription'] := SCM.qryEvent.FieldByName('Caption').AsString;
         EventObj.Null['eventShortLabel'] := jNull;
         EventObj.Null['eventFullLabel'] := jNull;
         EventObj.Null['eventStartTime'] := jNull;
@@ -542,7 +542,7 @@ begin
         *)
 
         Add(EventObj);
-        AppData.qryEvent.Next;
+        SCM.qryEvent.Next;
       end;
     end;
 
@@ -551,9 +551,9 @@ begin
     begin
       SessObj := SO();
       SessObj.I['sessionNumber'] := 1;
-      SessObj.S['sessionId'] := IntToStr(AppData.qrySession.FieldByName('SessionID').AsInteger);
-      SessObj.S['sessionName'] := AppData.qrySession.FieldByName('Caption').AsString;
-      dt := AppData.qrySession.FieldByName('SessionStart').AsDateTime;
+      SessObj.S['sessionId'] := IntToStr(SCM.qrySession.FieldByName('SessionID').AsInteger);
+      SessObj.S['sessionName'] := SCM.qrySession.FieldByName('Caption').AsString;
+      dt := SCM.qrySession.FieldByName('SessionStart').AsDateTime;
       SessObj.S['sessionBeginAt'] := FormatDateTime('yyyy-mm-dd"T"hh:nn:ss', dt, AFormatSettings);
       // db v1.1.5.3 doesn't have field SessionEnd - Calculate a session end time.
       dt := IncHour(dt,2);
@@ -563,20 +563,20 @@ begin
 
       with SessObj.A['sessionRaces'] do
       begin
-        AppData.qryEvent.First;
-        while not AppData.qryEvent.Eof do
+        SCM.qryEvent.First;
+        while not SCM.qryEvent.Eof do
         begin
-          AppData.qryDistance.ApplyMaster;
-          AEventTypeID := AppData.qryDistance.FieldByName('EventTypeID').AsInteger;
-          AppData.qryHeat.ApplyMaster;
-          AppData.qryHeat.Last;
-          NumOfHeats := AppData.qryHeat.RecordCount;
-          AppData.qryHeat.First;
-          while not AppData.qryHeat.Eof do
+          SCM.qryDistance.ApplyMaster;
+          AEventTypeID := SCM.qryDistance.FieldByName('EventTypeID').AsInteger;
+          SCM.qryHeat.ApplyMaster;
+          SCM.qryHeat.Last;
+          NumOfHeats := SCM.qryHeat.RecordCount;
+          SCM.qryHeat.First;
+          while not SCM.qryHeat.Eof do
           begin
             RaceObj := SO();
-            RaceObj.S['raceEventId'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
-            RaceObj.S['raceEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+            RaceObj.S['raceEventId'] := IntToStr(SCM.qryEvent.FieldByName('EventID').AsInteger);
+            RaceObj.S['raceEventNumber'] := IntToStr(SCM.qryEvent.FieldByName('EventNum').AsInteger);
             {
               IMPORTANT: the race number defines the order of races at the meet
               irrespective of the event number and heat number
@@ -585,17 +585,17 @@ begin
             Inc(currRaceNumber);
             RaceObj.I['raceNumber'] := currRaceNumber;
 
-            { TODO JOIN dbo.HeatType on AppData.qryHeat for correct assignment.
+            { TODO JOIN dbo.HeatType on SCM.qryHeat for correct assignment.
               RaceObj.S['raceHeatType'] :=
-              AppData.qryHeatType.FieldByName('Caption').AsString;   }
+              SCM.qryHeatType.FieldByName('Caption').AsString;   }
             // for Prelims, Finals, Swimoffs etc.
-            RaceObj.S['raceHeatType'] := GetHeatTypeStr(AppData.qryHeat.FieldByName('HeatID').AsInteger);
+            RaceObj.S['raceHeatType'] := GetHeatTypeStr(SCM.qryHeat.FieldByName('HeatID').AsInteger);
             //  HEAT IDENTIFICATION.
-            RaceObj.I['raceHeatId'] := AppData.qryHeat.FieldByName('HeatID').AsInteger;
+            RaceObj.I['raceHeatId'] := SCM.qryHeat.FieldByName('HeatID').AsInteger;
             { The order of heats can be changed by the user ..
               Using the heat number as ID will result in errors. }
             // NUMBER OF THE HEAT
-            RaceObj.I['raceHeatNumber'] := AppData.qryHeat.FieldByName('HeatNum').AsInteger;
+            RaceObj.I['raceHeatNumber'] := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
             RaceObj.I['raceTotalHeats'] := NumOfHeats;
             Add(RaceObj);
 
@@ -604,75 +604,75 @@ begin
               // Individual event
               if AEventTypeID = 1 then
               begin
-                AppData.qryINDV.ApplyMaster;
-                AppData.qryINDV.First;
-                while not AppData.qryINDV.Eof do
+                SCM.qryINDV.ApplyMaster;
+                SCM.qryINDV.First;
+                while not SCM.qryINDV.Eof do
                 begin
-                  if AppData.qryINDV.FieldByName('MemberID').IsNull then
-                    AppData.qryINDV.Next
+                  if SCM.qryINDV.FieldByName('MemberID').IsNull then
+                    SCM.qryINDV.Next
                   else
                   begin
                     LaneObj := SO();
-                    LaneObj.I['laneNumber'] := AppData.qryINDV.FieldByName('Lane').AsInteger;
-                    LaneObj.B['isEmpty'] := AppData.qryINDV.FieldByName('MemberID').IsNull;
-                    LaneObj.S['laneEventId'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
-                    LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventNum').AsInteger);
+                    LaneObj.I['laneNumber'] := SCM.qryINDV.FieldByName('Lane').AsInteger;
+                    LaneObj.B['isEmpty'] := SCM.qryINDV.FieldByName('MemberID').IsNull;
+                    LaneObj.S['laneEventId'] := IntToStr(SCM.qryEvent.FieldByName('EventID').AsInteger);
+                    LaneObj.S['laneEventNumber'] := IntToStr(SCM.qryEvent.FieldByName('EventNum').AsInteger);
 
                     try
-                      dt := TimeOf(AppData.qryINDV.FieldByName('TimeToBeat').AsDateTime);
+                      dt := TimeOf(SCM.qryINDV.FieldByName('TimeToBeat').AsDateTime);
                       // in 100th of seconds.
                       seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
                       LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
                     except on E: Exception do
                       LaneObj.Null['laneSeedTime'] := jNull;
                     end;
-                    LaneObj.S['laneSwimmerId'] := IntToStr(AppData.qryINDV.FieldByName('MemberID').AsInteger);
+                    LaneObj.S['laneSwimmerId'] := IntToStr(SCM.qryINDV.FieldByName('MemberID').AsInteger);
                     LaneObj.Null['laneTeamId'] := jNull;
                     Add(LaneObj);
-                    AppData.qryINDV.Next;
+                    SCM.qryINDV.Next;
                   end;
                 end;
               end
               // Team event
               else if AEventTypeID = 2 then
               begin
-                AppData.qryTEAM.ApplyMaster;
-                AppData.qryTEAM.First;
-                while not AppData.qryTEAM.Eof do
+                SCM.qryTEAM.ApplyMaster;
+                SCM.qryTEAM.First;
+                while not SCM.qryTEAM.Eof do
                 begin
-                  if AppData.qryTEAM.FieldByName('TeamNameID').IsNull then
-                    AppData.qryTEAM.Next
+                  if SCM.qryTEAM.FieldByName('TeamNameID').IsNull then
+                    SCM.qryTEAM.Next
                   else
                   begin
                     LaneObj := SO();
-                    LaneObj.I['laneNumber'] := AppData.qryTEAM.FieldByName('Lane').AsInteger;
+                    LaneObj.I['laneNumber'] := SCM.qryTEAM.FieldByName('Lane').AsInteger;
                     LaneObj.B['isEmpty'] := false;
-                    LaneObj.S['laneEventNumber'] := IntToStr(AppData.qryEvent.FieldByName('EventID').AsInteger);
+                    LaneObj.S['laneEventNumber'] := IntToStr(SCM.qryEvent.FieldByName('EventID').AsInteger);
                     try
-                      dt := TimeOf(AppData.qryTEAM.FieldByName('TimeToBeat').AsDateTime);
+                      dt := TimeOf(SCM.qryTEAM.FieldByName('TimeToBeat').AsDateTime);
                       seedTimeInCentiseconds := MilliSecondOfTheDay(dt) div 10;
                       LaneObj.I['laneSeedTime'] := seedTimeInCentiseconds;
                     except on E: Exception do
                       LaneObj.Null['laneSeedTime'] := jNull;
                     end;
                     LaneObj.Null['laneSwimmerId'] := jNull;
-                    LaneObj.S['laneTeamId'] := IntToStr(AppData.qryTEAM.FieldByName('TeamID').AsInteger);
+                    LaneObj.S['laneTeamId'] := IntToStr(SCM.qryTEAM.FieldByName('TeamID').AsInteger);
                     Add(LaneObj);
-                    AppData.qryTEAM.Next;
+                    SCM.qryTEAM.Next;
                   end;
                 end;
               end;
             end;
-            AppData.qryHeat.Next;
+            SCM.qryHeat.Next;
           end;
-          AppData.qryEvent.Next;
+          SCM.qryEvent.Next;
         end;
         // specification for the pool this session is run in
         with SessObj.A['sessionPool'] do
         begin
           PoolObj := SO();
-          PoolObj.I['poolNumberOfLanes'] := AppData.qrySwimClub.FieldByName('NumOfLanes').AsInteger;
-          j := AppData.qrySwimClub.FieldByName('PoolTypeID').AsInteger;
+          PoolObj.I['poolNumberOfLanes'] := SCM.qrySwimClub.FieldByName('NumOfLanes').AsInteger;
+          j := SCM.qrySwimClub.FieldByName('PoolTypeID').AsInteger;
           case j of
             1: PoolObj.S['poolCourse'] :=  'SCM';
             2: PoolObj.S['poolCourse'] :=  'LCM';
@@ -689,24 +689,24 @@ begin
     with A['meetTeams'] do
     begin
       // DISTINCT list of TEAMS...
-      AppData.qryListTeams.Close;
-      AppData.qryListTeams.ParamByName('SESSIONID').AsInteger :=
-        AppData.qrySession.FieldByName('SessionID').AsInteger;
-      AppData.qryListTeams.Prepare;
-      AppData.qryListTeams.Open;
-      if AppData.qryListTeams.Active then
+      SCM.qryListTeams.Close;
+      SCM.qryListTeams.ParamByName('SESSIONID').AsInteger :=
+        SCM.qrySession.FieldByName('SessionID').AsInteger;
+      SCM.qryListTeams.Prepare;
+      SCM.qryListTeams.Open;
+      if SCM.qryListTeams.Active then
       begin
-        AppData.qryListTeams.First;
-        while not AppData.qryListTeams.Eof do
+        SCM.qryListTeams.First;
+        while not SCM.qryListTeams.Eof do
         begin
           teamObj := SO();
-          teamObj.I['teamId'] := AppData.qryListTeams.FieldByName('teamId').AsInteger;
-          teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
-          teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
-          teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.I['teamId'] := SCM.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] := SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] := SCM.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] := SCM.qryListTeams.FieldByName('teamFullName').AsString;
           teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
-          AppData.qryListTeams.Next;
+          SCM.qryListTeams.Next;
         end;
       end;
 
@@ -715,29 +715,29 @@ begin
     with A['meetSwimmers'] do
     begin
       // DISTINCT list of Entrants nominating to swim event(s)...
-      AppData.qryListSwimmers.Close;
-      AppData.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
-        AppData.qrySession.FieldByName('SessionID').AsInteger;
-      AppData.qryListSwimmers.Prepare;
-      AppData.qryListSwimmers.Open;
-      if AppData.qryListSwimmers.Active then
+      SCM.qryListSwimmers.Close;
+      SCM.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
+        SCM.qrySession.FieldByName('SessionID').AsInteger;
+      SCM.qryListSwimmers.Prepare;
+      SCM.qryListSwimmers.Open;
+      if SCM.qryListSwimmers.Active then
       begin
-        AppData.qryListSwimmers.First;
-        while not AppData.qryListSwimmers.Eof do
+        SCM.qryListSwimmers.First;
+        while not SCM.qryListSwimmers.Eof do
         begin
           swimmerObj := SO();
           // unique id of each swimmer (not necessarily globally unique, but must be unique within the meet
-          swimmerObj.I['swimmerId'] := AppData.qryListSwimmers.FieldByName('swimmerId').AsInteger;
+          swimmerObj.I['swimmerId'] := SCM.qryListSwimmers.FieldByName('swimmerId').AsInteger;
           // name of swimmer in the preferred order (first last or last, first)
-          swimmerObj.S['swimmerName'] := AppData.qryListSwimmers.FieldByName('swimmerName').AsString;
-          swimmerObj.S['swimmerGender'] := AppData.qryListSwimmers.FieldByName('swimmerGender').AsString;
+          swimmerObj.S['swimmerName'] := SCM.qryListSwimmers.FieldByName('swimmerName').AsString;
+          swimmerObj.S['swimmerGender'] := SCM.qryListSwimmers.FieldByName('swimmerGender').AsString;
           // per age up date
-          swimmerObj.I['swimmerAge'] := AppData.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
+          swimmerObj.I['swimmerAge'] := SCM.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
           {TODO -oBSA -cGeneral : query team assignment}
           // What if swimmer is assigned to multi-teams?
           // references list of teams
-          swimmerObj.S['swimmerTeamID'] := AppData.qryListSwimmers.FieldByName('swimmerTeamID').AsString;
-          AppData.qryListSwimmers.Next;
+          swimmerObj.S['swimmerTeamID'] := SCM.qryListSwimmers.FieldByName('swimmerTeamID').AsString;
+          SCM.qryListSwimmers.Next;
         end;
       end;
     end;
@@ -746,24 +746,24 @@ begin
     with A['meetTeams'] do
     begin
       // DISTINCT list of TEAMS...
-      AppData.qryListTeams.Close;
-      AppData.qryListTeams.ParamByName('SESSIONID').AsInteger :=
-        AppData.qrySession.FieldByName('SessionID').AsInteger;
-      AppData.qryListTeams.Prepare;
-      AppData.qryListTeams.Open;
-      if AppData.qryListTeams.Active then
+      SCM.qryListTeams.Close;
+      SCM.qryListTeams.ParamByName('SESSIONID').AsInteger :=
+        SCM.qrySession.FieldByName('SessionID').AsInteger;
+      SCM.qryListTeams.Prepare;
+      SCM.qryListTeams.Open;
+      if SCM.qryListTeams.Active then
       begin
-        AppData.qryListTeams.First;
-        while not AppData.qryListTeams.Eof do
+        SCM.qryListTeams.First;
+        while not SCM.qryListTeams.Eof do
         begin
           teamObj := SO();
-          teamObj.I['teamId'] := AppData.qryListTeams.FieldByName('teamId').AsInteger;
-          teamObj.S['teamAbbreviation'] := AppData.qryListTeams.FieldByName('teamAbbreviation').AsString;
-          teamObj.S['teamShortName'] := AppData.qryListTeams.FieldByName('teamShortName').AsString;
-          teamObj.S['teamFullName'] := AppData.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.I['teamId'] := SCM.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] := SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] := SCM.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] := SCM.qryListTeams.FieldByName('teamFullName').AsString;
           teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
-          AppData.qryListTeams.Next;
+          SCM.qryListTeams.Next;
         end;
       end;
 
@@ -773,24 +773,24 @@ begin
     with A['meetSwimmers'] do
     begin
       // DISTINCT list of Entrants nominating to swim event(s)...
-      AppData.qryListSwimmers.Close;
-      AppData.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
-        AppData.qrySession.FieldByName('SessionID').AsInteger;
-      AppData.qryListSwimmers.Prepare;
-      AppData.qryListSwimmers.Open;
-      if AppData.qryListSwimmers.Active then
+      SCM.qryListSwimmers.Close;
+      SCM.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
+        SCM.qrySession.FieldByName('SessionID').AsInteger;
+      SCM.qryListSwimmers.Prepare;
+      SCM.qryListSwimmers.Open;
+      if SCM.qryListSwimmers.Active then
       begin
-        AppData.qryListSwimmers.First;
-        while not AppData.qryListSwimmers.Eof do
+        SCM.qryListSwimmers.First;
+        while not SCM.qryListSwimmers.Eof do
         begin
           swimmerObj := SO();
-          swimmerObj.I['swimmerId'] := AppData.qryListSwimmers.FieldByName('swimmerId').AsInteger;
-          swimmerObj.S['swimmerName'] := AppData.qryListSwimmers.FieldByName('swimmerName').AsString;
-          swimmerObj.S['swimmerGender'] := AppData.qryListSwimmers.FieldByName('swimmerGender').AsString;
-          swimmerObj.I['swimmerAge'] := AppData.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
-          swimmerObj.I['swimmerTeamID']  := AppData.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
+          swimmerObj.I['swimmerId'] := SCM.qryListSwimmers.FieldByName('swimmerId').AsInteger;
+          swimmerObj.S['swimmerName'] := SCM.qryListSwimmers.FieldByName('swimmerName').AsString;
+          swimmerObj.S['swimmerGender'] := SCM.qryListSwimmers.FieldByName('swimmerGender').AsString;
+          swimmerObj.I['swimmerAge'] := SCM.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
+          swimmerObj.I['swimmerTeamID']  := SCM.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
           Add(swimmerObj);
-          AppData.qryListSwimmers.Next;
+          SCM.qryListSwimmers.Next;
         end;
       end;
     end;

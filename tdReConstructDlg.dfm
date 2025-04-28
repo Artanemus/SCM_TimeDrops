@@ -64,7 +64,7 @@ object ReConstructDlg: TReConstructDlg
       Top = 60
       Width = 28
       Height = 29
-      ImageCollection = AppData.imgcolDT
+      ImageCollection = IMG.imgcolDT
       ImageWidth = 0
       ImageHeight = 0
       ImageIndex = 77
@@ -85,7 +85,7 @@ object ReConstructDlg: TReConstructDlg
       Top = 60
       Width = 613
       Height = 29
-      Images = AppData.vimglistDTGrid
+      Images = IMG.vimglistDTGrid
       RightButton.ImageIndex = 1
       RightButton.ImageName = 'Folders'
       RightButton.Visible = True

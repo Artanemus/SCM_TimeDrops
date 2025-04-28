@@ -1,4 +1,4 @@
-unit dmAppData;
+unit dmTDS;
 
 interface
 
@@ -7,88 +7,43 @@ uses
   FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Def,
   FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.VCLUI.Wait,
   Data.DB, FireDAC.Comp.Client, FireDAC.Stan.Param, FireDAC.DatS,
-  FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.Comp.DataSet, dmSCM,
+  FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.Comp.DataSet,
   System.ImageList, Vcl.ImgList, Vcl.VirtualImageList, Vcl.BaseImageCollection,
   Vcl.ImageCollection, SCMDefines, Windows, Winapi.Messages, vcl.Forms,
   FireDAC.Phys.SQLiteVDataSet, Datasnap.DBClient, FireDAC.Stan.StorageXML,
   FireDAC.Stan.StorageBin, FireDAC.Stan.Storage, Datasnap.Provider,
   SVGIconImageCollection, uWatchTime;
 
-type
-//  dtFileType = (dtUnknown, dtDO4, dtDO3, dtALL);
-  // 5 x modes m-enabled, m-disabled, a-enabled, a-disabled, unknown (err or nil).
-  //  dtTimeModeErr = (tmeUnknow, tmeBadTime, tmeExceedsDeviation, tmeEmpty);
-//  dtPrecedence = (dtPrecHeader, dtPrecFileName);
-  dtActiveRT = (artAutomatic, artManual, artUser, artSplit, artNone);
 
 type
 
-  TAppData = class(TDataModule)
+  TTDS = class(TDataModule)
     dsmLane: TDataSource;
     dsmEvent: TDataSource;
     dsmHeat: TDataSource;
     dsmSession: TDataSource;
-    dsEvent: TDataSource;
-    dsHeat: TDataSource;
-    dsINDV: TDataSource;
-    dsSession: TDataSource;
-    dsSessionList: TDataSource;
-    dsSwimClub: TDataSource;
-    dsTEAM: TDataSource;
-    dsTEAMEntrant: TDataSource;
     FDStanStorageBinLink1: TFDStanStorageBinLink;
     FDStanStorageXMLLink1: TFDStanStorageXMLLink;
-    imgcolDT: TImageCollection;
-    qryDistance: TFDQuery;
-    qryEvent: TFDQuery;
-    qryHeat: TFDQuery;
-    qryINDV: TFDQuery;
-    qryNearestSessionID: TFDQuery;
-    qrySession: TFDQuery;
-    qrySessionList: TFDQuery;
-    qrySessionListCaption: TWideStringField;
-    qrySessionListClosedDT: TSQLTimeStampField;
-    qrySessionListSessionID: TFDAutoIncField;
-    qrySessionListSessionStart: TSQLTimeStampField;
-    qrySessionListSessionStatusID: TIntegerField;
-    qrySessionListSwimClubID: TIntegerField;
-    qryStroke: TFDQuery;
-    qrySwimClub: TFDQuery;
-    qryTEAM: TFDQuery;
-    qryTEAMEntrant: TFDQuery;
-    SVGIconImageCollection1: TSVGIconImageCollection;
     tblmLane: TFDMemTable;
     tblmEvent: TFDMemTable;
     tblmHeat: TFDMemTable;
     tblmNoodle: TFDMemTable;
     tblmSession: TFDMemTable;
-    vimglistDTCell: TVirtualImageList;
-    vimglistDTEvent: TVirtualImageList;
-    vimglistDTGrid: TVirtualImageList;
-    vimglistMenu: TVirtualImageList;
-    vimglistStateImages: TVirtualImageList;
-    vimglistTreeView: TVirtualImageList;
-    qryListSwimmers: TFDQuery;
-    qrySplit: TFDQuery;
-    qryListTeams: TFDQuery;
     dsmNoodle: TDataSource;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
     procedure tblmHeatAfterScroll(DataSet: TDataSet);
   private
-    FConnection: TFDConnection;
-    fTDDataIsActive: Boolean;
-    fTDMasterDetailActive: Boolean;
-    fSCMDataIsActive: Boolean;
-    msgHandle: HWND;  // TForm.dtfrmExec ...
-    function GetSCMActiveSessionID: integer;
-    procedure DeActivateDataSCM();
+    FConnection: TFDConnection;  //---
+    fDataIsActive: Boolean;
+    fMasterDetailActive: Boolean;
+    msgHandle: HWND;  // TForm.dtfrmExec ...   // Both DataModules
 
   public
-    procedure SetUpSCMConnection;
+    procedure ActivateDataSCM();  //---
+    procedure DeActivateDataSCM();  //---
+
     procedure ActivateDataTD;
-    procedure ActivateDataSCM();
-    procedure BuildCSVEventData(AFileName: string);
     procedure BuildAppData;
     procedure EmptyAllTDDataSets;
     procedure DisableAllTDControls;
@@ -97,9 +52,6 @@ type
     procedure CalcRTSplitTime(ADataSet: TDataSet);
     procedure DisableTDMasterDetail();
     procedure EnableTDMasterDetail();
-    // MISC SCM ROUTINES/FUNCTIONS
-    function GetSCMNumberOfHeats(AEventID: integer): integer;
-    function GetSCMRoundABBREV(AEventID: integer): string;
 
     // L O C A T E S   F O R   D T   D A T A.
     // WARNING : Master-Detail is enabled and locating to an ID isn't garenteed.
@@ -116,21 +68,10 @@ type
     function LocateTLaneID(ALaneID: integer): boolean;
     function LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
 
-    // L O C A T E S   F O R   S W I M C L U B M E E T   D A T A.
-    // WARNING : Master-Detail enabled...
-    // .......................................................
-    function LocateSCMEventID(AEventID: integer): boolean;
-    function LocateSCMHeatID(AHeatID: integer): boolean;
-    // Uses SessionStart TDateTime...
-    function LocateSCMNearestSessionID(aDate: TDateTime): integer;
-    function LocateSCMSessionID(ASessionID: integer): boolean;
-    function LocateSCMLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean;
-    // .......................................................
 
-    function SyncDTtoSCM: boolean;
-    function SyncSCMtoDT: boolean;
-    function SyncCheck: boolean;
-    function SyncCheckSession: boolean;
+    function SyncDTtoSCM(SessionID, EventNum, HeatNum: Integer): boolean;
+    function SyncCheck(SessionID, EventNum, HeatNum: Integer): boolean;
+    function SyncCheckSession: boolean; //---
 
     // .......................................................
     // FIND MAXIMUM IDENTIFIER VALUE IN TIME-DROPS TABLES.
@@ -147,34 +88,30 @@ type
 
     // Read/Write Application Data State to file
     procedure ReadFromBinary(AFilePath:string);
-    // If events, heats, etc change within SwimClubMeet then call here to
-    // reload and sync to changes.
-    procedure RefreshSCM();
 
     // SET dtActiveRT : artAutomatic, artManual, artUser, artSplit, artNone
-    procedure SetActiveRT(ADataSet: TDataSet; aActiveRT: dtActiveRT);
-    function ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0): dtActiveRT;
+    procedure SetActiveRT(ADataSet: TDataSet; aActiveRT: scmActiveRT);
+    function ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0): scmActiveRT;
     // toggle [T1M .. T3M] [T1A .. T3A] - TimeKeeper's watch-time 'active state'.
-    function ToggleWatchTime(ADataSet: TDataSet; idx: integer; art: dtActiveRT): Boolean;
+    function ToggleWatchTime(ADataSet: TDataSet; idx: integer; art: scmActiveRT): Boolean;
     // Tests IsEmpty, IsNull, [T1M .. T3M] [T1A .. T3A] STATE.
     function ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer; art:
-        dtActiveRT): boolean;
+        scmActiveRT): boolean;
     // Read/Write Application Data State to file
     procedure WriteToBinary(AFilePath:string);
 
-    property ActiveSessionID: integer read GetSCMActiveSessionID;
-    property Connection: TFDConnection read FConnection write FConnection;
-    property MSG_Handle: HWND read msgHandle write msgHandle;
-    property SCMDataIsActive: Boolean read fSCMDataIsActive;
-    property TDDataIsActive: Boolean read fTDDataIsActive;
-    property TDMasterDetailActive: Boolean read fTDMasterDetailActive;
+//    property ActiveSessionID: integer read GetSCMActiveSessionID;   //---
+    property Connection: TFDConnection read FConnection write FConnection; //---
+    property MSG_Handle: HWND read msgHandle write msgHandle;  // Both DataModules
+    property DataIsActive: Boolean read fDataIsActive;
+    property MasterDetailActive: Boolean read fMasterDetailActive;
   end;
 
 const
   XMLDataSubFolder = 'GitHub\SCM_TimeDrops\XML\';
 
 var
-  AppData: TAppData;
+  TDS: TTDS;
 
 implementation
 
@@ -182,22 +119,19 @@ implementation
 
 {$R *.dfm}
 
-uses System.Variants, System.DateUtils, tdSetting, System.IOUtils;
+uses System.Variants, System.DateUtils, tdSetting, System.IOUtils, dmSCM;
 
-function GetDocumentDir_TPath: string;
+procedure TTDS.ActivateDataSCM;
 begin
-  Result := TPath.GetDocumentsPath;
-  // TPath functions usually don't include the trailing delimiter,
-  // add it if you specifically need it.
-  Result := IncludeTrailingPathDelimiter(Result);
+    FConnection := nil;  //---
+    fDataIsActive := false;
+    fMasterDetailActive := false;
+    msgHandle := 0;  // TForm.dtfrmExec ...   // Both DataModules
 end;
 
-// Example Usage:
-// ShowMessage('Documents folder: ' + GetDocumentDir_TPath);
-
-procedure TAppData.ActivateDataTD;
+procedure TTDS.ActivateDataTD;
 begin
-  fTDDataIsActive := false;
+  fDataIsActive := false;
   // MAKE LIVE THE TIME-DROPS TABLES
   try
     tblmSession.Open;
@@ -212,7 +146,7 @@ begin
           tblmLane.Open;
           tblmNoodle.Open;
           if tblmLane.Active and tblmNoodle.Active then
-            fTDDataIsActive := true;
+            fDataIsActive := true;
         end;
       end;
     end;
@@ -221,127 +155,20 @@ begin
   end;
 end;
 
-procedure TAppData.ActivateDataSCM;
-begin
-  if Assigned(SCM.scmConnection) and SCM.scmConnection.Connected then
-  begin
-    fConnection := SCM.scmConnection;
-    // GRAND MASTER.
-    qrySwimClub.Connection := fConnection;
-    qrySwimClub.Open;
-    if qrySwimClub.Active then
-      qrySwimClub.First;
 
-    // Query used by pick session dialogue.
-    qrySessionList.Connection := fConnection;
-    qrySessionList.Close;
-    qrySessionList.ParamByName('SWIMCLUBID').AsInteger :=
-      qrySwimClub.FieldByName('SwimClubID').AsInteger;
-    qrySessionList.Prepare;
-    qrySessionList.Open;
-    // Sessions listed are 'OPEN' and reference SwimClubID.
-    if qrySessionList.Active and not qrySessionList.IsEmpty then
-    begin
-      qrySessionList.First;
-    end;
-
-    // setup connection for master - detail
-    qrySession.Connection := fConnection;
-    qryEvent.Connection := fConnection;
-    qryDistance.Connection := fConnection;
-    qryStroke.Connection := fConnection;
-    qryHeat.Connection := fConnection;
-    qryINDV.Connection := fConnection;
-    qryTEAM.Connection := fConnection;
-    qryTEAMEntrant.Connection := fConnection;
-
-    qrySession.Open;
-
-    if qrySwimClub.Active and qrySession.Active then
-    begin
-      qrySession.First;
-      qryEvent.Open;
-      qryDistance.Open;
-      qryStroke.Open;
-      qryHeat.Open;
-      qryINDV.Open;
-      qryTEAM.Open;
-      qryTEAMEntrant.Open;
-      fSCMDataIsActive := true;
-    end;
-
-  end else FConnection := nil;
-end;
-
-procedure TAppData.BuildCSVEventData(AFileName: string);
-var
-  sl: TStringList;
-  s, s2, s3: string;
-  i, id: integer;
-begin
-{
-The Load button lets the user load all event data from an event file.
-This is a CSV file and can be hand typed or generated by meet
-management software. Each line of this file should be formatted as follows:
-Event Number,EventName,Number of Heats,Number of Splits,Round ...
-
-Example:
-1A,Boys 50 M Free,4,1,P
-1B,Girls 50 M Free,5,1,P
-2A,Boys 100 M Breaststroke,2,2,P
-2B,Girls 100 M Breaststroke,2,2,P …
-
-The first line will be event index 1, the second line will be event index 2 and so on. Events
-will always come up in event index order although this can be overridden and events and
-heats may be run in any order.
-
-}
-  sl := TStringlist.Create;
-  qryEvent.First();
-  while not qryEvent.Eof do
-  begin
-    s := '';
-    // Event Number – Up to 5 alpha-numeric characters. Example: 12B ...
-    i := qryEvent.FieldByName('EventNum').AsInteger;
-    s := s + IntToStr(i) + ',';
-    // Event Name – Up to 25 alpha-numeric characters. Example: Men’s 50 Meter Freestyle
-    s2 := qryDistance.FieldByName('Caption').AsString + ' ' +
-    qryStroke.FieldByName('Caption').AsString;
-    s3 := qryEvent.FieldByName('Caption').AsString;
-    if Length(s3) > 0 then
-      s2 := s2 + ' ' + s3;
-    s := s + s2 + ',';
-    // Get Number of Heats
-    // Number of Heats – (0-99) Number of expected heats for the given event
-    id := qryEvent.FieldByName('EventID').AsInteger;
-    i := GetSCMNumberOfHeats(id);
-    s := s + IntToStr(i) + ',';
-    { TODO -oBSA : Implement Splits for TIME-DROPS }
-    // Number of Splits - NOT AVAILABLE IN THIS VERSION.
-    s := s + '0,';
-    { Round .... requires db v1.1.5.4.
-    * A: ALL  (CTS DOLPHIN - ref F912 ).
-    * P: Preliminary (DEFAULT)
-    * Q: Quarterfinals
-    * S: Semifinals
-    * F: Finals
-    }
-    // Round – “A” for all, “P” for prelim or “F” for final
-    s := s + 'P';
-    sl.Add(s);
-    qryEvent.Next;
-  end;
-  qryEvent.First();
-  if not sl.IsEmpty then
-    sl.SaveToFile(AFileName);
-  sl.free;
-end;
-
-procedure TAppData.BuildAppData;
+procedure TTDS.BuildAppData;
 var
 fn: TFileName;
+
+function GetDocumentDir_TPath: string;
 begin
-  fSCMDataIsActive := false;
+  Result := TPath.GetDocumentsPath;
+  // TPath functions usually don't include the trailing delimiter,
+  Result := IncludeTrailingPathDelimiter(Result);
+end;
+
+begin
+  fDataIsActive := false;
   tblmSession.Active := false;
   tblmEvent.Active := false;
   tblmHeat.Active := false;
@@ -552,7 +379,7 @@ begin
 
 end;
 
-procedure TAppData.CalcRTSplitTime(ADataSet: TDataSet);
+procedure TTDS.CalcRTSplitTime(ADataSet: TDataSet);
 var
   t, t2: TTime;
   tOk: boolean;
@@ -606,7 +433,7 @@ begin
 
 end;
 
-procedure TAppData.CalcRaceTimeM(ADataSet: TDataSet);
+procedure TTDS.CalcRaceTimeM(ADataSet: TDataSet);
 var
   I: Integer;
   s: string;
@@ -643,40 +470,27 @@ begin
   ADataSet.Post;
 end;
 
-procedure TAppData.DataModuleCreate(Sender: TObject);
+procedure TTDS.DataModuleCreate(Sender: TObject);
 begin
   // Init params.
-  fTDDataIsActive := false;
-  fTDMasterDetailActive := false;
+  fDataIsActive := false;
+  fMasterDetailActive := false;
   FConnection := nil;
-  fSCMDataIsActive := false; // activated later once FConnection is assigned.
+  fDataIsActive := false; // activated later once FConnection is assigned.
   msgHandle := 0;
 end;
 
-procedure TAppData.DataModuleDestroy(Sender: TObject);
+procedure TTDS.DataModuleDestroy(Sender: TObject);
 begin
-  DeActivateDataSCM;
+//  DeActivateDataSCM;
 end;
 
-procedure TAppData.DeActivateDataSCM;
+procedure TTDS.DeActivateDataSCM;
 begin
-  if Assigned(fConnection) and fConnection.Connected then
-  begin
-    fSCMDataIsActive := false;
-    qryTEAMEntrant.Close; // Detail of TEAM
-    qryTEAM.Close;  // Detail of Heat
-    qryINDV.Close;  // Detail of Heat
-    qryHeat.Close;  // Detail of event
-    qryStroke.Close; // Detail of event
-    qryDistance.Close;  // Detail of event
-    qryEvent.Close;
-    qrySession.Close;
-    qrySessionList.Close; // Query used by pick session dialogue.
-    qrySwimClub.Close;  // GRAND MASTER.
-  end;
+    msgHandle := 0;
 end;
 
-procedure TAppData.DisableAllTDControls;
+procedure TTDS.DisableAllTDControls;
 begin
   tblmSession.DisableControls;
   tblmEvent.DisableControls;
@@ -685,7 +499,7 @@ begin
   tblmNoodle.DisableControls;
 end;
 
-procedure TAppData.DisableTDMasterDetail();
+procedure TTDS.DisableTDMasterDetail();
 begin
   // ASSERT Master - Detail
   tblmSession.IndexFieldNames := 'SessionID';
@@ -721,10 +535,10 @@ begin
   tblmNoodle.ApplyMaster;
   tblmNoodle.First;
 
-  fTDMasterDetailActive := false;
+  fMasterDetailActive := false;
 end;
 
-procedure TAppData.EmptyAllTDDataSets;
+procedure TTDS.EmptyAllTDDataSets;
 begin
    // clear all data records - cannot be performed on a closed table.
   if tblmSession.Active then
@@ -737,7 +551,7 @@ begin
   end;
 end;
 
-procedure TAppData.EnableAllTDControls;
+procedure TTDS.EnableAllTDControls;
 begin
   tblmSession.EnableControls;
   tblmEvent.EnableControls;
@@ -746,7 +560,7 @@ begin
   tblmNoodle.EnableControls;
 end;
 
-procedure TAppData.EnableTDMasterDetail();
+procedure TTDS.EnableTDMasterDetail();
 begin
   // Master - index field.
   tblmSession.IndexFieldNames := 'SessionID';
@@ -768,57 +582,10 @@ begin
   tblmNoodle.DetailFields := 'HeatID';
   tblmNoodle.IndexFieldNames := 'HeatID';
   tblmSession.First;
-  fTDMasterDetailActive := true;
+  fMasterDetailActive := true;
 end;
 
-function TAppData.GetSCMActiveSessionID: integer;
-begin
-  result := 0;
-  if not fSCMDataIsActive then exit;
-  if qrySession.Active and not qrySession.IsEmpty then
-    result := qrySession.FieldByName('SessionID').AsInteger;
-end;
-
-function TAppData.GetSCMNumberOfHeats(AEventID: integer): integer;
-var
-SQL: string;
-v: variant;
-begin
-  result := 0;
-  SQL := 'SELECT COUNT(HeatID) FROM dbo.HeatIndividual WHERE EventID = :ID;';
-  v := AppData.Connection.ExecSQLScalar(SQL, [AEventID]);
-  if VarIsNull(v) or VarIsEmpty(v) or (v=0)  then exit;
-  result := v;
-end;
-
-function TAppData.GetSCMRoundABBREV(AEventID: integer): string;
-var
-SQL: string;
-v: variant;
-ARoundID: integer;
-begin
-  {
-  SwimClubMeet.dbo.Round database version 1.1.5.4
-  SQL := 'SELECT [ABREV] FROM dbo.Round WHERE RoundID = :ID'
-  * P: Preliminary (DEFAULT)
-  * Q: Quarterfinals
-  * S: Semifinals
-  * F: Finals
-  }
-  result := 'P';
-  SQL := 'SELECT [RoundID] FROM dbo.Event WHERE EventID = :ID;';
-  v := AppData.Connection.ExecSQLScalar(SQL, [AEventID]);
-  if VarIsNull(v) or VarIsEmpty(v) or (v=0)  then exit;
-  ARoundID := v;
-
-  SQL := 'SELECT [ABREV] FROM dbo.Round WHERE RoundID = :ID;';
-  v := AppData.Connection.ExecSQLScalar(SQL, [ARoundID]);
-  if VarIsNull(v) or VarIsEmpty(v) then exit;
-  result := v;
-
-end;
-
-function TAppData.LocateTEventID(AEventID: integer): boolean;
+function TTDS.LocateTEventID(AEventID: integer): boolean;
 var
   LOptions: TLocateOptions;
 begin
@@ -831,7 +598,7 @@ begin
     dsmHeat.DataSet.Refresh;
 end;
 
-function TAppData.LocateTEventNum(ASessionID, AEventNum: integer): boolean;
+function TTDS.LocateTEventNum(ASessionID, AEventNum: integer): boolean;
 var
   indexStr: string;
   LOptions: TLocateOptions;
@@ -851,7 +618,7 @@ begin
   tblmEvent.IndexFieldNames := indexStr;
 end;
 
-function TAppData.LocateTHeatID(AHeatID: integer): boolean;
+function TTDS.LocateTHeatID(AHeatID: integer): boolean;
 var
   LOptions: TLocateOptions;
 begin
@@ -862,7 +629,7 @@ begin
   result := dsmHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
 end;
 
-function TAppData.LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
+function TTDS.LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
 var
   indexStr: string;
   LOptions: TLocateOptions;
@@ -882,7 +649,7 @@ begin
   tblmHeat.IndexFieldNames := indexStr;
 end;
 
-function TAppData.LocateTLaneID(ALaneID: integer): boolean;
+function TTDS.LocateTLaneID(ALaneID: integer): boolean;
 begin
   result := false;
   if not tblmLane.Active then exit;
@@ -890,7 +657,7 @@ begin
   result := tblmLane.Locate('LaneID', ALaneID, []);
 end;
 
-function TAppData.LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
+function TTDS.LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
 var
   indexStr: string;
   LOptions: TLocateOptions;
@@ -910,7 +677,7 @@ begin
   tblmLane.IndexFieldNames := indexStr;
 end;
 
-function TAppData.LocateTRaceNum(aRaceNum: integer): boolean;
+function TTDS.LocateTRaceNum(aRaceNum: integer): boolean;
 begin
   result := false;
   if not tblmHeat.Active then exit;
@@ -919,7 +686,7 @@ begin
   if result then dsmLane.DataSet.Refresh;
 end;
 
-function TAppData.LocateTSessionID(ASessionID: integer): boolean;
+function TTDS.LocateTSessionID(ASessionID: integer): boolean;
 var
   LOptions: TLocateOptions;
 begin
@@ -935,7 +702,7 @@ begin
   end;
 end;
 
-function TAppData.LocateTSessionNum(ASessionNum: integer): boolean;
+function TTDS.LocateTSessionNum(ASessionNum: integer): boolean;
 var
   indexStr: string;
   LOptions: TLocateOptions;
@@ -955,75 +722,7 @@ begin
   tblmSession.IndexFieldNames := indexStr;
 end;
 
-function TAppData.LocateSCMEventID(AEventID: integer): boolean;
-var
-  LOptions: TLocateOptions;
-begin
-  result := false;
-  if not fSCMDataIsActive then exit;
-  if (aEventID = 0) then exit;
-  LOptions := [];
-  if dsEvent.DataSet.Active then
-      result := dsEvent.DataSet.Locate('EventID', aEventID, LOptions);
-end;
-
-function TAppData.LocateSCMHeatID(AHeatID: integer): boolean;
-var
-  LOptions: TLocateOptions;
-begin
-  result := false;
-  if not fSCMDataIsActive then exit;
-  if (AHeatID = 0) then exit;
-  LOptions := [];
-  if dsHeat.DataSet.Active then
-      result := dsHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
-end;
-
-function TAppData.LocateSCMLaneNum(ALaneNum: integer; aEventType:
-    scmEventType): boolean;
-var
-  found: boolean;
-  LOptions: TLocateOptions;
-begin
-  // IGNORES SYNC STATE...
-  found := false;
-  LOptions := [];
-  case aEventType of
-    etUnknown:
-      found := false;
-    etINDV:
-      found := qryINDV.Locate('Lane', ALaneNum, LOptions);
-    etTEAM:
-      found := qryTEAM.Locate('Lane', ALaneNum, LOptions);
-  end;
-  result := found;
-end;
-
-function TAppData.LocateSCMNearestSessionID(aDate: TDateTime): integer;
-begin
-  result := 0;
-  // find the session with 'aDate' or bestfit.
-  qryNearestSessionID.Connection := fConnection;
-  qryNearestSessionID.ParamByName('ADATE').AsDateTime := DateOf(aDate);
-  qryNearestSessionID.Prepare;
-  qryNearestSessionID.Open;
-  if not qryNearestSessionID.IsEmpty then
-   result := qryNearestSessionID.FieldByName('SessionID').AsInteger;
-end;
-
-function TAppData.LocateSCMSessionID(ASessionID: integer): boolean;
-var
-  LOptions: TLocateOptions;
-begin
-  result := false;
-  if not fSCMDataIsActive then exit;
-  if (ASessionID = 0) then exit;
-  LOptions := [];
-  if dsSession.DataSet.Active then
-      result := dsSession.DataSet.Locate('SessionID', ASessionID, LOptions);
-end;
-
-function TAppData.MaxID_Lane: integer;
+function TTDS.MaxID_Lane: integer;
 var
 max, id: integer;
 begin
@@ -1040,7 +739,7 @@ begin
   result := max;
 end;
 
-function TAppData.MaxID_Event: integer;
+function TTDS.MaxID_Event: integer;
 var
 max, id: integer;
 begin
@@ -1057,7 +756,7 @@ begin
   result := max;
 end;
 
-function TAppData.MaxID_Heat: integer;
+function TTDS.MaxID_Heat: integer;
 var
 max, id: integer;
 begin
@@ -1074,7 +773,7 @@ begin
   result := max;
 end;
 
-function TAppData.MaxID_Session: integer;
+function TTDS.MaxID_Session: integer;
 var
 max, id: integer;
 begin
@@ -1091,123 +790,103 @@ begin
   result := max;
 end;
 
-procedure TAppData.POST_All;
+procedure TTDS.POST_All;
 var
   AEventType: scmEventType;
   ALaneNum: integer;
 begin
-  qryINDV.DisableControls;
-  qryTEAM.DisableControls;
+  SCM.qryINDV.DisableControls;
+  SCM.qryTEAM.DisableControls;
   tblmLane.DisableControls;
 
-  AEventType := scmEventType(qryDistance.FieldByName('EventTypeID').AsInteger);
+  AEventType := scmEventType(SCM.qryDistance.FieldByName('EventTypeID').AsInteger);
 
   // ONE TO ONE SYNC....
   tblmLane.First;
-  while not (tblmLane.eof or qryINDV.eof) do
+  while not (tblmLane.eof or SCM.qryINDV.eof) do
   begin
     ALaneNum := tblmLane.FieldByName('Lane').AsInteger;
-    if LocateSCMLaneNum(ALaneNum, AEventType) then
+    if SCM.LocateLaneNum(ALaneNum, AEventType) then
     begin
       if AEventType = etINDV then
       begin
         // can't post a time to a lane with no swimmer!
-        if not qryINDV.FieldByName('MemberID').IsNull then
+        if not SCM.qryINDV.FieldByName('MemberID').IsNull then
         begin
-          qryINDV.Edit;
-          qryINDV.FieldByName('RaceTime').AsDateTime :=
+          SCM.qryINDV.Edit;
+          SCM.qryINDV.FieldByName('RaceTime').AsDateTime :=
           tblmLane.FieldByName('RaceTime').AsDateTime;
-          qryINDV.Post;
+          SCM.qryINDV.Post;
         end;
       end
       else if AEventType = etTEAM then
       begin
         // can't post a time to a lane that doesn't have a relay team.
-        if not qryINDV.FieldByName('TeamNameID').IsNull then
+        if not SCM.qryINDV.FieldByName('TeamNameID').IsNull then
         begin
-          qryTEAM.Edit;
-          qryTEAM.FieldByName('RaceTime').AsDateTime :=
+          SCM.qryTEAM.Edit;
+          SCM.qryTEAM.FieldByName('RaceTime').AsDateTime :=
           tblmLane.FieldByName('RaceTime').AsDateTime;
-          qryTEAM.Post;
+          SCM.qryTEAM.Post;
         end;
       end;
     end;
     tblmLane.Next;
   end;
   if AEventType = etINDV then
-    qryINDV.First
+    SCM.qryINDV.First
   else if AEventType = etTEAM then
-    qryTEAM.First;
+    SCM.qryTEAM.First;
   tblmLane.First;
   tblmLane.EnableControls;
-  qryTEAM.EnableControls;
-  qryINDV.EnableControls;
+  SCM.qryTEAM.EnableControls;
+  SCM.qryINDV.EnableControls;
 
 end;
 
-procedure TAppData.POST_Lane(ALaneNum: Integer);
+procedure TTDS.POST_Lane(ALaneNum: Integer);
 var
   AEventType: scmEventType;
   b1, b2: boolean;
 begin
-  qryINDV.DisableControls;
-  qryTEAM.DisableControls;
+  SCM.qryINDV.DisableControls;
+  SCM.qryTEAM.DisableControls;
   tblmLane.DisableControls;
-  AEventType := scmEventType(qryDistance.FieldByName('EventTypeID').AsInteger);
+  AEventType := scmEventType(SCM.qryDistance.FieldByName('EventTypeID').AsInteger);
   // SYNC to ROW ...
   b1 := LocateTLaneNum(tblmHeat.FieldByName('HeatID').AsInteger, ALaneNum);
-  b2 := LocateSCMLaneNum(ALaneNum, AEventType);
+  b2 := SCM.LocateLaneNum(ALaneNum, AEventType);
   if (b1 and b2) then
   begin
       if AEventType = etINDV then
       begin
         // can't post a time to a lane with no swimmer!
-        if not qryINDV.FieldByName('MemberID').IsNull then
+        if not SCM.qryINDV.FieldByName('MemberID').IsNull then
         begin
-          qryINDV.Edit;
-          qryINDV.FieldByName('RaceTime').AsDateTime :=
+          SCM.qryINDV.Edit;
+          SCM.qryINDV.FieldByName('RaceTime').AsDateTime :=
           tblmLane.FieldByName('RaceTime').AsDateTime;
-          qryINDV.Post;
+          SCM.qryINDV.Post;
         end;
       end
       else if AEventType = etTEAM then
       begin
         // can't post a time to a lane that doesn't have a relay team.
-        if not qryINDV.FieldByName('TeamNameID').IsNull then
+        if not SCM.qryINDV.FieldByName('TeamNameID').IsNull then
         begin
-          qryTEAM.Edit;
-          qryTEAM.FieldByName('RaceTime').AsDateTime :=
+          SCM.qryTEAM.Edit;
+          SCM.qryTEAM.FieldByName('RaceTime').AsDateTime :=
           tblmLane.FieldByName('RaceTime').AsDateTime;
-          qryTEAM.Post;
+          SCM.qryTEAM.Post;
         end;
       end;
   end;
   tblmLane.EnableControls;
-  qryTEAM.EnableControls;
-  qryINDV.EnableControls;
+  SCM.qryTEAM.EnableControls;
+  SCM.qryINDV.EnableControls;
 end;
 
-procedure TAppData.SetUpSCMConnection;
-begin
-  qryTEAM.DisableControls;
-  qryINDV.DisableControls;
-  qryHeat.DisableControls;
-  qryEvent.DisableControls;
-  qrySession.DisableControls;
-  qrySwimClub.DisableControls;
-
-  ActivateDataSCM;
-
-  qrySwimClub.EnableControls;
-  qrySession.EnableControls;
-  qryEvent.EnableControls;
-  qryHeat.EnableControls;
-  qryINDV.EnableControls;
-  qryTEAM.EnableControls;
-
-end;
-
-procedure TAppData.ReadFromBinary(AFilePath:string);
+procedure TTDS.ReadFromBinary(AFilePath:string);
 var
 s: string;
 begin
@@ -1223,59 +902,7 @@ begin
   tblmNoodle.LoadFromFile(s + 'DTNoodle.fsBinary');
 end;
 
-procedure TAppData.RefreshSCM;
-var
-  ASwimClubID, ASessionID, AEventID, AHeatID: integer;
-begin
-  qryTEAM.DisableControls;
-  qryINDV.DisableControls;
-  qryHeat.DisableControls;
-  qryEvent.DisableControls;
-  qrySession.DisableControls;
-  qrySwimClub.DisableControls;
-
-  // Store database record position(s).
-  ASwimClubID := qrySwimClub.FieldByName('SwimClubID').AsInteger;
-  ASessionID := qrySession.FieldByName('SessionID').AsInteger;
-  AEventID := qryEvent.FieldByName('EventID').AsInteger;
-  AHeatID := qryHeat.FieldByName('HeatID').AsInteger;
-  // close
-  DeActivateDataSCM;
-  // open : assign connection : assert Master-Detail, etc.
-  ActivateDataSCM;
-  // cue-to-record : locate.
-  if qrySwimClub.Locate('SwimClubID', ASwimClubID, []) then
-  begin
-    qrySession.ApplyMaster;
-    if LocateSCMSessionID(ASessionID) then
-    begin
-      qryEvent.ApplyMaster;
-      if LocateSCMEventID(AEventID) then
-      begin
-        qryHeat.ApplyMaster;
-        if not LocateSCMHeatID(AHeatID) then
-          qryHeat.First;
-      end
-      else
-      begin
-        qryEvent.First;
-      end;
-    end;
-  end;
-  // cue-to-lane 1
-  qryINDV.first;
-  qryTEAM.first;
-
-  qrySwimClub.EnableControls;
-  qrySession.EnableControls;
-  qryEvent.EnableControls;
-  qryHeat.EnableControls;
-  qryINDV.EnableControls;
-  qryTEAM.EnableControls;
-
-end;
-
-procedure TAppData.SetActiveRT(ADataSet: TDataSet; aActiveRT: dtActiveRT);
+procedure TTDS.SetActiveRT(ADataSet: TDataSet; aActiveRT: scmActiveRT);
 var
   RaceTimeField: TField;
   RaceTimeUField: TField;
@@ -1392,7 +1019,7 @@ begin
   end;
 end;
 
-function TAppData.SyncDTtoSCM: boolean;
+function TTDS.SyncDTtoSCM(SessionID, EventNum, HeatNum: Integer): boolean;
 var
   found: boolean;
   LOptions: TLocateOptions;
@@ -1404,17 +1031,16 @@ begin
   tblmLane.DisableControls;
   tblmSession.DisableControls;
   // NOTE : SCM Sesssion ID = DT SessionNum.
-  found := LocateTSessionID(qrySession.FieldByName('SessionID').AsInteger);
+  found := LocateTSessionID(SessionID);
   if found then
   begin
     tblmEvent.ApplyMaster;
 //    found := appData.LocateTEventNum(qrySession.FieldByName('SessionID').AsInteger, qryEvent.FieldByName('EventNum').AsInteger);
-    found := tblmEvent.Locate('EventNum', qryEvent.FieldByName('EventNum').AsInteger, LOptions);
+    found := tblmEvent.Locate('EventNum', EventNum, LOptions);
     if found then
     begin
       tblmHeat.ApplyMaster;
-      found := tblmHeat.Locate('HeatNum',
-          qryHeat.FieldByName('HeatNum').AsInteger, LOptions);
+      found := tblmHeat.Locate('HeatNum', HeatNum, LOptions);
       tblmLane.ApplyMaster;
       if found then
         result := true;
@@ -1426,89 +1052,57 @@ begin
   tblmLane.EnableControls;
 end;
 
-function TAppData.SyncCheck: boolean;
+function TTDS.SyncCheck(SessionID, EventNum, HeatNum: Integer): boolean;
 var
   IsSynced: boolean;
 begin
   IsSynced := false;
-  if qrySession.FieldByName('SessionID').AsInteger =
-  tblmSession.FieldByName('SessionNum').AsInteger then
-    if qryEvent.FieldByName('EventNum').AsInteger =
-    tblmEvent.FieldByName('EventNum').AsInteger then
-      if qryHeat.FieldByName('HeatNum').AsInteger =
-      tblmHeat.FieldByName('HeatNum').AsInteger then
+  if SessionID =  tblmSession.FieldByName('SessionNum').AsInteger then
+    if EventNum = tblmEvent.FieldByName('EventNum').AsInteger then
+      if HeatNum = tblmHeat.FieldByName('HeatNum').AsInteger then
         IsSynced := true;
   result := IsSynced;
 end;
 
-function TAppData.SyncCheckSession: boolean;
+function TTDS.SyncCheckSession: boolean;
 var
   sessNum: integer;
 begin
   result := false;
   sessNum := tblmSession.FieldByName('SessionNum').AsInteger;
-  if qrySession.FieldByName('SessionID').AsInteger = sessNum then
+  if SCM.qrySession.FieldByName('SessionID').AsInteger = sessNum then
     result := true;
 end;
 
-function TAppData.SyncSCMtoDT: boolean;
-var
-  found: boolean;
-begin
-  result := false;
-  found := false;
-
-  if not SyncCheckSession() then exit;
-
-  qryTEAM.DisableControls;
-  qryINDV.DisableControls;
-  qryHeat.DisableControls;
-  qryEvent.DisableControls;
-  qrySession.DisableControls;
-
-  if qryEvent.Locate('EventNum', tblmEvent.FieldByName('EventNum').AsInteger, [])
-  then
-    found := qryHeat.Locate('HeatNum', tblmHeat.FieldByName('HeatNum')
-      .AsInteger, []);
-
-  result := found;
-  qrySession.EnableControls;
-  qryEvent.EnableControls;
-  qryHeat.EnableControls;
-  qryINDV.EnableControls;
-  qryTEAM.EnableControls;
-end;
-
-
-procedure TAppData.tblmHeatAfterScroll(DataSet: TDataSet);
+procedure TTDS.tblmHeatAfterScroll(DataSet: TDataSet);
 begin
   if (msgHandle <> 0) then
-    PostMessage(msgHandle, SCM_UPDATEUI3, 0,0);
+    PostMessage(msgHandle, SCM_UPDATEUI_TDS, 0,0);
 end;
 
-function TAppData.ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0):
-dtActiveRT;
+function TTDS.ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0):
+scmActiveRT;
 var
-  art: dtActiveRT;
+  art: scmActiveRT;
 begin
   result := artNone;
   if not ADataSet.Active then exit;
   if not (ADataSet.Name = 'tblmLane') then exit;
   // Get the current ActiveRT value
-  art := dtActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+  art := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
   if (Direction = 0) then
   begin
     // Toggle state using Succ and handling wrapping
-    if art = High(dtActiveRT) then
-      art := Low(dtActiveRT)
+    if art = High(scmActiveRT) then
+      art := Low(scmActiveRT)
     else
       art := Succ(art);
   end
   else
   begin
     // Toggle state using Succ and handling wrapping
-    if art = Low(dtActiveRT) then
-      art := High(dtActiveRT)
+    if art = Low(scmActiveRT) then
+      art := High(scmActiveRT)
     else
       art := Pred(art);
   end;
@@ -1525,7 +1119,7 @@ begin
   end;
 end;
 
-function TAppData.ToggleWatchTime(ADataSet: TDataSet; idx: integer; art: dtActiveRT): Boolean;
+function TTDS.ToggleWatchTime(ADataSet: TDataSet; idx: integer; art: scmActiveRT): Boolean;
 var
 s, s2: string;
 b: boolean;
@@ -1553,8 +1147,8 @@ begin
   end;
 end;
 
-function TAppData.ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer;
-    art: dtActiveRT): boolean;
+function TTDS.ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer;
+    art: scmActiveRT): boolean;
 var
   TimeField, EnabledField: TField;
 begin
@@ -1596,7 +1190,7 @@ begin
   result := true;
 end;
 
-procedure TAppData.WriteToBinary(AFilePath:string);
+procedure TTDS.WriteToBinary(AFilePath:string);
 var
 s: string;
 begin
