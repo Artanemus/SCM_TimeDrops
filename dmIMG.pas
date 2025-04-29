@@ -3,7 +3,7 @@ unit dmIMG;
 interface
 
 uses
-  System.SysUtils, System.Classes, SVGIconImageCollection, System.ImageList,
+  System.SysUtils, System.Classes, System.ImageList,
   Vcl.ImgList, Vcl.VirtualImageList, Vcl.BaseImageCollection,
   Vcl.ImageCollection;
 

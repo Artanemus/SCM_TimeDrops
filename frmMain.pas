@@ -65,7 +65,7 @@ type
     btnPickSCMTreeView: TButton;
     btnPickDTTreeView: TButton;
     lblEventDetailsTD: TLabel;
-    DTAppendFile: TFileOpenDialog;
+    TDPushResultFile: TFileOpenDialog;
     sbtnAutoPatch: TSpeedButton;
     sbtnSyncSCMtoDT: TSpeedButton;
     sbtnRefreshSCM: TSpeedButton;
@@ -75,12 +75,12 @@ type
     actnManager: TActionManager;
     actnRefresh: TAction;
     actnSelectSwimClub: TAction;
-    actnSelectSession: TAction;
+    actnSCMSession: TAction;
     actnExportMeetProgram: TAction;
     actnReConstructTDResultFiles: TAction;
     actnPreferences: TAction;
-    actnImportAppendDO: TAction;
-    actnClearReScanMeets: TAction;
+    actnPushResults: TAction;
+    actnClearAndReScan: TAction;
     actnSaveSession: TAction;
     actnLoadSession: TAction;
     actnAbout: TAction;
@@ -91,25 +91,28 @@ type
     actnReportTD: TAction;
     actnSyncSCM: TAction;
     lblKeyBoardInfo: TLabel;
-    actnLoginToSCM: TAction;
+    actnConnectToSCM: TAction;
     lbl_scmGridOverlay: TLabel;
     act_FireDACExplorer: TAction;
     actBuildTDTables: TAction;
     actTDTableViewer: TAction;
+    actnReScan: TAction;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
-    procedure actnClearReScanMeetsExecute(Sender: TObject);
-    procedure actnImportDTResultExecute(Sender: TObject);
-    procedure actnLoginToSCMExecute(Sender: TObject);
-    procedure actnLoginToSCMUpdate(Sender: TObject);
+    procedure actnClearAndReScanExecute(Sender: TObject);
+    procedure actnClearAndReScanUpdate(Sender: TObject);
+    procedure actnPushResultExecute(Sender: TObject);
+    procedure actnConnectToSCMExecute(Sender: TObject);
+    procedure actnConnectToSCMUpdate(Sender: TObject);
     procedure actnPostExecute(Sender: TObject);
     procedure actnPostUpdate(Sender: TObject);
     procedure actnPreferencesExecute(Sender: TObject);
     procedure actnReConstructTDResultFilesExecute(Sender: TObject);
     procedure actnReConstructTDResultFilesUpdate(Sender: TObject);
     procedure actnRefreshExecute(Sender: TObject);
-    procedure actnSelectSessionExecute(Sender: TObject);
-    procedure actnSelectSessionUpdate(Sender: TObject);
+    procedure actnSCMSessionExecute(Sender: TObject);
+    procedure actnSCMSessionUpdate(Sender: TObject);
+    procedure actnPushResultsUpdate(Sender: TObject);
     procedure actnSelectSwimClubExecute(Sender: TObject);
     procedure actnSelectSwimClubUpdate(Sender: TObject);
     procedure actnSetDTMeetsFolderExecute(Sender: TObject);
@@ -117,6 +120,8 @@ type
     procedure actnSyncSCMExecute(Sender: TObject);
     procedure actnSyncSCMUpdate(Sender: TObject);
     procedure actnSyncTDUpdate(Sender: TObject);
+    procedure actnReScanExecute(Sender: TObject);
+    procedure actnReScanUpdate(Sender: TObject);
     procedure actTDTableViewerExecute(Sender: TObject);
     procedure act_FireDACExplorerExecute(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
@@ -139,9 +144,12 @@ type
     FConnection: TFDConnection;
     fDolphinMeetsFolder: string;
     fDirectoryWatcher: TDirectoryWatcher;
-    { On FormShow - prompt user to select session.
-      Default value : FALSE     }
-    fFlagSelectSession: boolean;
+    { Connect to the SCM DB Server. Default value : FALSE     }
+    fEnableLoginPrompt: boolean;
+    { Auto Re-Scan TD 'meet's folder. Default value : FALSE     }
+    fEnableRescanPrompt: boolean;
+    // force silent mode for EnableLoginPrompt, EnableRescanPrompt
+    fMakeSilent: boolean;
 
     procedure OnFileChanged(Sender: TObject; const FileName: string);
 
@@ -154,18 +162,25 @@ type
 
   const
     AcceptedTimeKeeperDeviation = 0.3;
-    SCM_SELECTSESSION = WM_USER + 999;
 
   protected
     procedure MSG_UpdateUISCM(var Msg: TMessage); message SCM_UPDATEUI_SCM;
     procedure MSG_UpdateUITDS(var Msg: TMessage); message SCM_UPDATEUI_TDS;
-    procedure MSG_SelectSession(var Msg: TMessage); message SCM_SELECTSESSION;
+    procedure MSG_Connect(var Msg: TMessage); message SCM_CONNECT;
+    // perform either RESCAN or CLEARANDRESCAN based on Msg.wParam
+    // 1 = RESCAN, 2 = CLEARANDRESCAN (destrucive).
+    // make silent based on Msg.lParam
+    // 0 = verbose, 1 = silent.
+    procedure MSG_ReScan(var Msg: TMessage); message SCM_CALL_TIME_DROPS;
 
   public
     { Public declarations }
     procedure Prepare(AConnection: TFDConnection);
     property DolphinFolder: string read fDolphinMeetsFolder write fDolphinMeetsFolder;
-    property FlagSelectSession: boolean read fFlagSelectSession write fFlagSelectSession;
+    property EnableLoginPrompt: boolean read fEnableLoginPrompt write
+        fEnableLoginPrompt;
+    property EnableRescanPrompt: boolean read fEnableRescanPrompt write
+        fEnableRescanPrompt;
   end;
 
 var
@@ -178,7 +193,7 @@ implementation
 uses System.UITypes, System.DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
   tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin,
-  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS;
+  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgPushResults;
 
 const
 
@@ -186,6 +201,107 @@ const
   DO4_FILE_EXTENSION = 'DO4';
   DO3_FILE_EXTENSION = 'DO3';
 
+
+procedure TMain.actnClearAndReScanExecute(Sender: TObject);
+var
+  s: string;
+  mr: TModalResult;
+begin
+  mr := mrNo; // inti required.
+  if not fMakeSilent then
+  begin
+    s := '''
+      This will clear the TimeDrops grid. The Time-Drops meets folder will be re-scanned.
+      Any posted racetimes, made to SwimClubMeet, will remain intact.
+      Work done in the TimeDrops grid will be lost. There is no undo.
+      (HINT: use ''Save SCM-DT Session'' to store all work prior to calling here.)
+      Do you really want to CLEAR and RE-SCAN?
+      ''';
+    mr := MessageBox(0, PChar(s), PChar('CLEAR and Rescan Meets Folder. '),
+      MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
+  end;
+
+  if ((fMakeSilent = false) and IsPositiveResult(mr)) OR (fMakeSilent = true) then
+  begin
+    // Test DT directory exists...
+    if DirectoryExists(Settings.MeetsFolder) then
+    begin
+      if DirHasResultFiles(Settings.MeetsFolder) then
+      begin
+        TDS.DisableAllTDControls;
+        tdsGrid.BeginUpdate;
+        try
+          // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
+          // Necessary to manually calculate Primary keys in each memory table.
+          ProcessDirectory(Settings.MeetsFolder);
+          tdsGrid.EndUpdate;
+          // Update lblEventDetailsTD.
+          // Paint cell icons.
+          PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+        finally
+          TDS.EnableAllTDControls;
+          tdsGrid.EndUpdate;
+        end;
+      end;
+    end;
+  end;
+  // assert default state.
+  fMakeSilent := false;
+
+end;
+
+procedure TMain.actnClearAndReScanUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
+end;
+
+procedure TMain.actnSCMSessionExecute(Sender: TObject);
+var
+  dlg: TSessionPicker;
+  mr: TModalResult;
+begin
+  dlg := TSessionPicker.Create(Self);
+  dlg.rtnSessionID := 0;
+  // the picker will locate to the given session id.
+  if SCM.qrySession.Active and not SCM.qrySession.IsEmpty then
+  begin
+    dlg.rtnSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
+  end;
+
+  // Prompt to pick session
+  mr := dlg.ShowModal;
+  if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
+  begin
+    SCM.MSG_Handle := 0;
+    SCM.LocateSessionID(dlg.rtnSessionID);
+    SCM.MSG_Handle := Self.Handle;
+  end;
+  dlg.Free;
+
+  UpdateCaption;
+  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+end;
+
+procedure TMain.actnSCMSessionUpdate(Sender: TObject);
+begin
+  if (Assigned(SCM)) and (SCM.DataIsActive = true) then
+  begin
+    if (TAction(Sender).Enabled = false) then
+      TAction(Sender).Enabled := true;
+  end
+  else
+  begin
+    if TAction(Sender).Enabled = true then
+      TAction(Sender).Enabled := false;
+  end;
+end;
 
 procedure TMain.actnExportMeetProgramExecute(Sender: TObject);
 var
@@ -220,87 +336,21 @@ begin
 end;
 
 procedure TMain.actnExportMeetProgramUpdate(Sender: TObject);
-var
-Passed: boolean;
 begin
-  passed := true;
-  if not Assigned(SCM) then passed := false;
-  if not Assigned(SCM.scmConnection) then passed := false;
-  if not SCM.scmConnection.Connected then passed := false;
-  if not Assigned(TDS) then passed := false;
-  if not SCM.DataIsActive then passed := false;
-  if not TDS.DataIsActive then passed := false;
-
-  if passed then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-      TAction(Sender).Enabled := false;
-end;
-
-procedure TMain.actnClearReScanMeetsExecute(Sender: TObject);
-var
-  s: string;
-  mr: TModalResult;
-begin
-  s := '''
-    This will clear all patches. The Time-Drops meets folder will be re-scanned and the DT data tables will be rebuilt.
-    Any posted racetimes, made to SwimClubMeet, will remain intact. There is no undo.
-    (HINT: use ''Save SCM-DT Session'' to store all work prior to calling here.)
-    Do you really want to rescan?
-    ''';
-  mr := MessageBox(0, PChar(s), PChar('Clear and Rescan Meets Folder. '),
-    MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
-  if IsPositiveResult(mr) then
-  begin
-    // Test DT directory exists...
-    if DirectoryExists(Settings.MeetsFolder) then
+  if Assigned(SCM) and SCM.DataIsActive
+    and Assigned(TDS) and TDS.DataIsActive then
     begin
-      if DirHasResultFiles(Settings.MeetsFolder) then
-      begin
-        TDS.DisableAllTDControls;
-        tdsGrid.BeginUpdate;
-        try
-          // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
-          // Necessary to manually calculate Primary keys in each memory table.
-          ProcessDirectory(Settings.MeetsFolder);
-          tdsGrid.EndUpdate;
-          // Update lblEventDetailsTD.
-          // Paint cell icons.
-          PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0);
-        finally
-          TDS.EnableAllTDControls;
-          tdsGrid.EndUpdate;
-        end;
-      end;
+    if (TAction(Sender).Enabled = false) then
+      TAction(Sender).Enabled := true;
+    end
+  else
+    begin
+    if (TAction(Sender).Enabled = true) then
+      TAction(Sender).Enabled := false;
     end;
-  end;
 end;
 
-procedure TMain.actnImportDTResultExecute(Sender: TObject);
-var
-  AFile: string;
-begin
-  if DTAppendFile.Execute() then
-  begin
-    try
-      for AFile in DTAppendFile.Files do
-      begin
-        { Calls - PrepareExtraction, ProcessEvent, ProcessHeat, ProcessEntrant }
-        tdsGrid.BeginUpdate;
-        tdResults.ProcessFile(AFile);
-        tdsGrid.EndUpdate;
-      end;
-    finally
-      // =====================================================
-      // =====================================================
-    end;
-  end;
-end;
-
-procedure TMain.actnLoginToSCMExecute(Sender: TObject);
+procedure TMain.actnConnectToSCMExecute(Sender: TObject);
 var
   aLoginDlg: TLogin;  // 24/04/2020 uses simple INI access
 begin
@@ -328,12 +378,16 @@ begin
 
 end;
 
-procedure TMain.actnLoginToSCMUpdate(Sender: TObject);
+procedure TMain.actnConnectToSCMUpdate(Sender: TObject);
 begin
   if Assigned(SCM) and SCM.scmFDManager.Active then
-    TAction(Sender).Enabled := true
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
   else
-    TAction(Sender).Enabled := false;
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnPostExecute(Sender: TObject);
@@ -438,6 +492,50 @@ begin
   UpdateCaption;
 end;
 
+procedure TMain.actnPushResultExecute(Sender: TObject);
+var
+  AFile, s: string;
+  mr: TModalResult;
+  dlg: TPushResults;
+  count: integer;
+begin
+  count := 0;
+  // an info dialogue with information on how to push data.
+  dlg := TPushResults.Create(Self);
+  mr := dlg.ShowModal;
+  if IsPositiveResult(mr) then
+  begin
+    if TDPushResultFile.Execute() then
+    begin
+      try
+        for AFile in TDPushResultFile.Files do
+        begin
+          { Calls - PrepareExtraction, ProcessEvent, ProcessHeat, ProcessEntrant }
+          tdsGrid.BeginUpdate;
+          tdResults.ProcessFile(AFile);
+          inc(Count);
+          tdsGrid.EndUpdate;
+        end;
+        s := 'Pushed (' + IntToStr(Count) + ') results completed.';
+        MessageDlg(s, mtInformation, [mbOK], 0);      finally
+        // =====================================================
+        // =====================================================
+      end;
+    end;
+  end;
+end;
+
+procedure TMain.actnPushResultsUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
+end;
 
 procedure TMain.actnReConstructTDResultFilesExecute(Sender: TObject);
 var
@@ -493,43 +591,6 @@ begin
   SCMGrid.EndUpdate;
 end;
 
-procedure TMain.actnSelectSessionExecute(Sender: TObject);
-var
-  dlg: TSessionPicker;
-  mr: TModalResult;
-begin
-  dlg := TSessionPicker.Create(Self);
-  dlg.rtnSessionID := 0;
-  // the picker will locate to the given session id.
-  if SCM.qrySession.Active and not SCM.qrySession.IsEmpty then
-  begin
-    dlg.rtnSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
-  end;
-
-  mr := dlg.ShowModal;
-  if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
-  begin
-    SCM.MSG_Handle := 0;
-    SCM.LocateSessionID(dlg.rtnSessionID);
-    SCM.MSG_Handle := Self.Handle;
-  end;
-  dlg.Free;
-  UpdateCaption;
-  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
-end;
-
-procedure TMain.actnSelectSessionUpdate(Sender: TObject);
-begin
-  if (Assigned(SCM)) and (SCM.DataIsActive = true) then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-    if TAction(Sender).Enabled then
-      TAction(Sender).Enabled := false;
-end;
-
 procedure TMain.actnSelectSwimClubExecute(Sender: TObject);
 begin
   (*
@@ -583,44 +644,6 @@ begin
   // SavePreferencesToJSON.
 end;
 
-procedure TMain.actnSyncTDExecute(Sender: TObject);
-var
-found: boolean;
-aSCMSessionID, aSCMEventNum, aSCMHeatNum: integer;
-begin
-  tdsGrid.BeginUpdate;
-  aSCMSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
-  aSCMEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
-  aSCMHeatNum := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
-  found := TDS.SyncDTtoSCM(aSCMSessionID, aSCMEventNum, aSCMHeatNum); // data event - scroll.
-  tdsGrid.EndUpdate;
-
-  {TODO -oBSA -cGeneral : CHECK: Usage of UpdateEventDetails}
-  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0);
-
-  if not found then
-  begin
-    StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
-    + 'Your ''Results'' folder may not contain the session files required to sync.';
-    timer1.enabled := true;
-  end;
-end;
-
-procedure TMain.actnSyncTDUpdate(Sender: TObject);
-begin
-  //  if not Assigned(SCM.scmConnection) then exit;
-  //  if not SCM.scmConnection.Connected then exit;
-  if (Assigned(SCM)) and Assigned(TDS)
-    and (SCM.DataIsActive = true) and (TDS.DataIsActive = true) then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-    if TAction(Sender).Enabled then
-      TAction(Sender).Enabled := false;
-end;
-
 procedure TMain.actnSyncSCMExecute(Sender: TObject);
 var
 found: boolean;
@@ -664,6 +687,93 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
+procedure TMain.actnSyncTDExecute(Sender: TObject);
+var
+found: boolean;
+aSCMSessionID, aSCMEventNum, aSCMHeatNum: integer;
+begin
+  tdsGrid.BeginUpdate;
+  aSCMSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
+  aSCMEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
+  aSCMHeatNum := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
+  found := TDS.SyncDTtoSCM(aSCMSessionID, aSCMEventNum, aSCMHeatNum); // data event - scroll.
+  tdsGrid.EndUpdate;
+
+  {TODO -oBSA -cGeneral : CHECK: Usage of UpdateEventDetails}
+  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0);
+
+  if not found then
+  begin
+    StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
+    + 'Your ''Results'' folder may not contain the session files required to sync.';
+    timer1.enabled := true;
+  end;
+end;
+
+procedure TMain.actnSyncTDUpdate(Sender: TObject);
+begin
+  //  if not Assigned(SCM.scmConnection) then exit;
+  //  if not SCM.scmConnection.Connected then exit;
+  if (Assigned(SCM)) and Assigned(TDS)
+    and (SCM.DataIsActive = true) and (TDS.DataIsActive = true) then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
+end;
+
+procedure TMain.actnReScanExecute(Sender: TObject);
+var
+  s: string;
+  mr: TModalResult;
+begin
+  s := '''
+    The Time-Drops meets folder will be re-scanned.
+    Any new 'results' not in the Time-Drops grid will be added.
+    Any updated 'results' will be handled safely and lane data updated.
+    Do you want to RE-SCAN?
+    ''';
+  mr := MessageBox(0, PChar(s), PChar('Rescan Meets Folder. '),
+    MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
+  if IsPositiveResult(mr) then
+  begin
+    // Test DT directory exists...
+    if DirectoryExists(Settings.MeetsFolder) then
+    begin
+      if DirHasResultFiles(Settings.MeetsFolder) then
+      begin
+        TDS.DisableAllTDControls;
+        tdsGrid.BeginUpdate;
+        try
+          // NOTE: ProcessFile.
+          ProcessFile(Settings.MeetsFolder);
+          tdsGrid.EndUpdate;
+          // Update lblEventDetailsTD.
+          // Paint cell icons.
+          PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+        finally
+          TDS.EnableAllTDControls;
+          tdsGrid.EndUpdate;
+        end;
+      end;
+    end;
+  end;
+end;
+
+procedure TMain.actnReScanUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
+end;
 
 procedure TMain.actTDTableViewerExecute(Sender: TObject);
 var
@@ -1027,135 +1137,6 @@ begin
     PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
 end;
 
-procedure TMain.tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
-var
-  Grid: TDBAdvGrid;
-  ADataSet: TDataSet;
-  s: string;
-  ActiveRT: scmActiveRT;
-  t: TTime;
-  dlg: TUserRaceTime;
-  mr: TModalResult;
-begin
-  Grid := Sender as TDBAdvGrid;
-  ADataSet := Grid.DataSource.DataSet;
-
-  if (ARow >= tdsGrid.FixedRows) then
-  begin
-    case ACol of
-      7: // C O L U M N   E N T E R   U S E R   R A C E T I M E  .
-        begin
-          // 2025/04/16 :: The ALT key isn't required.
-          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
-          if (ActiveRT = artUser) then // Enter a user race-time.
-          begin
-            grid.BeginUpdate;
-            // create the 'Enter Race-Time' dialogue.
-            dlg := TUserRaceTime.Create(Self);
-            // Assign : Current displayed racetime.
-            dlg.RaceTime := ADataSet.FieldByName('RaceTime').AsDateTime;
-            // Assign : Store user racetime.
-            dlg.RaceTimeUser := ADataSet.FieldByName('RaceTimeUser').AsDateTime;
-            mr := dlg.ShowModal;
-            if IsPositiveResult(mr) then
-            begin
-              t := dlg.RaceTimeUser;
-              ADataSet.Edit;
-              try
-                begin
-                  if (t = 0) then
-                    ADataSet.FieldByName('RaceTime').Clear
-                  else
-                    ADataSet.FieldByName('RaceTime').AsDateTime := t;
-                  ADataSet.FieldByName('RaceTimeUser').AsDateTime := t;
-                  ADataSet.Post;
-                end;
-              except on E: Exception do
-                ADataSet.Cancel;
-              end;
-            end;
-            dlg.Free;
-            // if routine 'POST selected' is immediately called after the
-            // above change in user's racetime - the grid reports
-            // SelectedRowCount = 0. Solution :: re-select the row.
-            grid.SelectRows(ARow,1); // REQUIRED.
-            grid.EndUpdate;
-
-            {TODO -oBSA -cGeneral : Row still needs a repaint!
-            grid.repaintRow(ARow);  NOT WORKING...
-            grid.ClearRowSelect;
-            grid.invalidate;  }
-
-          end;
-        end;
-      6: // C O L U M N   T O G G L E   A C T I V E - R T .
-        begin
-          grid.BeginUpdate;
-          { ALT KEY is active :: Toggle tblEntrant.ActiveRT}
-          if (GetKeyState(VK_MENU) < 0) then
-            // toggle backwards
-            ActiveRT := TDS.ToggleActiveRT(ADataSet, 1)
-          else
-            // toggle forward (default)
-            ActiveRT := TDS.ToggleActiveRT(ADataSet);
-          { Modifies tblEntrant: ActiveRT, RaceTime, imgActiveRT }
-          TDS.SetActiveRT(ADataSet, ActiveRT);
-          case ActiveRT of
-            artAutomatic:
-            begin
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artManual:
-            begin
-              // The RaceTime needs to be recalculated...
-              TDS.CalcRaceTimeM(ADataSet);
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artUser:
-            begin
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artSplit:
-            begin
-              // The RaceTime needs to be recalculated...
-              TDS.CalcRTSplitTime(ADataSet);
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-
-            artNone:
-               UpdateCellIcons(ADataSet, ARow, ActiveRT);
-          end;
-          grid.EndUpdate;
-        end;
-      3, 4, 5:
-        begin
-
-          if ADataSet.FieldByName('LaneIsEmpty').AsBoolean then exit;
-
-          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
-          // Must be artmanual for the user to toggle watch-time state.
-          if ActiveRT <> artManual then exit;
-
-          // the ALT key is required to perform toggle.
-          if (GetKeyState(VK_MENU) < 0) then
-          begin
-            s := 'Time' + IntToStr(ACol - 2);
-            // Can toggle an empty TimeKeeper's stopwatch time...
-            if (ADataSet.FieldByName(s).IsNull) then exit;
-            grid.BeginUpdate;
-            // modify TimeKeeper's stopwatch state.
-            // idx in [1..3]. Asserts : dtTimeKeeperMode = dtManual.
-            TDS.ToggleWatchTime(ADataSet, (Acol - 2), ActiveRT);
-            UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            // The RaceTime needs to be recalculated...
-            TDS.CalcRaceTimeM(ADataset);
-            grid.EndUpdate;
-          end;
-        end;
-    end;
-  end;
-end;
-
 procedure TMain.FormCreate(Sender: TObject);
 var
   msg: string;
@@ -1168,7 +1149,6 @@ begin
   { If settings FILE doesn't exsist in %AppData% - it will be created and
     default data will be assigned.}
   LoadSettings;
-
 
   // CREATE THE CORE SCM CONNECTION DATAMODULE.
   if not Assigned(SCM) then
@@ -1206,8 +1186,6 @@ begin
     end;
   end;
 
-
-
   // C R E A T E   T H E   IMAGE COLLECTION   D A T A M O D U L E .
   if not Assigned(IMG) then
   begin
@@ -1216,8 +1194,6 @@ begin
     except on E: Exception do
     end;
   end;
-
-
 
   {
     Sort out the menubar font height - so tiny!
@@ -1240,8 +1216,13 @@ begin
   // Enable of HINTS.
   application.ShowHint := true;
 
-  // local fields init.
-  fFlagSelectSession := false;
+  // if true the login DLG will appear on first boot-up.
+  // action taken TForm.FormShow.
+  if Settings.EnableLoginPrompt then
+    fEnableLoginPrompt := true
+  else
+    fEnableLoginPrompt := false;
+
   // UI initialization.
   lblSessionStart.Caption := '';
   lblEventDetails.Caption := '';
@@ -1252,6 +1233,10 @@ begin
   vimgHeatStatus.ImageIndex := -1;
   vimgRelayBug.ImageIndex := -1;
   vimgStrokeBug.ImageIndex := -1;
+
+  // EnableRescanPrompt and  EnableLoginPrompton bootup
+  // Better user experisnce if silent.
+  fMakeSilent := false;
 
     // C R E A T E   T H E   TimeDrops system  D A T A M O D U L E .
   if not Assigned(TDS) then
@@ -1278,8 +1263,6 @@ begin
       end;
     end;
   end;
-
-
 
   FDirectoryWatcher := nil;
   // Test DT directory exists...
@@ -1335,8 +1318,6 @@ begin
   PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
 
-
-
 end;
 
 procedure TMain.FormDestroy(Sender: TObject);
@@ -1391,6 +1372,7 @@ begin
     // Assert Master - Detail ...
     TDS.ActivateDataTD;
   end;
+
   if Assigned(SCM) then
   begin
     SCM.MSG_Handle := Self.Handle;
@@ -1398,13 +1380,30 @@ begin
     SCM.ActivateDataSCM;
   end;
 
-
-  if fFlagSelectSession then
-    // Prompt user to select session. (... and update UI.)
-    PostMessage(Self.Handle, SCM_SELECTSESSION, 0 , 0 )
+  // LOGIN TO THE SCM DB SERVER.
+  if fEnableLoginPrompt then
+  begin
+    // DO ONCE...
+    fEnableLoginPrompt := false;
+    // Prompt user to connect to SCM. (... and update UI.)
+    PostMessage(Self.Handle, SCM_CONNECT, 0 , 0 );
+  end
   else
     // Assert UI display is up-to-date.
     PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 );
+
+  // CLEAR AND  RESCAN MEETS FOLDER
+  if fEnableRescanPrompt then
+  begin
+    // DO ONCE...
+    fEnableRescanPrompt := false;
+    // Prompt user to connect to SCM. (... and update UI.)
+    // wParam 1 = ReScan, 2 = ClearAndRescan.
+    PostMessage(Self.Handle, SCM_CALL_TIME_DROPS, 2 , 0 );
+  end
+  else
+    // Assert UI display is up-to-date.
+    PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0 );
 
 end;
 
@@ -1424,9 +1423,53 @@ begin
   LoadFromSettings();
 end;
 
-procedure TMain.MSG_SelectSession(var Msg: TMessage);
+procedure TMain.MSG_Connect(var Msg: TMessage);
 begin
-  actnSelectSessionExecute(Self);
+  // option to force silent mode ...
+  if Msg.LParam = 1 then
+    fMakeSilent := true else fMakeSilent := false;
+
+  if actnConnectToSCM.Enabled then
+  begin
+    try
+      actnConnectToSCMExecute(Self);
+    finally
+      fMakeSilent := false; // make safe.
+    end;
+  end;
+
+  //Assert default state.
+  fMakeSilent := false;
+end;
+
+procedure TMain.MSG_ReScan(var Msg: TMessage);
+begin
+  // option to force silent mode ...
+  if Msg.LParam = 1 then
+    fMakeSilent := true else fMakeSilent := false;
+
+  // select method.
+  case Msg.WParam of
+    1:
+      begin
+        if actnReScan.Enabled then
+          actnReScanExecute(Self);
+      end;
+    2:
+      begin
+        if actnClearAndReScan.Enabled then
+        begin
+          try
+            actnClearAndReScanExecute(Self);
+          finally
+            fMakeSilent := false; // make safe.
+          end;
+        end;
+      end;
+  end;
+
+  //Assert default state.
+  fMakeSilent := false;
 end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
@@ -1670,8 +1713,6 @@ begin
 
 end;
 
-
-
 procedure TMain.MSG_UpdateUITDS(var Msg: TMessage);
 var
 i: integer;
@@ -1830,8 +1871,6 @@ begin
   Caption := 'SwimClubMeet - Dolphin Timing. ';
 end;
 
-
-
 procedure TMain.SaveToSettings;
 begin
   Settings.MeetsFolder := fDolphinMeetsFolder;
@@ -1868,12 +1907,140 @@ begin
   end;
 end;
 
+procedure TMain.tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
+var
+  Grid: TDBAdvGrid;
+  ADataSet: TDataSet;
+  s: string;
+  ActiveRT: scmActiveRT;
+  t: TTime;
+  dlg: TUserRaceTime;
+  mr: TModalResult;
+begin
+  Grid := Sender as TDBAdvGrid;
+  ADataSet := Grid.DataSource.DataSet;
+
+  if (ARow >= tdsGrid.FixedRows) then
+  begin
+    case ACol of
+      7: // C O L U M N   E N T E R   U S E R   R A C E T I M E  .
+        begin
+          // 2025/04/16 :: The ALT key isn't required.
+          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+          if (ActiveRT = artUser) then // Enter a user race-time.
+          begin
+            grid.BeginUpdate;
+            // create the 'Enter Race-Time' dialogue.
+            dlg := TUserRaceTime.Create(Self);
+            // Assign : Current displayed racetime.
+            dlg.RaceTime := ADataSet.FieldByName('RaceTime').AsDateTime;
+            // Assign : Store user racetime.
+            dlg.RaceTimeUser := ADataSet.FieldByName('RaceTimeUser').AsDateTime;
+            mr := dlg.ShowModal;
+            if IsPositiveResult(mr) then
+            begin
+              t := dlg.RaceTimeUser;
+              ADataSet.Edit;
+              try
+                begin
+                  if (t = 0) then
+                    ADataSet.FieldByName('RaceTime').Clear
+                  else
+                    ADataSet.FieldByName('RaceTime').AsDateTime := t;
+                  ADataSet.FieldByName('RaceTimeUser').AsDateTime := t;
+                  ADataSet.Post;
+                end;
+              except on E: Exception do
+                ADataSet.Cancel;
+              end;
+            end;
+            dlg.Free;
+            // if routine 'POST selected' is immediately called after the
+            // above change in user's racetime - the grid reports
+            // SelectedRowCount = 0. Solution :: re-select the row.
+            grid.SelectRows(ARow,1); // REQUIRED.
+            grid.EndUpdate;
+
+            {TODO -oBSA -cGeneral : Row still needs a repaint!
+            grid.repaintRow(ARow);  NOT WORKING...
+            grid.ClearRowSelect;
+            grid.invalidate;  }
+
+          end;
+        end;
+      6: // C O L U M N   T O G G L E   A C T I V E - R T .
+        begin
+          grid.BeginUpdate;
+          { ALT KEY is active :: Toggle tblEntrant.ActiveRT}
+          if (GetKeyState(VK_MENU) < 0) then
+            // toggle backwards
+            ActiveRT := TDS.ToggleActiveRT(ADataSet, 1)
+          else
+            // toggle forward (default)
+            ActiveRT := TDS.ToggleActiveRT(ADataSet);
+          { Modifies tblEntrant: ActiveRT, RaceTime, imgActiveRT }
+          TDS.SetActiveRT(ADataSet, ActiveRT);
+          case ActiveRT of
+            artAutomatic:
+            begin
+              UpdateCellIcons(ADataSet, ARow, ActiveRT);
+            end;
+            artManual:
+            begin
+              // The RaceTime needs to be recalculated...
+              TDS.CalcRaceTimeM(ADataSet);
+              UpdateCellIcons(ADataSet, ARow, ActiveRT);
+            end;
+            artUser:
+            begin
+              UpdateCellIcons(ADataSet, ARow, ActiveRT);
+            end;
+            artSplit:
+            begin
+              // The RaceTime needs to be recalculated...
+              TDS.CalcRTSplitTime(ADataSet);
+              UpdateCellIcons(ADataSet, ARow, ActiveRT);
+            end;
+
+            artNone:
+               UpdateCellIcons(ADataSet, ARow, ActiveRT);
+          end;
+          grid.EndUpdate;
+        end;
+      3, 4, 5:
+        begin
+
+          if ADataSet.FieldByName('LaneIsEmpty').AsBoolean then exit;
+
+          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+          // Must be artmanual for the user to toggle watch-time state.
+          if ActiveRT <> artManual then exit;
+
+          // the ALT key is required to perform toggle.
+          if (GetKeyState(VK_MENU) < 0) then
+          begin
+            s := 'Time' + IntToStr(ACol - 2);
+            // Can toggle an empty TimeKeeper's stopwatch time...
+            if (ADataSet.FieldByName(s).IsNull) then exit;
+            grid.BeginUpdate;
+            // modify TimeKeeper's stopwatch state.
+            // idx in [1..3]. Asserts : dtTimeKeeperMode = dtManual.
+            TDS.ToggleWatchTime(ADataSet, (Acol - 2), ActiveRT);
+            UpdateCellIcons(ADataSet, ARow, ActiveRT);
+            // The RaceTime needs to be recalculated...
+            TDS.CalcRaceTimeM(ADataset);
+            grid.EndUpdate;
+          end;
+        end;
+    end;
+  end;
+end;
+
 procedure TMain.Timer1Timer(Sender: TObject);
 begin
   Timer1.Enabled := False; // Stop the timer
   StatBar.SimpleText := ''; // Clear the message
 end;
-
 
 procedure TMain.UpdateCaption;
 var
@@ -2031,6 +2198,12 @@ begin
   tdsGrid.EndUpdate;
 
 end;
+
+
+
+
+
+
 
 
 

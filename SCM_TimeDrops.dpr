@@ -32,7 +32,8 @@ uses
   dlgFDExplorer in 'dlgFDExplorer.pas' {FDExplorer},
   dmIMG in 'dmIMG.pas' {IMG: TDataModule},
   dmSCM in 'dmSCM.pas' {SCM: TDataModule},
-  dmTDS in 'dmTDS.pas' {TDS: TDataModule};
+  dmTDS in 'dmTDS.pas' {TDS: TDataModule},
+  dlgPushResults in 'dlgPushResults.pas' {PushResults};
 
 {$R *.res}
 

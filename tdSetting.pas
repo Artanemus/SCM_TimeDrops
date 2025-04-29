@@ -38,7 +38,7 @@ type
     UseTDfinalTime: boolean;
     DoPostALL: boolean;
     EnableLoginPrompt: boolean;
-    EnableSessionPrompt: boolean;
+    EnableRescanPrompt: boolean;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -82,7 +82,7 @@ begin
   UseTDfinalTime := false;
   DoPostALL := true;
   EnableLoginPrompt:= false;
-  EnableSessionPrompt:= false;
+  EnableRescanPrompt:= false;
 
   {
   ForceDirectories creates a new directory as specified in Dir,

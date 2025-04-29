@@ -11,8 +11,7 @@ uses
   System.ImageList, Vcl.ImgList, Vcl.VirtualImageList, Vcl.BaseImageCollection,
   Vcl.ImageCollection, SCMDefines, Windows, Winapi.Messages, vcl.Forms,
   FireDAC.Phys.SQLiteVDataSet, Datasnap.DBClient, FireDAC.Stan.StorageXML,
-  FireDAC.Stan.StorageBin, FireDAC.Stan.Storage, Datasnap.Provider,
-  SVGIconImageCollection, uWatchTime;
+  FireDAC.Stan.StorageBin, FireDAC.Stan.Storage, Datasnap.Provider, uWatchTime;
 
 
 type

@@ -208,6 +208,19 @@ begin
       // Display some information on the connection.
       with  lblConnectionInfo do
       begin
+
+{$IFDEF DEBUG}
+        // Security issues. (wit: demostrating code).
+        Caption := 'FireDAC''s Connection Definition :' + sLineBreak;
+        Caption := Caption + '%APPDATA%\ARTANEMUS\SCM\FDConnectionDefs.ini' + sLineBreak + sLineBreak;
+        VersionInfo := SCM.scmConnection.ExecSQLScalar(
+    'SELECT CAST(SERVERPROPERTY(''ProductVersion'') AS VARCHAR(50)) + '' - '' ' +
+    '+ CAST(SERVERPROPERTY(''ProductLevel'') AS VARCHAR(50)) + '' - '' ' +
+    '+ CAST(SERVERPROPERTY(''Edition'') AS VARCHAR(50)) AS VersionInfo');
+        Caption := Caption + 'Server version: ' + VersionInfo + sLineBreak;
+        Caption := Caption + 'Host Machine: ARTANEMUS-LORE'  + sLineBreak;
+        Caption := Caption + 'SCM database version: ' + SCM.GetDBVerInfo;
+{$ELSE}
         Caption := 'FireDAC''s Connection Definition :' + sLineBreak;
         Caption := Caption + SCM.scmFDManager.ConnectionDefFileName + sLineBreak + sLineBreak;
         VersionInfo := SCM.scmConnection.ExecSQLScalar(
@@ -219,7 +232,9 @@ begin
     'SELECT CAST(SERVERPROPERTY(''MachineName'') AS VARCHAR(50)) AS MachineName;');
         Caption := Caption + 'Host Machine: ' + HostMachine + sLineBreak;
         Caption := Caption + 'SCM database version: ' + SCM.GetDBVerInfo;
+{$ENDIF}
       end;
+
     end
     else
       lblConnectionInfo.Caption := '';

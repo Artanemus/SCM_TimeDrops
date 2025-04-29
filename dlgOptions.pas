@@ -46,7 +46,7 @@ type
     vimgInfo2: TVirtualImage;
     TabSheet1: TTabSheet;
     chk_EnableLoginPrompt: TCheckBox;
-    chk_EnableSessionPrompt: TCheckBox;
+    chk_EnableRescanPrompt: TCheckBox;
     procedure btnCloseClick(Sender: TObject);
     procedure btnedtAppDataRightButtonClick(Sender: TObject);
     procedure btnedtMeetProgramRightButtonClick(Sender: TObject);
@@ -193,7 +193,7 @@ begin
   chkbxFinalTime.Checked := Settings.UseTDfinalTime;
   chkbxPadTime.Checked := Settings.UseTDpadTime;
   chk_EnableLoginPrompt.Checked := Settings.EnableLoginPrompt;
-  chk_EnableSessionPrompt.Checked := Settings.EnableSessionPrompt;
+  chk_EnableRescanPrompt.Checked := Settings.EnableRescanPrompt;
 
   try
     lbledtDeviation.Text := FloatToStr(Settings.AcceptedDeviation);
@@ -231,7 +231,7 @@ begin
   Settings.UseTDfinalTime := chkbxFinalTime.Checked;
   Settings.UseTDpadTime := chkbxPadTime.Checked;
   Settings.EnableLoginPrompt := chk_EnableLoginPrompt.Checked;
-  Settings.EnableSessionPrompt := chk_EnableSessionPrompt.Checked;
+  Settings.EnableRescanPrompt := chk_EnableRescanPrompt.Checked;
 
   Settings.SaveToFile();
 end;

@@ -9296,18 +9296,22 @@ object Options: TOptions
         object chk_EnableLoginPrompt: TCheckBox
           Left = 56
           Top = 32
-          Width = 305
-          Height = 25
-          Caption = 'Enable prompt for Login on startup.'
+          Width = 405
+          Height = 41
+          Caption = 
+            'Prompt to connect to the SwimClubMeet database server on startup' +
+            '.'
           TabOrder = 0
+          WordWrap = True
         end
-        object chk_EnableSessionPrompt: TCheckBox
+        object chk_EnableRescanPrompt: TCheckBox
           Left = 56
-          Top = 63
+          Top = 87
           Width = 369
-          Height = 25
-          Caption = 'Enable prompt for session selection on startup.'
+          Height = 42
+          Caption = 'Do an auto-scan of Time-Drops '#39'meets'#39' folder on startup.'
           TabOrder = 1
+          WordWrap = True
         end
       end
     end

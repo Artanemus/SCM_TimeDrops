@@ -453,6 +453,7 @@ begin
   RaceNum := 0;
   if FileExists(AFileName) then
   begin
+    TDS.DisableAllTDControls;
     // =====================================================
     // De-attach from Master-Detail. Create flat files.
     // Necessary to calculate table Primary keys.
@@ -486,6 +487,7 @@ begin
     // =====================================================
     // Re-attach Master-Detail.
     TDS.EnableTDMasterDetail;
+    TDS.EnableAllTDControls;
     // =====================================================
 
     end;
