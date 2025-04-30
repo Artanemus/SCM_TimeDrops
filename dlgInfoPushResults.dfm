@@ -1,4 +1,4 @@
-object PushResults: TPushResults
+object InfoPushResults: TInfoPushResults
   Left = 0
   Top = 0
   BorderStyle = bsDialog
@@ -8980,9 +8980,6 @@ object PushResults: TPushResults
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 45
-    ExplicitWidth = 624
-    ExplicitHeight = 343
     object chkbDoShowAgain: TCheckBox
       Left = 10
       Top = 406
@@ -9003,7 +9000,7 @@ object PushResults: TPushResults
       Font.Name = 'Segoe UI'
       Font.Style = []
       Lines.Strings = (
-        '**Instructions for Managing TimeDrops Data**'
+        '**Instructions for Pushing TimeDrops Results files.**'
         ''
         '1. **File Selection**  '
         '   - Click **OK** to open the file dialog.  '
@@ -9051,10 +9048,8 @@ object PushResults: TPushResults
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitTop = 384
-    ExplicitWidth = 624
     object btnCancel: TButton
-      Left = 161
+      Left = 321
       Top = 11
       Width = 98
       Height = 36
@@ -9063,13 +9058,21 @@ object PushResults: TPushResults
       OnClick = btnCancelClick
     end
     object btnOk: TButton
-      Left = 265
+      Left = 425
       Top = 10
       Width = 98
       Height = 36
       Caption = 'OK'
       TabOrder = 1
       OnClick = btnOkClick
+    end
+    object chkbHideInfoBox: TCheckBox
+      Left = 0
+      Top = 17
+      Width = 249
+      Height = 26
+      Caption = 'Don'#39't show this info box.'
+      TabOrder = 2
     end
   end
 end

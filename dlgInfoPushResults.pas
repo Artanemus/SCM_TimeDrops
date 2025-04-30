@@ -1,4 +1,4 @@
-unit dlgPushResults;
+unit dlgInfoPushResults;
 
 interface
 
@@ -7,13 +7,14 @@ uses
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.ComCtrls;
 
 type
-  TPushResults = class(TForm)
+  TInfoPushResults = class(TForm)
     pnlBody: TPanel;
     pnlFooter: TPanel;
     btnCancel: TButton;
     btnOk: TButton;
     chkbDoShowAgain: TCheckBox;
     RichEdit1: TRichEdit;
+    chkbHideInfoBox: TCheckBox;
     procedure btnCancelClick(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -24,23 +25,23 @@ type
   end;
 
 var
-  PushResults: TPushResults;
+  InfoPushResults: TInfoPushResults;
 
 implementation
 
 {$R *.dfm}
 
-procedure TPushResults.btnCancelClick(Sender: TObject);
+procedure TInfoPushResults.btnCancelClick(Sender: TObject);
 begin
   ModalResult := mrCancel;
 end;
 
-procedure TPushResults.btnOkClick(Sender: TObject);
+procedure TInfoPushResults.btnOkClick(Sender: TObject);
 begin
   ModalResult := mrOk;
 end;
 
-procedure TPushResults.FormKeyDown(Sender: TObject; var Key: Word; Shift:
+procedure TInfoPushResults.FormKeyDown(Sender: TObject; var Key: Word; Shift:
     TShiftState);
 begin
   if Key = VK_ESCAPE then

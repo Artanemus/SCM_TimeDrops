@@ -10421,6 +10421,27 @@ object Main: TMain
         RowHeights = (
           34
           46)
+        object lbl_tdsGridOverlay: TLabel
+          Left = 0
+          Top = 384
+          Width = 593
+          Height = 135
+          Align = alBottom
+          Alignment = taCenter
+          AutoSize = False
+          Caption = 
+            'BIG LETTERS IN THE GRID OVERLAY'#13#10'THREE LINES OF TEXT'#13#10'Reports th' +
+            'e state of the tabel data.'
+          Font.Charset = DEFAULT_CHARSET
+          Font.Color = clCoral
+          Font.Height = -21
+          Font.Name = 'Segoe UI'
+          Font.Style = [fsBold]
+          ParentFont = False
+          WordWrap = True
+          StyleElements = [seClient, seBorder]
+          ExplicitWidth = 494
+        end
       end
       object pBar: TProgressBar
         Left = 15
@@ -10636,6 +10657,7 @@ object Main: TMain
               end
               item
                 Action = actnSCMSession
+                Caption = '&Select SCM Session...'
                 ImageIndex = 2
                 ImageName = 'document_search'
               end
@@ -10667,6 +10689,7 @@ object Main: TMain
                   end
                   item
                     Action = actnReConstructTDResultFiles
+                    Caption = '&Generate Time-Drops Results files  ...'
                     ImageIndex = 9
                     ImageName = 'build'
                   end>

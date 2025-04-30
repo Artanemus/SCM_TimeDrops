@@ -11,6 +11,7 @@ function ConvertCentiSecondsToDateTime(AHundredths: Integer): TDateTime;
 function StripNonNumeric(const AStr: string): string;
 procedure DeleteFilesWithWildcard(const APath, APattern: string);
 function DirHasResultFiles(const ADirectory: string): boolean;
+function ExpandEnvVars(const Value: string): string;
 
 
 // ---------------------------------------------------
@@ -19,6 +20,17 @@ function DirHasResultFiles(const ADirectory: string): boolean;
 implementation
 
 uses System.Character, DateUtils, Data.DB, tdResults;
+
+function ExpandEnvVars(const Value: string): string;
+var
+  Buffer: array[0..MAX_PATH-1] of Char;
+begin
+  if ExpandEnvironmentStrings(PChar(Value), Buffer, Length(Buffer)) = 0 then
+    RaiseLastOSError;
+  Result := Buffer;
+end;
+
+
 
 function StripNonNumeric(const AStr: string): string;
 var

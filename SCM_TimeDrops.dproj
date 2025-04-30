@@ -206,8 +206,16 @@
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
-        <DCCReference Include="dlgPushResults.pas">
-            <Form>PushResults</Form>
+        <DCCReference Include="dlgInfoPushResults.pas">
+            <Form>InfoPushResults</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="dlgInfoClearRescanResults.pas">
+            <Form>InfoClearRescanResults</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="dlgInfoRescanResults.pas">
+            <Form>InfoReScanResults</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Base">
@@ -1211,6 +1219,7 @@
                     <IfExpressions/>
                 </Parser>
             </MMX>
+            <ModelSupport>False</ModelSupport>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>
     </ProjectExtensions>

@@ -97,6 +97,7 @@ type
     actBuildTDTables: TAction;
     actTDTableViewer: TAction;
     actnReScan: TAction;
+    lbl_tdsGridOverlay: TLabel;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearAndReScanExecute(Sender: TObject);
@@ -193,7 +194,8 @@ implementation
 uses System.UITypes, System.DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
   tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin,
-  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgPushResults;
+  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgInfoPushResults,
+  dlgInfoClearRescanResults, dlgInfoRescanResults;
 
 const
 
@@ -206,23 +208,26 @@ procedure TMain.actnClearAndReScanExecute(Sender: TObject);
 var
   s: string;
   mr: TModalResult;
+  dlg: TInfoClearRescanResults;
 begin
-  mr := mrNo; // inti required.
-  if not fMakeSilent then
+  // an info dialogue with information on how clear and rescan works.
+  dlg := TInfoClearRescanResults.Create(Self);
+  mr := dlg.ShowModal;
+  if IsPositiveResult(mr) then
   begin
-    s := '''
-      This will clear the TimeDrops grid. The Time-Drops meets folder will be re-scanned.
-      Any posted racetimes, made to SwimClubMeet, will remain intact.
-      Work done in the TimeDrops grid will be lost. There is no undo.
-      (HINT: use ''Save SCM-DT Session'' to store all work prior to calling here.)
-      Do you really want to CLEAR and RE-SCAN?
-      ''';
-    mr := MessageBox(0, PChar(s), PChar('CLEAR and Rescan Meets Folder. '),
-      MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
-  end;
-
-  if ((fMakeSilent = false) and IsPositiveResult(mr)) OR (fMakeSilent = true) then
-  begin
+    // Shut down file system watcher...
+    if Assigned(FDirectoryWatcher) then
+    begin
+      try
+        FDirectoryWatcher.Terminate;
+        {  Problems terminating ... }
+        // Signal the termination event...
+        FDirectoryWatcher.SignalTerminate;
+        FDirectoryWatcher.WaitFor;
+      finally
+        FreeAndNil(FDirectoryWatcher);
+      end;
+    end;
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
     begin
@@ -231,23 +236,30 @@ begin
         TDS.DisableAllTDControls;
         tdsGrid.BeginUpdate;
         try
+          TDS.EmptyAllTDDataSets;
           // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
           // Necessary to manually calculate Primary keys in each memory table.
           ProcessDirectory(Settings.MeetsFolder);
-          tdsGrid.EndUpdate;
-          // Update lblEventDetailsTD.
-          // Paint cell icons.
-          PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0);
         finally
           TDS.EnableAllTDControls;
           tdsGrid.EndUpdate;
+          // paint the TDS grid.
+          PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0);
         end;
       end;
     end;
   end;
-  // assert default state.
-  fMakeSilent := false;
-
+  if not Assigned(fDirectoryWatcher) then
+  begin
+    // restart file system watcher...
+    try
+      fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
+      fDirectoryWatcher.OnFileChanged := OnFileChanged;
+      fDirectoryWatcher.Start;
+    except on E: Exception do
+      FreeAndNil(fDirectoryWatcher);
+    end;
+  end;
 end;
 
 procedure TMain.actnClearAndReScanUpdate(Sender: TObject);
@@ -496,32 +508,60 @@ procedure TMain.actnPushResultExecute(Sender: TObject);
 var
   AFile, s: string;
   mr: TModalResult;
-  dlg: TPushResults;
+  dlg: TInfoPushResults;
   count: integer;
 begin
   count := 0;
   // an info dialogue with information on how to push data.
-  dlg := TPushResults.Create(Self);
+  dlg := TInfoPushResults.Create(Self);
   mr := dlg.ShowModal;
   if IsPositiveResult(mr) then
   begin
-    if TDPushResultFile.Execute() then
+    // Shut down file system watcher...
+    if Assigned(FDirectoryWatcher) then
     begin
       try
-        for AFile in TDPushResultFile.Files do
-        begin
-          { Calls - PrepareExtraction, ProcessEvent, ProcessHeat, ProcessEntrant }
-          tdsGrid.BeginUpdate;
-          tdResults.ProcessFile(AFile);
-          inc(Count);
-          tdsGrid.EndUpdate;
-        end;
-        s := 'Pushed (' + IntToStr(Count) + ') results completed.';
-        MessageDlg(s, mtInformation, [mbOK], 0);      finally
-        // =====================================================
-        // =====================================================
+        FDirectoryWatcher.Terminate;
+        {  Problems terminating ... }
+        // Signal the termination event...
+        FDirectoryWatcher.SignalTerminate;
+        FDirectoryWatcher.WaitFor;
+      finally
+        FreeAndNil(FDirectoryWatcher);
       end;
     end;
+
+    if TDPushResultFile.Execute() then
+    begin
+      tdsGrid.BeginUpdate;
+      try
+        begin
+          // terminate system watch folder.
+          for AFile in TDPushResultFile.Files do
+          begin
+            { Calls - PrepareExtraction, ProcessEvent, ProcessHeat, ProcessEntrant }
+            tdResults.ProcessFile(AFile);
+            inc(Count);
+          end;
+          s := 'Pushed (' + IntToStr(Count) + ') results completed.';
+          MessageDlg(s, mtInformation, [mbOK], 0);
+        end;
+      finally
+        tdsGrid.EndUpdate;
+      end;
+    end;
+  end;
+
+  if not Assigned(fDirectoryWatcher) then
+  begin
+      // restart file system watcher...
+      try
+        fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
+        fDirectoryWatcher.OnFileChanged := OnFileChanged;
+        fDirectoryWatcher.Start;
+      except on E: Exception do
+          FreeAndNil(fDirectoryWatcher);
+      end;
   end;
 end;
 
@@ -729,17 +769,25 @@ procedure TMain.actnReScanExecute(Sender: TObject);
 var
   s: string;
   mr: TModalResult;
+  dlg: TInfoReScanResults;
 begin
-  s := '''
-    The Time-Drops meets folder will be re-scanned.
-    Any new 'results' not in the Time-Drops grid will be added.
-    Any updated 'results' will be handled safely and lane data updated.
-    Do you want to RE-SCAN?
-    ''';
-  mr := MessageBox(0, PChar(s), PChar('Rescan Meets Folder. '),
-    MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
+  dlg := TInfoReScanResults.Create(Self);
+  mr := dlg.ShowModal;
   if IsPositiveResult(mr) then
   begin
+    // Shut down file system watcher...
+    if Assigned(FDirectoryWatcher) then
+    begin
+      try
+        FDirectoryWatcher.Terminate;
+        {  Problems terminating ... }
+        // Signal the termination event...
+        FDirectoryWatcher.SignalTerminate;
+        FDirectoryWatcher.WaitFor;
+      finally
+        FreeAndNil(FDirectoryWatcher);
+      end;
+    end;
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
     begin
@@ -759,6 +807,17 @@ begin
           tdsGrid.EndUpdate;
         end;
       end;
+    end;
+  end;
+  if not Assigned(fDirectoryWatcher) then
+  begin
+    // restart file system watcher...
+    try
+      fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
+      fDirectoryWatcher.OnFileChanged := OnFileChanged;
+      fDirectoryWatcher.Start;
+    except on E: Exception do
+      FreeAndNil(fDirectoryWatcher);
     end;
   end;
 end;
@@ -1142,6 +1201,21 @@ var
   msg: string;
 begin
 
+  FDirectoryWatcher := nil;
+  // UI initialization.
+  lblSessionStart.Caption := '';
+  lblEventDetails.Caption := '';
+  lblMetersRelay.Caption := '';
+  lblHeatNum.Caption := '';
+  lblMeters.Caption := '';
+  vimgHeatNum.ImageIndex := -1;
+  vimgHeatStatus.ImageIndex := -1;
+  vimgRelayBug.ImageIndex := -1;
+  vimgStrokeBug.ImageIndex := -1;
+  // EnableRescanPrompt and  EnableLoginPrompton bootup
+  // Better user experisnce if silent.
+  fMakeSilent := false;
+
   // A Class that uses JSON to read and write application configuration
   if Settings = nil then
     Settings := TPrgSetting.Create;
@@ -1172,8 +1246,9 @@ begin
     end;
   end;
 
-  SCM.ActivateDataSCM;
-  // ASSERT DATASOURCE.
+  // Assert Master-Detail. Safe to do while not connected.
+
+  // ASSERT SCM TAdvDBGrid's DATASOURCE.
   if not Assigned(scmGrid.DataSource) then
   begin
     scmGrid.DataSource := SCM.dsINDV;
@@ -1223,21 +1298,6 @@ begin
   else
     fEnableLoginPrompt := false;
 
-  // UI initialization.
-  lblSessionStart.Caption := '';
-  lblEventDetails.Caption := '';
-  lblMetersRelay.Caption := '';
-  lblHeatNum.Caption := '';
-  lblMeters.Caption := '';
-  vimgHeatNum.ImageIndex := -1;
-  vimgHeatStatus.ImageIndex := -1;
-  vimgRelayBug.ImageIndex := -1;
-  vimgStrokeBug.ImageIndex := -1;
-
-  // EnableRescanPrompt and  EnableLoginPrompton bootup
-  // Better user experisnce if silent.
-  fMakeSilent := false;
-
     // C R E A T E   T H E   TimeDrops system  D A T A M O D U L E .
   if not Assigned(TDS) then
   begin
@@ -1264,45 +1324,49 @@ begin
     end;
   end;
 
-  FDirectoryWatcher := nil;
-  // Test DT directory exists...
-  if DirectoryExists(Settings.MeetsFolder) then
+  // immediately load the TDS grid with results.
+  if Assigned(Settings) and Settings.EnableRescanPrompt then
   begin
-      if DirHasResultFiles(Settings.MeetsFolder) then
-      begin
-        if TDS.DataIsActive then
+    // Test DT directory exists...
+    if DirectoryExists(Settings.MeetsFolder) then
+    begin
+        if DirHasResultFiles(Settings.MeetsFolder) then
         begin
-          tdsGrid.BeginUpdate;
-          TDS.DisableAllTDControls;
-          try
-            // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
-            // Necessary to manually calculate Primary keys in each memory table.
-            ProcessDirectory(Settings.MeetsFolder);
-            // Update UI controls ...
-//            PostMessage(Self.Handle, SCM_UPDATEUI2, 0, 0);
-            // Paint cell icons.
-//            PostMessage(Self.Handle, SCM_UPDATEUI3, 0, 0);
-          finally
-            TDS.EnableAllTDControls;
-            tdsGrid.EndUpdate;
+          if TDS.DataIsActive then
+          begin
+            tdsGrid.BeginUpdate;
+            TDS.DisableAllTDControls;
+            try
+              ProcessDirectory(Settings.MeetsFolder);
+            finally
+              TDS.EnableAllTDControls;
+              tdsGrid.EndUpdate;
+            end;
           end;
         end;
-      end;
-    // Set up the file system watcher
-    FDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
-    FDirectoryWatcher.OnFileChanged := OnFileChanged;
-    FDirectoryWatcher.Start;
+    end;
   end;
 
-{$IFNDEF DEBUG}
-  actnReConstructTDResultFiles.Visible := false;
-{$ENDIF}
+  // Set up the file system watcher
+  try
+    fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
+    fDirectoryWatcher.OnFileChanged := OnFileChanged;
+    fDirectoryWatcher.Start;
+  except on E: Exception do
+    FreeAndNil(fDirectoryWatcher);
+  end;
 
-{$IFDEF DEBUG}
-  // A button that allows me to run dmTDData.BuildTDData.
-  // The FieldDefs are save out to XML. Load XML data to restore.
-  actnReConstructTDResultFiles.Visible := true;
-{$ENDIF}
+  (*
+    {$IFNDEF DEBUG}
+      actnReConstructTDResultFiles.Visible := false;
+    {$ENDIF}
+
+    {$IFDEF DEBUG}
+      // A button that allows me to run dmTDData.BuildTDData.
+      // The FieldDefs are save out to XML. Load XML data to restore.
+      actnReConstructTDResultFiles.Visible := true;
+    {$ENDIF}
+  *)
 
   // Assert StatusBar params
   // Ensure that the StyleElements property does not include seFont
@@ -1376,7 +1440,8 @@ begin
   if Assigned(SCM) then
   begin
     SCM.MSG_Handle := Self.Handle;
-    // Assert Master - Detail ...
+    // SCM.scmConnection must be connected to activate.
+    // procedure asserts Master-Detail ...
     SCM.ActivateDataSCM;
   end;
 

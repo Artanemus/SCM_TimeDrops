@@ -39,8 +39,8 @@ type
     msgHandle: HWND;  // TForm.dtfrmExec ...   // Both DataModules
 
   public
-    procedure ActivateDataSCM();  //---
-    procedure DeActivateDataSCM();  //---
+    procedure ActivateDataTDS();  //---
+    procedure DeActivateDataTDS();  //---
 
     procedure ActivateDataTD;
     procedure BuildAppData;
@@ -120,7 +120,7 @@ implementation
 
 uses System.Variants, System.DateUtils, tdSetting, System.IOUtils, dmSCM;
 
-procedure TTDS.ActivateDataSCM;
+procedure TTDS.ActivateDataTDS;
 begin
     FConnection := nil;  //---
     fDataIsActive := false;
@@ -484,7 +484,7 @@ begin
 //  DeActivateDataSCM;
 end;
 
-procedure TTDS.DeActivateDataSCM;
+procedure TTDS.DeActivateDataTDS;
 begin
     msgHandle := 0;
 end;

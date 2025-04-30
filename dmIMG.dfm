@@ -1,6 +1,6 @@
 object IMG: TIMG
-  Height = 240
-  Width = 405
+  Height = 285
+  Width = 620
   object imgcolDT: TImageCollection
     Images = <
       item

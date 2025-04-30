@@ -43,47 +43,46 @@ uses
 
 type
   TSCM = class(TDataModule)
-    qrySCMSystem: TFDQuery;
-    scmFDManager: TFDManager;
-    qrySession: TFDQuery;
-    qryEvent: TFDQuery;
-    qryHeat: TFDQuery;
-    qryINDV: TFDQuery;
-    qryTEAM: TFDQuery;
-    qryTEAMEntrant: TFDQuery;
-    dsSession: TDataSource;
     dsEvent: TDataSource;
     dsHeat: TDataSource;
     dsINDV: TDataSource;
+    dsSession: TDataSource;
+    dsSwimClub: TDataSource;
     dsTEAM: TDataSource;
     dsTEAMEntrant: TDataSource;
-    qryNearestSessionID: TFDQuery;
     qryDistance: TFDQuery;
-    qryStroke: TFDQuery;
+    qryEvent: TFDQuery;
+    qryHeat: TFDQuery;
+    qryINDV: TFDQuery;
     qryListSwimmers: TFDQuery;
-    qrySplit: TFDQuery;
     qryListTeams: TFDQuery;
+    qryNearestSessionID: TFDQuery;
+    qrySCMSystem: TFDQuery;
+    qrySession: TFDQuery;
+    qrySplit: TFDQuery;
+    qryStroke: TFDQuery;
     qrySwimClub: TFDQuery;
-    dsSwimClub: TDataSource;
+    qryTEAM: TFDQuery;
+    qryTEAMEntrant: TFDQuery;
+    scmFDManager: TFDManager;
     TestFDConnection: TFDConnection;
-    procedure DataModuleDestroy(Sender: TObject);
     procedure DataModuleCreate(Sender: TObject);
+    procedure DataModuleDestroy(Sender: TObject);
     procedure qryHeatAfterScroll(DataSet: TDataSet);
   private
+    fDataIsActive: Boolean;
     { Private declarations }
     fDBModel, fDBVersion, fDBMajor, fDBMinor: integer;
-    fDataIsActive: Boolean;
+    procedure AssertMasterDetail;
   public
-    { Public declarations }
-    scmConnection: TFDConnection;   //---
     fLoginTimeout: integer;  //---
     msgHandle: HWND;  // TForm.dtfrmExec ...   // Both DataModules
+    { Public declarations }
+    scmConnection: TFDConnection;   //---
     procedure ActivateDataSCM();  //---
-    procedure DeActivateDataSCM();  //---
-    procedure WriteConnectionDef(const ConnectionName, ParamName, ParamValue: string);
-    procedure ReadConnectionDef(const ConnectionName, ParamName: string; out ParamValue: string);
-
     procedure BuildCSVEventData(AFileName: string); //---
+    procedure DeActivateDataSCM();  //---
+    function  GetDBVerInfo(): string;
     // MISC SCM ROUTINES/FUNCTIONS
     function GetNumberOfHeats(AEventID: integer): integer;
     function GetRoundABBREV(AEventID: integer): string;
@@ -92,23 +91,22 @@ type
     // .......................................................
     function LocateEventID(AEventID: integer): boolean;
     function LocateHeatID(AHeatID: integer): boolean;
+    function LocateLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean;
     // Uses SessionStart TDateTime...
     function LocateNearestSessionID(aDate: TDateTime): integer;
     function LocateSessionID(ASessionID: integer): boolean;
     function LocateSwimClubID(ASwimClubID: integer): boolean;
-    function LocateLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean;
-    // .......................................................
-    function SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer): boolean;
-    function SyncCheckSession(aTDSessionID: Integer): boolean;
-    function SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum: Integer): boolean;
+    procedure ReadConnectionDef(const ConnectionName, ParamName: string; out ParamValue: string);
     // If events, heats, etc change within SwimClubMeet then call here to
     // reload and sync to changes.
     procedure RefreshSCM();  //---
-    function  GetDBVerInfo(): string;
-
-    property MSG_Handle: HWND read msgHandle write msgHandle;  // Both DataModules
+    function SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum: Integer): boolean;
+    function SyncCheckSession(aTDSessionID: Integer): boolean;
+    // .......................................................
+    function SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer): boolean;
+    procedure WriteConnectionDef(const ConnectionName, ParamName, ParamValue: string);
     property DataIsActive: Boolean read fDataIsActive;
-
+    property MSG_Handle: HWND read msgHandle write msgHandle;  // Both DataModules
   end;
 
 var
@@ -117,40 +115,23 @@ var
 implementation
 
 uses
-  System.DateUtils;
+  System.DateUtils, uAppUtils;
 
 {%CLASSGROUP 'Vcl.Controls.TControl'}
 
 {$R *.dfm}
 
-function ExpandEnvVars(const Value: string): string;
-var
-  Buffer: array[0..MAX_PATH-1] of Char;
-begin
-  if ExpandEnvironmentStrings(PChar(Value), Buffer, Length(Buffer)) = 0 then
-    RaiseLastOSError;
-  Result := Buffer;
-end;
-
-procedure TSCM.DataModuleDestroy(Sender: TObject);
-begin
-  FreeAndNil(scmConnection);
-end;
-
 procedure TSCM.ActivateDataSCM;
 begin
+  // ASSERT state
+  fDataIsActive := false;
+
   if Assigned(scmConnection) and scmConnection.Connected then
   begin
-
-    // GRAND MASTER.
-    qrySwimClub.Connection := scmConnection;
-    qrySwimClub.Open;
-    if qrySwimClub.Active then
-      {TODO -oBSA -cGeneral : locate the current active swimming club.}
-      qrySwimClub.First;
-
     { If the dataset is the master of a master/detail relationship,
       calling DisableControls also disables the master/detail relationship.}
+
+    qryTEAMEntrant.DisableControls;
     qryTEAM.DisableControls;
     qryINDV.DisableControls;
     qryHeat.DisableControls;
@@ -158,7 +139,8 @@ begin
     qrySession.DisableControls;
     qrySwimClub.DisableControls;
 
-    // setup connection for master - detail
+    // assign TFDConnection
+    qrySwimClub.Connection := scmConnection;
     qrySession.Connection := scmConnection;
     qryEvent.Connection := scmConnection;
     qryDistance.Connection := scmConnection;
@@ -169,18 +151,25 @@ begin
     qryTEAMEntrant.Connection := scmConnection;
 
     try
-      qrySession.Open;
-      if qrySwimClub.Active and qrySession.Active then
+      // GRAND MASTER.
+      qrySwimClub.Open;
+      if qrySwimClub.Active then
       begin
-        qrySession.Last;  // most recent session.
-        qryEvent.Open;
-        qryDistance.Open;
-        qryStroke.Open;
-        qryHeat.Open;
-        qryINDV.Open;
-        qryTEAM.Open;
-        qryTEAMEntrant.Open;
-        fDataIsActive := true;
+        {TODO -oBSA -cGeneral : locate the current active swimming club.}
+        qrySwimClub.First; // Default ID = 1.
+        qrySession.Open;
+        if qrySession.Active then
+        begin
+          qrySession.Last;  // most recent session.
+          qryEvent.Open;
+          qryDistance.Open;
+          qryStroke.Open;
+          qryHeat.Open;
+          qryINDV.Open;
+          qryTEAM.Open;
+          qryTEAMEntrant.Open;
+          fDataIsActive := true;
+        end;
       end;
     finally
       qrySwimClub.EnableControls;
@@ -189,15 +178,191 @@ begin
       qryHeat.EnableControls;
       qryINDV.EnableControls;
       qryTEAM.EnableControls;
+      qryTEAMEntrant.EnableControls;
     end;
   end;
 end;
 
+procedure TSCM.AssertMasterDetail;
+begin
+  if (fDataIsActive = false) then
+  begin
+    // should be ok to run this procedure with out a connection.
+    // assigning a master will result in query state = close.
+    // must be explicitly reopened. (ActivateDataSCM)
+
+    // Master - index field.
+    qrySwimClub.IndexFieldNames := 'SwimClubID';
+
+    // ASSERT Master - Detail
+    qrySession.MasterSource := dsSwimClub;
+    qrySession.MasterFields := 'SwimClubID';
+    qrySession.DetailFields := 'SwimClubID';
+    qrySession.IndexFieldNames := 'SwimClubID';
+
+    qryEvent.MasterSource := dsSession;
+    qryEvent.MasterFields := 'SessionID';
+    qryEvent.DetailFields := 'SessionID';
+    qryEvent.IndexFieldNames := 'SessionID';
+
+    qryDistance.MasterSource := dsEvent;
+    qryDistance.MasterFields := 'DistanceID';
+    qryDistance.DetailFields := 'DistanceID';
+    qryDistance.IndexFieldNames := 'DistanceID';
+
+    qryStroke.MasterSource := dsEvent;
+    qryStroke.MasterFields := 'StrokeID';
+    qryStroke.DetailFields := 'StrokeID';
+    qryStroke.IndexFieldNames := 'StrokeID';
+
+    qryHeat.MasterSource := dsEvent;
+    qryHeat.MasterFields := 'EventID';
+    qryHeat.DetailFields := 'EventID';
+    qryHeat.IndexFieldNames := 'EventID';
+
+    qryINDV.MasterSource := dsHeat;
+    qryINDV.MasterFields := 'HeatID';
+    qryINDV.DetailFields := 'HeatID';
+    qryINDV.IndexFieldNames := 'HeatID';
+
+    qryTEAM.MasterSource := dsHeat;
+    qryTEAM.MasterFields := 'HeatID';
+    qryTEAM.DetailFields := 'HeatID';
+    qryTEAM.IndexFieldNames := 'HeatID';
+
+    qryTeamEntrant.MasterSource := dsTeam;
+    qryTeamEntrant.MasterFields := 'TeamID';
+    qryTeamEntrant.DetailFields := 'TeamID';
+    qryTeamEntrant.IndexFieldNames := 'TeamID';
+
+  end;
+
+end;
+
+procedure TSCM.BuildCSVEventData(AFileName: string);
+var
+  sl: TStringList;
+  s, s2, s3: string;
+  i, id: integer;
+begin
+{
+The Load button lets the user load all event data from an event file.
+This is a CSV file and can be hand typed or generated by meet
+management software. Each line of this file should be formatted as follows:
+Event Number,EventName,Number of Heats,Number of Splits,Round ...
+
+Example:
+1A,Boys 50 M Free,4,1,P
+1B,Girls 50 M Free,5,1,P
+2A,Boys 100 M Breaststroke,2,2,P
+2B,Girls 100 M Breaststroke,2,2,P …
+
+The first line will be event index 1, the second line will be event index 2 and so on. Events
+will always come up in event index order although this can be overridden and events and
+heats may be run in any order.
+
+}
+  sl := TStringlist.Create;
+  qryEvent.First();
+  while not qryEvent.Eof do
+  begin
+    s := '';
+    // Event Number – Up to 5 alpha-numeric characters. Example: 12B ...
+    i := qryEvent.FieldByName('EventNum').AsInteger;
+    s := s + IntToStr(i) + ',';
+    // Event Name – Up to 25 alpha-numeric characters. Example: Men’s 50 Meter Freestyle
+    s2 := qryDistance.FieldByName('Caption').AsString + ' ' +
+    qryStroke.FieldByName('Caption').AsString;
+    s3 := qryEvent.FieldByName('Caption').AsString;
+    if Length(s3) > 0 then
+      s2 := s2 + ' ' + s3;
+    s := s + s2 + ',';
+    // Get Number of Heats
+    // Number of Heats – (0-99) Number of expected heats for the given event
+    id := qryEvent.FieldByName('EventID').AsInteger;
+    i := GetNumberOfHeats(id);
+    s := s + IntToStr(i) + ',';
+    { TODO -oBSA : Implement Splits for TIME-DROPS }
+    // Number of Splits - NOT AVAILABLE IN THIS VERSION.
+    s := s + '0,';
+    { Round .... requires db v1.1.5.4.
+    * A: ALL  (CTS DOLPHIN - ref F912 ).
+    * P: Preliminary (DEFAULT)
+    * Q: Quarterfinals
+    * S: Semifinals
+    * F: Finals
+    }
+    // Round – “A” for all, “P” for prelim or “F” for final
+    s := s + 'P';
+    sl.Add(s);
+    qryEvent.Next;
+  end;
+  qryEvent.First();
+  if not sl.IsEmpty then
+    sl.SaveToFile(AFileName);
+  sl.free;
+end;
+
+procedure TSCM.DataModuleCreate(Sender: TObject);
+var
+  ExpandedFn, msg: string;
+begin
+  fDataIsActive := false;
+  scmConnection := nil;
+  msgHandle := 0;
+
+  { SWITCH from the default application's FDConnectionDefs.ini to
+    FDConnectionDefs.ini held in user AppData folder.
+    This resolves read-write issues and security. }
+
+  ExpandedFn := ExpandEnvVars('%APPDATA%\Artanemus\SCM\FDConnectionDefs.ini');
+  if FileExists(ExpandedFn) then
+  begin
+    // As ConnectionDefFileAutoLoad := True, the file will be loaded immediately.
+    //  and a call to LoadConnectionDefFile isn't needed.
+    scmFDManager.ConnectionDefFileName := ExpandedFn;
+    // Assert state.
+    scmFDManager.Active := true;
+  end
+  else
+  begin
+    msg := '''
+    While preparing the FireDAC's connection manager, the application
+    was unable to find %APPDATA%\Artanemus\SCM\FDConnectionDefs.ini.
+    A connection can't be made with the SwimClubMeet database.
+    (NOTE: The application's folder contains a backup of this file.)
+    ''';
+    raise Exception.Create(msg);
+  end;
+
+  try
+    begin
+      scmConnection := TFDConnection.Create(Self);
+      scmConnection.ConnectionDefName := 'MSSQL_SwimClubMeet';
+      // The connection isn't opened. This will occur on the main form -
+      // via the TLogin dialogue.
+    end;
+  except on E: Exception do
+    begin
+      msg := Format('Failed to create FireDAC''s connection component. Error: %s', [E.Message]);
+      FreeAndNil(scmConnection);
+      raise Exception.Create(msg);
+    end;
+  end;
+end;
+
+procedure TSCM.DataModuleDestroy(Sender: TObject);
+begin
+  FreeAndNil(scmConnection);
+end;
+
 procedure TSCM.DeActivateDataSCM;
 begin
+  // Safe to assign early in execution.
+  fDataIsActive := false;
+  // Can only close TFDQuery if connection is active.
   if Assigned(scmConnection) and scmConnection.Connected then
   begin
-    fDataIsActive := false;
     qryTEAMEntrant.Close; // Detail of TEAM
     qryTEAM.Close;  // Detail of Heat
     qryINDV.Close;  // Detail of Heat
@@ -207,6 +372,7 @@ begin
     qryEvent.Close;
     qrySession.Close;
     qrySwimClub.Close;  // GRAND MASTER.
+    {TODO -oBSA -cIMPORTANT : On DeActivate SCM - should we close connection?}
   end;
 end;
 
@@ -343,7 +509,6 @@ begin
       result := dsSession.DataSet.Locate('SessionID', ASessionID, LOptions);
 end;
 
-
 function TSCM.LocateSwimClubID(ASwimClubID: integer): boolean;
 var
   LOptions: TLocateOptions;
@@ -354,6 +519,12 @@ begin
   LOptions := [];
   if dsSwimClub.DataSet.Active then
       result := dsSwimClub.DataSet.Locate('SwimClubID', ASwimClubID, LOptions);
+end;
+
+procedure TSCM.qryHeatAfterScroll(DataSet: TDataSet);
+begin
+  if (msgHandle <> 0) then
+    PostMessage(msgHandle, SCM_UPDATEUI_SCM, 0,0);
 end;
 
 procedure TSCM.ReadConnectionDef(const ConnectionName, ParamName: string;
@@ -419,7 +590,6 @@ begin
   qryTEAM.EnableControls;
 
 end;
-
 
 function TSCM.SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum: Integer):
     boolean;
@@ -496,123 +666,6 @@ begin
     raise Exception.CreateFmt('Connection definition "%s" not found.', [ConnectionName]);
 end;
 
-procedure TSCM.BuildCSVEventData(AFileName: string);
-var
-  sl: TStringList;
-  s, s2, s3: string;
-  i, id: integer;
-begin
-{
-The Load button lets the user load all event data from an event file.
-This is a CSV file and can be hand typed or generated by meet
-management software. Each line of this file should be formatted as follows:
-Event Number,EventName,Number of Heats,Number of Splits,Round ...
-
-Example:
-1A,Boys 50 M Free,4,1,P
-1B,Girls 50 M Free,5,1,P
-2A,Boys 100 M Breaststroke,2,2,P
-2B,Girls 100 M Breaststroke,2,2,P …
-
-The first line will be event index 1, the second line will be event index 2 and so on. Events
-will always come up in event index order although this can be overridden and events and
-heats may be run in any order.
-
-}
-  sl := TStringlist.Create;
-  qryEvent.First();
-  while not qryEvent.Eof do
-  begin
-    s := '';
-    // Event Number – Up to 5 alpha-numeric characters. Example: 12B ...
-    i := qryEvent.FieldByName('EventNum').AsInteger;
-    s := s + IntToStr(i) + ',';
-    // Event Name – Up to 25 alpha-numeric characters. Example: Men’s 50 Meter Freestyle
-    s2 := qryDistance.FieldByName('Caption').AsString + ' ' +
-    qryStroke.FieldByName('Caption').AsString;
-    s3 := qryEvent.FieldByName('Caption').AsString;
-    if Length(s3) > 0 then
-      s2 := s2 + ' ' + s3;
-    s := s + s2 + ',';
-    // Get Number of Heats
-    // Number of Heats – (0-99) Number of expected heats for the given event
-    id := qryEvent.FieldByName('EventID').AsInteger;
-    i := GetNumberOfHeats(id);
-    s := s + IntToStr(i) + ',';
-    { TODO -oBSA : Implement Splits for TIME-DROPS }
-    // Number of Splits - NOT AVAILABLE IN THIS VERSION.
-    s := s + '0,';
-    { Round .... requires db v1.1.5.4.
-    * A: ALL  (CTS DOLPHIN - ref F912 ).
-    * P: Preliminary (DEFAULT)
-    * Q: Quarterfinals
-    * S: Semifinals
-    * F: Finals
-    }
-    // Round – “A” for all, “P” for prelim or “F” for final
-    s := s + 'P';
-    sl.Add(s);
-    qryEvent.Next;
-  end;
-  qryEvent.First();
-  if not sl.IsEmpty then
-    sl.SaveToFile(AFileName);
-  sl.free;
-end;
-
-procedure TSCM.DataModuleCreate(Sender: TObject);
-var
-  ExpandedFn, msg: string;
-begin
-  fDataIsActive := false;
-  scmConnection := nil;
-  msgHandle := 0;
-
-  { SWITCH from the default application's FDConnectionDefs.ini to
-    FDConnectionDefs.ini held in user AppData folder.
-    This resolves read-write issues and security. }
-
-  ExpandedFn := ExpandEnvVars('%APPDATA%\Artanemus\SCM\FDConnectionDefs.ini');
-  if FileExists(ExpandedFn) then
-  begin
-    // As ConnectionDefFileAutoLoad := True, the file will be loaded immediately.
-    //  and a call to LoadConnectionDefFile isn't needed.
-    scmFDManager.ConnectionDefFileName := ExpandedFn;
-    // Assert state.
-    scmFDManager.Active := true;
-  end
-  else
-  begin
-    msg := '''
-    While preparing the FireDAC's connection manager, the application
-    was unable to find %APPDATA%\Artanemus\SCM\FDConnectionDefs.ini.
-    A connection can't be made with the SwimClubMeet database.
-    (NOTE: The application's folder contains a backup of this file.)
-    ''';
-    raise Exception.Create(msg);
-  end;
-
-  try
-    begin
-      scmConnection := TFDConnection.Create(Self);
-      scmConnection.ConnectionDefName := 'MSSQL_SwimClubMeet';
-      // The connection isn't opened. This will occur on the main form -
-      // via the TLogin dialogue.
-    end;
-  except on E: Exception do
-    begin
-      msg := Format('Failed to create FireDAC''s connection component. Error: %s', [E.Message]);
-      FreeAndNil(scmConnection);
-      raise Exception.Create(msg);
-    end;
-  end;
-end;
-
-procedure TSCM.qryHeatAfterScroll(DataSet: TDataSet);
-begin
-  if (msgHandle <> 0) then
-    PostMessage(msgHandle, SCM_UPDATEUI_SCM, 0,0);
-end;
 
 
 end.

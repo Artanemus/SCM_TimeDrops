@@ -1,7 +1,7 @@
 object SCM: TSCM
   OnCreate = DataModuleCreate
   OnDestroy = DataModuleDestroy
-  Height = 549
+  Height = 697
   Width = 721
   object qrySCMSystem: TFDQuery
     ActiveStoredUsage = [auDesignTime]
@@ -23,6 +23,7 @@ object SCM: TSCM
     ActiveStoredUsage = [auDesignTime]
     Active = True
     IndexFieldNames = 'SwimClubID'
+    MasterSource = dsSwimClub
     MasterFields = 'SwimClubID'
     DetailFields = 'SwimClubID'
     Connection = TestFDConnection
@@ -99,7 +100,7 @@ object SCM: TSCM
       '      ,[CloseDT]'
       '  FROM [SwimClubMeet].[dbo].[HeatIndividual]'
       '')
-    Left = 88
+    Left = 120
     Top = 400
   end
   object qryINDV: TFDQuery
@@ -136,8 +137,8 @@ object SCM: TSCM
         '  LEFT JOIN [Member] ON [Entrant].[MemberID] = [Member].[MemberI' +
         'D]'
       '  ORDER BY [Lane]')
-    Left = 152
-    Top = 400
+    Left = 176
+    Top = 464
   end
   object qryTEAM: TFDQuery
     ActiveStoredUsage = [auDesignTime]
@@ -161,8 +162,8 @@ object SCM: TSCM
       '      ,[TeamNameID]'
       '  FROM [SwimClubMeet].[dbo].[Team]'
       '  ORDEr BY [Lane]')
-    Left = 216
-    Top = 400
+    Left = 288
+    Top = 464
   end
   object qryTEAMEntrant: TFDQuery
     ActiveStoredUsage = [auDesignTime]
@@ -186,8 +187,8 @@ object SCM: TSCM
       '      ,[IsScratched]'
       '  FROM [SwimClubMeet].[dbo].[TeamEntrant]'
       '  ORDEr BY [Lane]')
-    Left = 216
-    Top = 464
+    Left = 368
+    Top = 536
   end
   object dsSession: TDataSource
     DataSet = qrySession
@@ -196,28 +197,28 @@ object SCM: TSCM
   end
   object dsEvent: TDataSource
     DataSet = qryEvent
-    Left = 280
+    Left = 144
     Top = 336
   end
   object dsHeat: TDataSource
     DataSet = qryHeat
-    Left = 280
+    Left = 176
     Top = 400
   end
   object dsINDV: TDataSource
     DataSet = qryINDV
-    Left = 336
-    Top = 400
+    Left = 232
+    Top = 464
   end
   object dsTEAM: TDataSource
     DataSet = qryTEAM
-    Left = 392
-    Top = 400
+    Left = 344
+    Top = 464
   end
   object dsTEAMEntrant: TDataSource
     DataSet = qryTEAMEntrant
-    Left = 304
-    Top = 464
+    Left = 464
+    Top = 536
   end
   object qryNearestSessionID: TFDQuery
     SQL.Strings = (
@@ -289,8 +290,8 @@ object SCM: TSCM
       '      ,[ABREV]'
       '      ,[EventTypeID]'
       '  FROM [dbo].[Distance]')
-    Left = 152
-    Top = 336
+    Left = 232
+    Top = 400
   end
   object qryStroke: TFDQuery
     ActiveStoredUsage = [auDesignTime]
@@ -309,8 +310,8 @@ object SCM: TSCM
       '      ,[Caption]'
       '  FROM [dbo].[Stroke]'
       '')
-    Left = 216
-    Top = 336
+    Left = 296
+    Top = 400
   end
   object qryListSwimmers: TFDQuery
     SQL.Strings = (

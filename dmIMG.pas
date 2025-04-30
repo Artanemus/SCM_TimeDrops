@@ -23,8 +23,8 @@ type
     fIMGIsactive: boolean;
   public
     { Public declarations }
-    procedure ActivateDataSCM();  //---
-    procedure DeActivateDataSCM();  //---
+    procedure ActivateDataIMG();  //---
+    procedure DeActivateDataIMG();  //---
 
   end;
 
@@ -39,12 +39,12 @@ implementation
 
 { TAppData }
 
-procedure TIMG.ActivateDataSCM;
+procedure TIMG.ActivateDataIMG;
 begin
   fIMGIsactive := false;
 end;
 
-procedure TIMG.DeActivateDataSCM;
+procedure TIMG.DeActivateDataIMG;
 begin
   fIMGIsactive := false;
 end;
