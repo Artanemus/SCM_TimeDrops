@@ -42,7 +42,6 @@ type
     procedure ActivateDataTDS();  //---
     procedure DeActivateDataTDS();  //---
 
-    procedure ActivateDataTD;
     procedure BuildAppData;
     procedure EmptyAllTDDataSets;
     procedure DisableAllTDControls;
@@ -122,14 +121,6 @@ uses System.Variants, System.DateUtils, tdSetting, System.IOUtils, dmSCM;
 
 procedure TTDS.ActivateDataTDS;
 begin
-    FConnection := nil;  //---
-    fDataIsActive := false;
-    fMasterDetailActive := false;
-    msgHandle := 0;  // TForm.dtfrmExec ...   // Both DataModules
-end;
-
-procedure TTDS.ActivateDataTD;
-begin
   fDataIsActive := false;
   // MAKE LIVE THE TIME-DROPS TABLES
   try
@@ -154,6 +145,15 @@ begin
   end;
 end;
 
+procedure TTDS.DeActivateDataTDS;
+begin
+    tblmNoodle.close;
+    tblmLane.close;
+    tblmHeat.close;
+    tblmEvent.close;
+    tblmSession.close;
+    fDataIsActive := false;
+end;
 
 procedure TTDS.BuildAppData;
 var
@@ -480,11 +480,6 @@ begin
 end;
 
 procedure TTDS.DataModuleDestroy(Sender: TObject);
-begin
-//  DeActivateDataSCM;
-end;
-
-procedure TTDS.DeActivateDataTDS;
 begin
     msgHandle := 0;
 end;

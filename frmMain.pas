@@ -206,7 +206,6 @@ const
 
 procedure TMain.actnClearAndReScanExecute(Sender: TObject);
 var
-  s: string;
   mr: TModalResult;
   dlg: TInfoClearRescanResults;
 begin
@@ -767,7 +766,6 @@ end;
 
 procedure TMain.actnReScanExecute(Sender: TObject);
 var
-  s: string;
   mr: TModalResult;
   dlg: TInfoReScanResults;
 begin
@@ -1298,31 +1296,36 @@ begin
   else
     fEnableLoginPrompt := false;
 
-    // C R E A T E   T H E   TimeDrops system  D A T A M O D U L E .
+
+
+  // Create the TimeDrops system Data Module
   if not Assigned(TDS) then
   begin
     try
       TDS := TTDS.Create(Self);
-    except on E: Exception do
+    except
+      on E: Exception do
+        // Handle exception if needed
     end;
   end;
 
   if Assigned(TDS) then
   begin
-    TDS.ActivateDataTD;
+    TDS.ActivateDataTDS; // Open all tables
     if TDS.DataIsActive then
-    begin
-      // Empty data in TFDMemTables.
-      TDS.EmptyAllTDDataSets;
-      // Attaches mater-detail.
-      TDS.EnableTDMasterDetail;
-      if TDS.DataIsActive then
-      begin
-        if not Assigned(tdsGrid.DataSource) then
-          tdsGrid.DataSource := TDS.dsmLane;
-      end;
-    end;
+      TDS.EmptyAllTDDataSets; // Clear data in TFDMemTables
+    if TDS.MasterDetailActive = false then
+      TDS.EnableTDMasterDetail; // Attach master-detail relationships
+
+    // Assert state.
+    if TDS.DataIsActive = false then
+      TDS.ActivateDataTDS; // Ensure tables are active
+
+    if not Assigned(tdsGrid.DataSource) then
+      tdsGrid.DataSource := TDS.dsmLane; // Bind grid to data source
   end;
+
+
 
   // immediately load the TDS grid with results.
   if Assigned(Settings) and Settings.EnableRescanPrompt then
@@ -1433,8 +1436,15 @@ begin
   if Assigned(TDS) then
   begin
     TDS.MSG_Handle := Self.Handle;
-    // Assert Master - Detail ...
-    TDS.ActivateDataTD;
+
+(*
+      // Assert Master - Detail ...
+      if not TDS.MasterDetailActive then
+        TDS.EnableTDMasterDetail;
+      // Assert tables are open ...
+      if not TDS.DataIsActive then
+        TDS.ActivateDataTDS;
+*)
   end;
 
   if Assigned(SCM) then
@@ -1791,12 +1801,47 @@ begin
   // UPDATE DESCRIPTION.
   // -----------------------------------------------------
   lblEventDetailsTD.caption := '';
+  lbl_tdsGridOverlay.Caption := '';
+  lbl_tdsGridOverlay.Visible := true;
 
-  if not Assigned(TDS) then exit;
-  if not TDS.DataIsActive then exit;
+  if not Assigned(TDS) then
+  begin
+    lbl_tdsGridOverlay.Caption := 'Failed to create ' + sLineBreak +
+      'the TDS data module!';
+    tdsGrid.DataSource := nil;
+    exit;
+  end;
+
+  if TDS.DataIsActive = false then
+  begin
+    lbl_tdsGridOverlay.Caption := 'Data offline.' + sLineBreak +
+      'Perform a ''Clear and Re-Scan'' meets folder.';
+    tdsGrid.DataSource := nil;
+    exit;
+  end;
+
+  if tdsGrid.DataSource = nil then
+  begin
+    lbl_tdsGridOverlay.Caption := 'Data offline. To get started...' + sLineBreak +
+      'Perform a ''Clear and Re-Scan'' meets folder.';
+    exit;
+  end;
+
+  // ASSERT DATASOURCE.
+  {TODO -oBSA -cGeneral : CHECK tdsGrid DataSource assignment. This should
+  occur on TDS creation?}
+  // -----------------------------------------------------
+  if not Assigned(tdsGrid.DataSource) then
+    tdsGrid.DataSource := TDS.dsmLane;
+  // -----------------------------------------------------
 
 
-  if TDS.tblmSession.IsEmpty then exit;
+  if TDS.tblmSession.IsEmpty then
+  begin
+    lblEventDetailsTD.caption := 'No ''results'' to post.';
+    lbl_tdsGridOverlay.Caption := 'Watching and waiting.';
+  end;
+
   s := 'Session : ';
   i := TDS.tblmSession.FieldByName('SessionNum').AsInteger;
   s := s + IntToStr(i);
@@ -1820,16 +1865,12 @@ begin
   s := s + IntToStr(i);
   lblEventDetailsTD.caption := s;
 
-  // ASSERT DATASOURCE.
-  {TODO -oBSA -cGeneral : CHECK tdsGrid DataSource assignment. This should
-  occur on TDS creation?}
-  // -----------------------------------------------------
-  if TDS.DataIsActive then
-  begin
-    if not Assigned(tdsGrid.DataSource) then
-      tdsGrid.DataSource := TDS.dsmLane;
-  end;
-  // -----------------------------------------------------
+
+
+  // ASSERT LABEL/PANEL STATE.
+  lbl_tdsGridOverlay.Visible := false;
+  lbl_tdsGridOverlay.Caption := '';
+
 
   // TDS.dsmHeat - AfterScroll event.
   // UI images in grid cells need to be re-assigned.

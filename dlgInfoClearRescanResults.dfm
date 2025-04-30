@@ -113,7 +113,7 @@ object InfoClearRescanResults: TInfoClearRescanResults
       Top = 17
       Width = 249
       Height = 26
-      Caption = 'Don'#39't show this info box.'
+      Caption = 'Don'#39't show this info box again.'
       TabOrder = 2
     end
   end

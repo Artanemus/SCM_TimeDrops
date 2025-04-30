@@ -11,7 +11,9 @@ object InfoReScanResults: TInfoReScanResults
   Font.Height = -16
   Font.Name = 'Segoe UI'
   Font.Style = []
+  KeyPreview = True
   Position = poMainFormCenter
+  OnKeyDown = FormKeyDown
   TextHeight = 21
   object pnlBody: TPanel
     Left = 0
@@ -21,7 +23,6 @@ object InfoReScanResults: TInfoReScanResults
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitHeight = 541
     object chkbDoShowAgain: TCheckBox
       Left = 10
       Top = 406
@@ -58,7 +59,6 @@ object InfoReScanResults: TInfoReScanResults
       ReadOnly = True
       ScrollBars = ssVertical
       TabOrder = 1
-      ExplicitHeight = 541
     end
   end
   object pnlFooter: TPanel
@@ -69,7 +69,6 @@ object InfoReScanResults: TInfoReScanResults
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitTop = 541
     object btnCancel: TButton
       Left = 321
       Top = 11
@@ -77,6 +76,7 @@ object InfoReScanResults: TInfoReScanResults
       Height = 36
       Caption = 'Cancel'
       TabOrder = 0
+      OnClick = btnCancelClick
     end
     object btnOk: TButton
       Left = 425
@@ -85,13 +85,14 @@ object InfoReScanResults: TInfoReScanResults
       Height = 36
       Caption = 'OK'
       TabOrder = 1
+      OnClick = btnOkClick
     end
     object chkbHideInfoBox: TCheckBox
       Left = 0
       Top = 17
       Width = 249
       Height = 26
-      Caption = 'Don'#39't show this info box.'
+      Caption = 'Don'#39't show this info box again.'
       TabOrder = 2
     end
   end
