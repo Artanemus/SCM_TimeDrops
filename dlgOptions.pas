@@ -47,6 +47,11 @@ type
     TabSheet1: TTabSheet;
     chk_EnableLoginPrompt: TCheckBox;
     chk_EnableRescanPrompt: TCheckBox;
+    vimgInfo3: TVirtualImage;
+    vimgInfo4: TVirtualImage;
+    vimgInfo5: TVirtualImage;
+    vimgInfo6: TVirtualImage;
+    chkbHideExtendedHelp: TCheckBox;
     procedure btnCloseClick(Sender: TObject);
     procedure btnedtAppDataRightButtonClick(Sender: TObject);
     procedure btnedtMeetProgramRightButtonClick(Sender: TObject);
@@ -59,6 +64,14 @@ type
     procedure vimginfo1MouseLeave(Sender: TObject);
     procedure vimgInfo2MouseEnter(Sender: TObject);
     procedure vimgInfo2MouseLeave(Sender: TObject);
+    procedure vimgInfo3MouseEnter(Sender: TObject);
+    procedure vimgInfo3MouseLeave(Sender: TObject);
+    procedure vimgInfo4MouseEnter(Sender: TObject);
+    procedure vimgInfo4MouseLeave(Sender: TObject);
+    procedure vimgInfo5MouseEnter(Sender: TObject);
+    procedure vimgInfo5MouseLeave(Sender: TObject);
+    procedure vimgInfo6MouseEnter(Sender: TObject);
+    procedure vimgInfo6MouseLeave(Sender: TObject);
   private
     procedure LoadFromSettings;
     procedure LoadSettings;
@@ -192,8 +205,8 @@ begin
 
   chkbxFinalTime.Checked := Settings.UseTDfinalTime;
   chkbxPadTime.Checked := Settings.UseTDpadTime;
-  chk_EnableLoginPrompt.Checked := Settings.EnableLoginPrompt;
-  chk_EnableRescanPrompt.Checked := Settings.EnableRescanPrompt;
+  chk_EnableLoginPrompt.Checked := Settings.DoLoginOnBoot;
+  chk_EnableRescanPrompt.Checked := Settings.DoClearAndScanOnBoot;
 
   try
     lbledtDeviation.Text := FloatToStr(Settings.AcceptedDeviation);
@@ -230,8 +243,8 @@ begin
   end;
   Settings.UseTDfinalTime := chkbxFinalTime.Checked;
   Settings.UseTDpadTime := chkbxPadTime.Checked;
-  Settings.EnableLoginPrompt := chk_EnableLoginPrompt.Checked;
-  Settings.EnableRescanPrompt := chk_EnableRescanPrompt.Checked;
+  Settings.DoLoginOnBoot := chk_EnableLoginPrompt.Checked;
+  Settings.DoClearAndScanOnBoot := chk_EnableRescanPrompt.Checked;
 
   Settings.SaveToFile();
 end;
@@ -240,44 +253,22 @@ procedure TOptions.vimginfo1MouseEnter(Sender: TObject);
 begin
   bhintOptions.Title := 'finalTime vs AutoCalc';
   bhintOptions.Description := '''
-  Checking this box results in using Time Drops' 'finalTime',
-  instead of using SwimClubMeet's auto-calculated race time.
+  Checking this box results in TimeDrops' 'finalTime',
+  being used as the lane's race-time instead of SwimClubMeet's
+  auto-calculated race-time.
 
-  SwimClubMeet offers two methods for auto-calculated race time.
-  METHOD 1 - Standard Practice:
-  - If there is one watch per lane, that time will also be
-      placed in 'raceTime'.
-  - If there are two watches for a given lane, the average
-      will be computed and placed in 'raceTime'.
-  - If there are three watch times for a given lane,
-      the middle time will be placed in 'raceTime'.
-
-  METHOD 2 - Enhanced:
-  The average is always used—whether for two or three watch times.
-  Deviation between three watch times is always checked, and
-  SwimClubMeet may conclude that all watch times should be dropped.
-
-  NOTES:
-  If the difference between the two watch times exceeds the
-  'Accepted Deviation', the average result time will NOT be computed,
-  and warning icons will appear for both watch times in this lane.
-  The 'raceTime' will be empty.
-  Switch to manual mode and select which time to use.
-  You are permitted to select both, in which case an average of the
-  two watch times will be used in 'raceTime'.
-
-  Rules for 'finalTime' are undocumented
-
+  Rules for 'Auto-Calc' are shown below in the info hint.
+  Rules for 'finalTime' are undocumented.
   ''';
 
-  bhintOptions.ShowHint;
+  bhintOptions.ShowHint(TControl(Sender));
 end;
 
 procedure TOptions.vimginfo2MouseEnter(Sender: TObject);
 begin
   bhintOptions.Title := 'padTime vs Split-Time';
   bhintOptions.Description := '''
-  Checking this box will use Time-Drops' 'padTime' instead
+  Checking this box will use TimeDrops' 'padTime' instead
   of SwimClubMeet's calculated split time.' +
                  '
   SwimClubMeet calculates split times by searching all 10
@@ -287,12 +278,11 @@ begin
   race time).
 
   There is no official documentation for Time-Drops' 'padTime'.
-  However, it is likely that the anticipated split count provided
-  when building the Meet Program plays a role in determining the
-  final 'padTime'.
-
+  However, it is likely that the split count value provided
+  when building the TimeDrops 'Meet Program' plays an important
+  role in determining the final 'padTime'.
   ''';
-  bhintOptions.ShowHint;
+  bhintOptions.ShowHint(TControl(Sender));
 
 end;
 
@@ -302,6 +292,108 @@ begin
 end;
 
 procedure TOptions.vimgInfo2MouseLeave(Sender: TObject);
+begin
+  bhintOptions.HideHint;
+end;
+
+procedure TOptions.vimgInfo3MouseEnter(Sender: TObject);
+begin
+  bhintOptions.Title := 'Methods used by Auto-Calculate.';
+  bhintOptions.Description := '''
+  SwimClubMeet offers two methods for auto-calculated race-time.
+  METHOD 1 - Standard Practice:
+  - If there is one watch per lane, that time will also be
+      placed in 'raceTime'.
+  - If there are two watches for a given lane, the average
+      will be computed and placed in 'race-time'.
+  - If there are three watch times for a given lane,
+      the middle time will be placed in 'race-time'.
+
+  METHOD 2 - Enhanced:
+  The average is always used for two or three watch times.
+  Deviation between three watch times is always checked, and
+  SwimClubMeet may conclude that all watch times should be dropped.
+
+  NOTES:
+  If the difference between the two watch times exceeds the
+  'Accepted Deviation', the average result time will NOT be computed,
+  and warning icons will appear for both watch times in this lane.
+  The 'race-time' value will be empty.
+
+  If you wish to use the watch times, then switch to manual mode and
+  make your selection.
+  ''';
+  bhintOptions.ShowHint(TControl(Sender));
+end;
+
+procedure TOptions.vimgInfo3MouseLeave(Sender: TObject);
+begin
+  bhintOptions.HideHint;
+end;
+
+procedure TOptions.vimgInfo4MouseEnter(Sender: TObject);
+begin
+  bhintOptions.Title := 'Calculating a Swimmer''s Age in SwimClubMeet';
+  bhintOptions.Description := '''
+  The swimmer's age is a critical factor used to calculate predicted
+  race times. However, the exact age can vary based on competition
+  rules. These rules may specify:
+  - The swimmer's age at the start of the swimming season.
+  - The swimmer's age on the date of a specific swimming session.
+  - A designated date, commonly used for club championships,
+    especially when events span multiple club nights.
+
+  There are two methods available in SwimClubMeet for determining
+  a swimmer's age:
+
+  **Method 1: SwimClubMeet Option**
+  This method is configured in the application's core options menu,
+  with two choices:
+  - Age at the start of the swimming season.
+  - Age on the date of the swimming session.
+
+  **Method 2: Seed Date**
+  Choose this option and manually enter a specific date using
+  the 'Date and Time Picker'.
+  ''';
+  bhintOptions.ShowHint(TControl(Sender));
+end;
+
+procedure TOptions.vimgInfo4MouseLeave(Sender: TObject);
+begin
+  bhintOptions.HideHint;
+end;
+
+procedure TOptions.vimgInfo5MouseEnter(Sender: TObject);
+begin
+  bhintOptions.Title := 'Display login prompt on boot-up..';
+  bhintOptions.Description := '''
+  It is convenient to be logged into the SwimClubMeet
+  DB Server upon starting the application. However,
+  this is optional — you can still view and manage the
+  TimeDrops grid data without logging in.
+  ''';
+  bhintOptions.ShowHint(TControl(Sender));
+end;
+
+procedure TOptions.vimgInfo5MouseLeave(Sender: TObject);
+begin
+  bhintOptions.HideHint;
+end;
+
+procedure TOptions.vimgInfo6MouseEnter(Sender: TObject);
+begin
+  bhintOptions.Title := 'Auto-Scan of "meets" folder';
+  bhintOptions.Description := '''
+  If this option is unchecked and the "meets" folder contains
+  TimeDrops results, the TimeDrops grid will remain empty when
+  the application starts. The results files will only appear
+  after the first "Directory Watch" event occurs.
+  ''';
+  bhintOptions.ShowHint(TControl(Sender));
+end;
+
+procedure TOptions.vimgInfo6MouseLeave(Sender: TObject);
 begin
   bhintOptions.HideHint;
 end;

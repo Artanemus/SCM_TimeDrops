@@ -575,7 +575,6 @@ begin
   tblmNoodle.MasterFields := 'HeatID';
   tblmNoodle.DetailFields := 'HeatID';
   tblmNoodle.IndexFieldNames := 'HeatID';
-  tblmSession.First;
   fMasterDetailActive := true;
 end;
 

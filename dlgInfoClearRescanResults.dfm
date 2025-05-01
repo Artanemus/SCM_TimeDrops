@@ -13,6 +13,8 @@ object InfoClearRescanResults: TInfoClearRescanResults
   Font.Style = []
   KeyPreview = True
   Position = poMainFormCenter
+  OnClose = FormClose
+  OnCreate = FormCreate
   OnKeyDown = FormKeyDown
   TextHeight = 21
   object pnlBody: TPanel
@@ -113,7 +115,7 @@ object InfoClearRescanResults: TInfoClearRescanResults
       Top = 17
       Width = 249
       Height = 26
-      Caption = 'Don'#39't show this info box again.'
+      Caption = 'Hide extended info and help.'
       TabOrder = 2
     end
   end

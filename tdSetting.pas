@@ -37,8 +37,9 @@ type
     UseTDpadTime: boolean;
     UseTDfinalTime: boolean;
     DoPostALL: boolean;
-    EnableLoginPrompt: boolean;
-    EnableRescanPrompt: boolean;
+    DoLoginOnBoot: boolean;
+    DoClearAndScanOnBoot: boolean;
+    HideExtendedHelp: boolean;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -81,9 +82,9 @@ begin
   UseTDpadTime := false;
   UseTDfinalTime := false;
   DoPostALL := true;
-  EnableLoginPrompt:= false;
-  EnableRescanPrompt:= false;
-
+  DoLoginOnBoot:= false;
+  DoClearAndScanOnBoot:= true;
+  HideExtendedHelp := false;
   {
   ForceDirectories creates a new directory as specified in Dir,
   which must be a fully-qualified path name. If the directories given in

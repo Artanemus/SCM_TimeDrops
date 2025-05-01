@@ -10641,27 +10641,6 @@ object Main: TMain
                 ImageName = 'Sync'
               end
               item
-                Action = actnConnectToSCM
-                Caption = 'C&onnect to the SCM database...'
-                ImageIndex = 16
-                ImageName = 'login'
-              end
-              item
-                Caption = '-'
-              end
-              item
-                Action = actnSelectSwimClub
-                Caption = 'Sele&ct Swimming Club...'
-                ImageIndex = 2
-                ImageName = 'document_search'
-              end
-              item
-                Action = actnSCMSession
-                Caption = '&Select SCM Session...'
-                ImageIndex = 2
-                ImageName = 'document_search'
-              end
-              item
                 Caption = '-'
               end
               item
@@ -10678,22 +10657,6 @@ object Main: TMain
               end
               item
                 Caption = '-'
-              end
-              item
-                Items = <
-                  item
-                    Action = actnExportMeetProgram
-                    Caption = '&Export Time-Drops Meet Program ...'
-                    ImageIndex = 1
-                    ImageName = 'file_saveAlt'
-                  end
-                  item
-                    Action = actnReConstructTDResultFiles
-                    Caption = '&Generate Time-Drops Results files  ...'
-                    ImageIndex = 9
-                    ImageName = 'build'
-                  end>
-                Caption = '&Export'
               end>
             Caption = '&File'
           end
@@ -10731,6 +10694,53 @@ object Main: TMain
           item
             Items = <
               item
+                Action = actnRefresh
+                Caption = '&Refresh'
+                ImageIndex = 4
+                ImageName = 'Sync'
+              end
+              item
+                Action = actnConnectToSCM
+                Caption = '&Connect to the SCM database...'
+                ImageIndex = 16
+                ImageName = 'login'
+              end
+              item
+                Caption = '-'
+              end
+              item
+                Action = actnSelectSwimClub
+                Caption = '&Select Swimming Club...'
+                ImageIndex = 2
+                ImageName = 'document_search'
+              end
+              item
+                Action = actnSCMSession
+                Caption = 'S&elect SCM Session...'
+                ImageIndex = 2
+                ImageName = 'document_search'
+              end
+              item
+                Items = <
+                  item
+                    Action = actnExportMeetProgram
+                    Caption = '&Export Time-Drops Meet Program ...'
+                    ImageIndex = 1
+                    ImageName = 'file_saveAlt'
+                  end
+                  item
+                    Action = actnReConstructTDResultFiles
+                    Caption = '&Generate Time-Drops Results files  ...'
+                    ImageIndex = 9
+                    ImageName = 'build'
+                  end>
+                Caption = 'E&xport'
+              end>
+            Caption = '&SCM'
+          end
+          item
+            Items = <
+              item
                 Action = actnPushResults
                 Caption = '&Push result(s) to the grid...'
                 ImageIndex = 0
@@ -10746,8 +10756,8 @@ object Main: TMain
                 Caption = '-'
               end
               item
-                Action = actnClearAndReScan
-                Caption = '&Clear and re-scan '#39'Meets'#39' folder...'
+                Action = actnClearAndScan
+                Caption = '&Clear and scan '#39'Meets'#39' folder...'
                 ImageIndex = 10
                 ImageName = 'scan'
               end>
@@ -10814,14 +10824,22 @@ object Main: TMain
     Top = 368
     StyleName = 'Platform Default'
     object actnRefresh: TAction
-      Category = 'File'
+      Category = 'SCM'
       Caption = 'Refresh'
       ImageIndex = 4
       ImageName = 'Sync'
       OnExecute = actnRefreshExecute
     end
+    object actnConnectToSCM: TAction
+      Category = 'SCM'
+      Caption = 'Connect to the SCM database...'
+      ImageIndex = 16
+      ImageName = 'login'
+      OnExecute = actnConnectToSCMExecute
+      OnUpdate = actnConnectToSCMUpdate
+    end
     object actnSelectSwimClub: TAction
-      Category = 'File'
+      Category = 'SCM'
       Caption = 'Select Swimming Club...'
       Enabled = False
       ImageIndex = 2
@@ -10830,7 +10848,7 @@ object Main: TMain
       OnUpdate = actnSelectSwimClubUpdate
     end
     object actnSCMSession: TAction
-      Category = 'File'
+      Category = 'SCM'
       Caption = 'Select SCM Session...'
       ImageIndex = 2
       ImageName = 'document_search'
@@ -10869,13 +10887,13 @@ object Main: TMain
       OnExecute = actnReScanExecute
       OnUpdate = actnReScanUpdate
     end
-    object actnClearAndReScan: TAction
+    object actnClearAndScan: TAction
       Category = 'TimeDrops'
-      Caption = 'Clear and re-scan '#39'Meets'#39' folder...'
+      Caption = 'Clear and scan '#39'Meets'#39' folder...'
       ImageIndex = 10
       ImageName = 'scan'
-      OnExecute = actnClearAndReScanExecute
-      OnUpdate = actnClearAndReScanUpdate
+      OnExecute = actnClearAndScanExecute
+      OnUpdate = actnClearAndScanUpdate
     end
     object actnSaveSession: TAction
       Category = 'File'
@@ -10945,14 +10963,6 @@ object Main: TMain
       ImageIndex = 3
       ImageName = 'Settings'
       OnExecute = actnPreferencesExecute
-    end
-    object actnConnectToSCM: TAction
-      Category = 'File'
-      Caption = 'Connect to the SCM database...'
-      ImageIndex = 16
-      ImageName = 'login'
-      OnExecute = actnConnectToSCMExecute
-      OnUpdate = actnConnectToSCMUpdate
     end
     object act_FireDACExplorer: TAction
       Category = 'Tools'

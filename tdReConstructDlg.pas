@@ -114,7 +114,7 @@ begin
     With each file written a sudo "Timing System" status file is updated.
     These files can be used to simulate or repair a Time-Drops session (meet).
   ''';
-  BalloonHint1.ShowHint(vimgInfo1);
+  BalloonHint1.ShowHint(TControl(Sender));
 end;
 
 procedure TReConstructDlg.vimgInfo1MouseLeave(Sender: TObject);

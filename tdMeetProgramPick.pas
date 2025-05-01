@@ -80,7 +80,7 @@ begin
     The detailed version contains all the JSON data as per the Kotlin class
     definition given in "TimeDrops Interface Specifications".
   ''';
-  BalloonHint1.ShowHint(vimgInfo2);
+  BalloonHint1.ShowHint(TControl(Sender));
 end;
 
 procedure TMeetProgramPick.btnCancelClick(Sender: TObject);

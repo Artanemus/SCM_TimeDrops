@@ -9116,6 +9116,32 @@ object Options: TOptions
           OnMouseEnter = vimgInfo2MouseEnter
           OnMouseLeave = vimgInfo2MouseLeave
         end
+        object vimgInfo3: TVirtualImage
+          Left = 279
+          Top = 221
+          Width = 32
+          Height = 32
+          ImageCollection = IMG.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 77
+          ImageName = 'info'
+          OnMouseEnter = vimgInfo3MouseEnter
+          OnMouseLeave = vimgInfo3MouseLeave
+        end
+        object vimgInfo4: TVirtualImage
+          Left = 601
+          Top = 221
+          Width = 32
+          Height = 32
+          ImageCollection = IMG.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 77
+          ImageName = 'info'
+          OnMouseEnter = vimgInfo4MouseEnter
+          OnMouseLeave = vimgInfo4MouseLeave
+        end
         object lbledtDeviation: TLabeledEdit
           Left = 20
           Top = 16
@@ -9133,7 +9159,7 @@ object Options: TOptions
         object rgrpMeanTimeMethod: TRadioGroup
           Left = 20
           Top = 213
-          Width = 269
+          Width = 253
           Height = 92
           Caption = 'AutoCalc entrant'#39's race times ...'
           ItemIndex = 0
@@ -9152,9 +9178,9 @@ object Options: TOptions
           TabOrder = 2
         end
         object rgrpSwimmerAge: TRadioGroup
-          Left = 328
+          Left = 362
           Top = 213
-          Width = 305
+          Width = 233
           Height = 92
           Caption = 'Calculate swimmer'#39's age ...'
           Enabled = False
@@ -9293,10 +9319,36 @@ object Options: TOptions
       object TabSheet1: TTabSheet
         Caption = 'Actions'
         ImageIndex = 2
+        object vimgInfo5: TVirtualImage
+          Left = 527
+          Top = 41
+          Width = 32
+          Height = 32
+          ImageCollection = IMG.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 77
+          ImageName = 'info'
+          OnMouseEnter = vimgInfo5MouseEnter
+          OnMouseLeave = vimgInfo5MouseLeave
+        end
+        object vimgInfo6: TVirtualImage
+          Left = 447
+          Top = 97
+          Width = 32
+          Height = 32
+          ImageCollection = IMG.imgcolDT
+          ImageWidth = 0
+          ImageHeight = 0
+          ImageIndex = 77
+          ImageName = 'info'
+          OnMouseEnter = vimgInfo6MouseEnter
+          OnMouseLeave = vimgInfo6MouseLeave
+        end
         object chk_EnableLoginPrompt: TCheckBox
-          Left = 56
+          Left = 16
           Top = 32
-          Width = 405
+          Width = 505
           Height = 41
           Caption = 
             'Prompt to connect to the SwimClubMeet database server on startup' +
@@ -9305,13 +9357,21 @@ object Options: TOptions
           WordWrap = True
         end
         object chk_EnableRescanPrompt: TCheckBox
-          Left = 56
+          Left = 16
           Top = 87
-          Width = 369
+          Width = 425
           Height = 42
           Caption = 'Do an auto-scan of Time-Drops '#39'meets'#39' folder on startup.'
           TabOrder = 1
           WordWrap = True
+        end
+        object chkbHideExtendedHelp: TCheckBox
+          Left = 16
+          Top = 159
+          Width = 233
+          Height = 17
+          Caption = 'Hide extended help and info.'
+          TabOrder = 2
         end
       end
     end
@@ -9320,12 +9380,12 @@ object Options: TOptions
     FavoriteLinks = <>
     FileTypes = <>
     Options = [fdoPickFolders, fdoDontAddToRecent]
-    Left = 564
-    Top = 75
+    Left = 548
+    Top = 11
   end
   object bhintOptions: TBalloonHint
-    Position = hpAutoFromCenter
-    Left = 564
-    Top = 147
+    Position = hpBelow
+    Left = 460
+    Top = 43
   end
 end
