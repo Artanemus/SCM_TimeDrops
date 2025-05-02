@@ -1,4 +1,4 @@
-unit dlgInfoRescanResults;
+unit dlgInfoScanResults;
 
 interface
 
@@ -8,7 +8,7 @@ uses
   tdSetting;
 
 type
-  TInfoReScanResults = class(TForm)
+  TInfoScanResults = class(TForm)
     pnlBody: TPanel;
     RichEditInfo: TRichEdit;
     pnlFooter: TPanel;
@@ -27,36 +27,36 @@ type
   end;
 
 var
-  InfoReScanResults: TInfoReScanResults;
+  InfoScanResults: TInfoScanResults;
 
 implementation
 
 {$R *.dfm}
 
-procedure TInfoReScanResults.FormCreate(Sender: TObject);
+procedure TInfoScanResults.FormCreate(Sender: TObject);
 begin
   if Assigned(Settings) then
     chkbHideInfoBox.Checked := Settings.HideExtendedHelp;
 end;
 
-procedure TInfoReScanResults.btnCancelClick(Sender: TObject);
+procedure TInfoScanResults.btnCancelClick(Sender: TObject);
 begin
   ModalResult := mrCancel;
 end;
 
-procedure TInfoReScanResults.btnOkClick(Sender: TObject);
+procedure TInfoScanResults.btnOkClick(Sender: TObject);
 begin
   ModalResult := mrOk;
 end;
 
-procedure TInfoReScanResults.FormClose(Sender: TObject; var Action:
+procedure TInfoScanResults.FormClose(Sender: TObject; var Action:
     TCloseAction);
 begin
   if Assigned(Settings) then
     Settings.HideExtendedHelp := chkbHideInfoBox.Checked;
 end;
 
-procedure TInfoReScanResults.FormKeyDown(Sender: TObject; var Key: Word; Shift:
+procedure TInfoScanResults.FormKeyDown(Sender: TObject; var Key: Word; Shift:
     TShiftState);
 begin
   if Key = VK_ESCAPE then

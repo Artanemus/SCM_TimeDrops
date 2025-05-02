@@ -80,7 +80,7 @@ type
     actnReConstructTDResultFiles: TAction;
     actnPreferences: TAction;
     actnPushResults: TAction;
-    actnClearAndScan: TAction;
+    actnEmptyDataClearGrid: TAction;
     actnSaveSession: TAction;
     actnLoadSession: TAction;
     actnAbout: TAction;
@@ -96,12 +96,14 @@ type
     act_FireDACExplorer: TAction;
     actBuildTDTables: TAction;
     actTDTableViewer: TAction;
-    actnReScan: TAction;
+    actnScanMeetsFolder: TAction;
     lbl_tdsGridOverlay: TLabel;
+    StopDirectoryWatcher: TAction;
+    sbtnDirWatcher: TSpeedButton;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
-    procedure actnClearAndScanExecute(Sender: TObject);
-    procedure actnClearAndScanUpdate(Sender: TObject);
+    procedure actnEmptyDataClearGridExecute(Sender: TObject);
+    procedure actnEmptyDataClearGridUpdate(Sender: TObject);
     procedure actnPushResultExecute(Sender: TObject);
     procedure actnConnectToSCMExecute(Sender: TObject);
     procedure actnConnectToSCMUpdate(Sender: TObject);
@@ -121,8 +123,8 @@ type
     procedure actnSyncSCMExecute(Sender: TObject);
     procedure actnSyncSCMUpdate(Sender: TObject);
     procedure actnSyncTDUpdate(Sender: TObject);
-    procedure actnReScanExecute(Sender: TObject);
-    procedure actnReScanUpdate(Sender: TObject);
+    procedure actnScanMeetsFolderExecute(Sender: TObject);
+    procedure actnScanMeetsFolderUpdate(Sender: TObject);
     procedure actTDTableViewerExecute(Sender: TObject);
     procedure act_FireDACExplorerExecute(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
@@ -145,14 +147,12 @@ type
     FConnection: TFDConnection;
     fDolphinMeetsFolder: string;
     fDirectoryWatcher: TDirectoryWatcher;
-    { User prefernece: Connect to the SCM DB Server on boot. Default: FALSE }
+    { User preference: Connect to the SCM DB Server on boot. Default: FALSE }
     fDoLoginOnBoot: boolean;
-    { Typically the TDS data is populated with any 'results' that may be
-      held in the 'meets' folder. Else they may not appear until a
-      directory watch event occurs. Default = true.}
-    fBootClearAndScan: boolean;
-    // force silent mode for DoLoginOnBoot, DoClearAndScanOnBoot
-    fMakeSilent: boolean;
+    { User preference: On boot-up, populated the TDS data tables with any
+      'results' that may reside in the 'meets' folder. }
+    fDoClearAndScanOnBoot: boolean;
+    fClearAndScan_Done: Boolean;
 
     procedure OnFileChanged(Sender: TObject; const FileName: string);
 
@@ -180,7 +180,6 @@ type
     { Public declarations }
     procedure Prepare(AConnection: TFDConnection);
     property DolphinFolder: string read fDolphinMeetsFolder write fDolphinMeetsFolder;
-    property DoLoginOnBoot: boolean read fDoLoginOnBoot write fDoLoginOnBoot;
   end;
 
 var
@@ -194,7 +193,7 @@ uses System.UITypes, System.DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeView
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
   tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin,
   Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgInfoPushResults,
-  dlgInfoClearRescanResults, dlgInfoRescanResults;
+  dlgInfoClearRescanResults, dlgInfoScanResults;
 
 const
 
@@ -203,25 +202,29 @@ const
   DO3_FILE_EXTENSION = 'DO3';
 
 
-procedure TMain.actnClearAndScanExecute(Sender: TObject);
+procedure TMain.actnEmptyDataClearGridExecute(Sender: TObject);
 var
   mr: TModalResult;
-  dlg: TInfoClearRescanResults;
+//  dlg: TInfoClearRescanResults;
 begin
-
-  if (fMakeSilent = false) and (Settings.HideExtendedHelp = false) then
+{
+  mr:= mrCancel;
+  // a switch set on TForm.Create. assigned with Settings.DoClearAndScanOnBoot
+  if (fDoClearAndScanOnBoot = true) and (fClearAndScan_Done = false) then
+    mr := mrOk
+  else if (Settings.HideExtendedHelp = true) then
   begin
-    // an info dialogue with information on how clear and rescan works.
+    // an info dialogue with information on how clear and scan works.
     dlg := TInfoClearRescanResults.Create(Self);
     mr := dlg.ShowModal;
   end
-  else if (fMakeSilent = false) and (Settings.HideExtendedHelp = true) then
-  begin
-    // message
-    MessageDlg('Do you want to CLEAR grid and Scan the ''meets'' folder? ', mtConfirmation, [mbNo, mbYes], 0);
-  end
-  else mr := mrOk;
-
+  else
+}
+  // Because this proc is destructive - confirmation is required.
+  mr := MessageDlg('Do you want to EMPTY TimeDrop''s' + sLineBreak + 'data tables and CLEAR the grid? ',
+    mtConfirmation, [mbYes, mbNo], 0, mbNo);
+  { IsPositiveResult returns true if AModalResult is mrYes, mrOk,
+    mrYesToAll or mrAll, false otherwise }
   if IsPositiveResult(mr) then
   begin
     // Shut down file system watcher...
@@ -246,11 +249,8 @@ begin
         tdsGrid.BeginUpdate;
         try
           TDS.EmptyAllTDDataSets;
-          // NOTE: ProcessDirectory will call - disabled/enabled Master-Detail.
-          // Necessary to manually calculate Primary keys in each memory table.
-          ProcessDirectory(Settings.MeetsFolder);
         finally
-          fBootClearAndScan := false;
+          fClearAndScan_Done := true;
           TDS.EnableAllTDControls;
           tdsGrid.EndUpdate;
           // paint the TDS grid.
@@ -272,7 +272,7 @@ begin
   end;
 end;
 
-procedure TMain.actnClearAndScanUpdate(Sender: TObject);
+procedure TMain.actnEmptyDataClearGridUpdate(Sender: TObject);
 begin
   if Assigned(TDS) and TDS.DataIsActive then
   begin
@@ -376,9 +376,10 @@ procedure TMain.actnConnectToSCMExecute(Sender: TObject);
 var
   aLoginDlg: TLogin;  // 24/04/2020 uses simple INI access
 begin
+  fDoLoginOnBoot := false; // Do Once...
+
   // -----------------------------------------------------------
-  // 24/04/2020 Basic login using simple INI access
-  // to the FireDAC connection definition file
+  // 02/05/2025 connect - %AppData%\Artanemus\SCM\FDConnectionDefs.ini
   // -----------------------------------------------------------
   aLoginDlg := TLogin.Create(self);
   aLoginDlg.ShowModal;
@@ -399,11 +400,7 @@ begin
     TAction(Sender).Caption := 'Connect to the SCM database...';
   end;
 
-  // UPDATE ICONS located in panel (pnlTool), located left of scmGrid.
-  // Update description detail in panel (lblEventDetails), located above scmGrid.
-  // Update cell icons (ActiveRT) in scmGrid.
-  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 );
-
+  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 ); // UPDATE UI
 end;
 
 procedure TMain.actnConnectToSCMUpdate(Sender: TObject);
@@ -788,16 +785,26 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
-procedure TMain.actnReScanExecute(Sender: TObject);
+procedure TMain.actnScanMeetsFolderExecute(Sender: TObject);
 var
   mr: TModalResult;
-  dlg: TInfoReScanResults;
+  dlg: TInfoScanResults;
+  LList: TStringDynArray;
+  I: integer;
+  LSearchOption: TSearchOption;
+
 begin
+  // Do not do recursive extract into subfolders
+  LSearchOption := TSearchOption.soTopDirectoryOnly;
+
   if not Settings.HideExtendedHelp then
   begin
-    dlg := TInfoReScanResults.Create(Self);
+    dlg := TInfoScanResults.Create(Self);
     mr := dlg.ShowModal;
-  end else mr := mrOk;
+  end
+  else
+    mr := mrOk;
+
 
   if IsPositiveResult(mr) then
   begin
@@ -814,27 +821,40 @@ begin
         FreeAndNil(FDirectoryWatcher);
       end;
     end;
+
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
     begin
       if DirHasResultFiles(Settings.MeetsFolder) then
       begin
-        TDS.DisableAllTDControls;
-        tdsGrid.BeginUpdate;
         try
-          // NOTE: ProcessFile.
-          ProcessFile(Settings.MeetsFolder);
-          tdsGrid.EndUpdate;
-          // Update lblEventDetailsTD.
-          // Paint cell icons.
-          PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0);
-        finally
-          TDS.EnableAllTDControls;
-          tdsGrid.EndUpdate;
+          // For files use GetFiles method
+          LList := TDirectory.GetFiles(Settings.MeetsFolder, 'Session*.JSON', LSearchOption);
+        except
+          // Catch the possible exceptions
         end;
+
+        if Length(LList) > 0 then
+        begin
+          TDS.DisableAllTDControls;
+          tdsGrid.BeginUpdate;
+          try
+            // NOTE: ProcessFile.
+            for I := 0 to Length(LList) - 1 do
+            begin
+              ProcessFile(LList[i]);
+            end;
+          finally
+            TDS.EnableAllTDControls;
+            tdsGrid.EndUpdate;
+          end;
+        end;
+        fClearAndScan_Done :=  true;
+        PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0); // Update UI.
       end;
     end;
   end;
+
   if not Assigned(fDirectoryWatcher) then
   begin
     // restart file system watcher...
@@ -846,9 +866,10 @@ begin
       FreeAndNil(fDirectoryWatcher);
     end;
   end;
+
 end;
 
-procedure TMain.actnReScanUpdate(Sender: TObject);
+procedure TMain.actnScanMeetsFolderUpdate(Sender: TObject);
 begin
   if Assigned(TDS) and TDS.DataIsActive then
   begin
@@ -1238,17 +1259,28 @@ begin
   vimgHeatStatus.ImageIndex := -1;
   vimgRelayBug.ImageIndex := -1;
   vimgStrokeBug.ImageIndex := -1;
-  fDoLoginOnBoot := false; // Don't login to DB Server by default.
-  fBootClearAndScan := true;
-  fMakeSilent := true; // Silent for ClearAndScan on boot prompt.
+  fDoLoginOnBoot := false; // login to DB Server.
+  fDoClearAndScanOnBoot := false; // EmptyDataSets and scan 'meets' folder.
+  fClearAndScan_Done := false;
 
   // A Class that uses JSON to read and write application configuration
-  if Settings = nil then
-    Settings := TPrgSetting.Create;
+  Settings := TPrgSetting.Create;
 
   { If settings FILE doesn't exsist in %AppData% - it will be created and
     default data will be assigned.}
-  LoadSettings;
+  if Assigned(Settings) then
+  begin
+    LoadSettings;
+    // if true the login DLG will appear on first boot-up.
+    // TForm.FormShow takes care of this.
+    if Settings.DoLoginOnBoot then
+      fDoLoginOnBoot := true;
+    // If true then on application boot ...
+    // EmptyDataset is called for all TFDMemTables.
+    // The TimeDrops 'meets' folder is scanned for 'results'.
+    if Settings.DoClearAndScanOnBoot then
+      fDoClearAndScanOnBoot := true;
+  end;
 
   // CREATE THE CORE SCM CONNECTION DATAMODULE.
   if not Assigned(SCM) then
@@ -1317,12 +1349,6 @@ begin
   // Enable of HINTS.
   application.ShowHint := true;
 
-  // if true the login DLG will appear on first boot-up.
-  // TForm.FormShow takes care of this.
-  if Settings.DoLoginOnBoot then
-    fDoLoginOnBoot := true
-  else
-    fDoLoginOnBoot := false;
 
   // Create the TimeDrops system Data Module
   if not Assigned(TDS) then
@@ -1331,7 +1357,7 @@ begin
       TDS := TTDS.Create(Self);
     except
       on E: Exception do
-        // Handle exception if needed
+        // Handle exception if needed.
     end;
   end;
 
@@ -1340,17 +1366,10 @@ begin
     if TDS.MasterDetailActive = false then
       TDS.EnableTDMasterDetail; // Attach master-detail relationships
     TDS.ActivateDataTDS; // Open all tables
-
     // Assert state.
     if TDS.DataIsActive = true then
       tdsGrid.DataSource := TDS.dsmLane; // Bind grid to data source
   end;
-
-  // if true the TDS meets folder is scanned for 'results'
-  // and added to the tdsGrid.
-  if Settings.DoClearAndScanOnBoot then
-    // calling ... sets fDoClearAndScanOnBoot := false.
-    PostMessage(Self.Handle, SCM_CALL_TIME_DROPS, 2, 1);
 
   // Set up the file system watcher
   try
@@ -1456,18 +1475,19 @@ begin
 
   // LOGIN TO THE SCM DB SERVER.
   if fDoLoginOnBoot then
-  begin
-    // DO ONCE...
-    fDoLoginOnBoot := false;
     // Prompt user to connect to SCM. (... and update UI.)
-    PostMessage(Self.Handle, SCM_CONNECT, 0 , 0 );
-  end
+    // calling ... sets fDoLoginOnBoot := false.
+    PostMessage(Self.Handle, SCM_CONNECT, 0 , 0 )
   else
     // Assert UI display is up-to-date.
     PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 );
-
-  // Assert UI display is up-to-date.
-  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0 );
+  // Fill the grid with available 'results'
+  if fDoClearAndScanOnBoot then
+    // calling ... sets fDoClearAndScanOnBoot := false.
+    PostMessage(Self.Handle, SCM_CALL_TIME_DROPS, 2, 0)
+  else
+    // Assert UI display is up-to-date.
+    PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0 );
 
 end;
 
@@ -1489,49 +1509,26 @@ end;
 
 procedure TMain.MSG_Connect(var Msg: TMessage);
 begin
-  // option to force silent mode ...
-  if Msg.LParam = 1 then
-    fMakeSilent := true else fMakeSilent := false;
-
   if actnConnectToSCM.Enabled then
-  begin
-    try
+      // proc assigns fDoLoginOnBoot := false;
       actnConnectToSCMExecute(Self);
-    finally
-      fMakeSilent := false; // make safe.
-    end;
-  end;
-
-  //Assert default state.
-  fMakeSilent := false;
 end;
 
 procedure TMain.MSG_CallTimeDrop(var Msg: TMessage);
 begin
-  // option to force silent mode ...
-  if Msg.LParam = 1 then
-    fMakeSilent := true else fMakeSilent := false;
   // select method.
   case Msg.WParam of
     1: // Scan meet's folder - non destructive. (Refresh TDS Data).
       begin
-        if actnReScan.Enabled then
-          actnReScanExecute(Self);
+        if actnScanMeetsFolder.Enabled then
+          actnScanMeetsFolderExecute(Self);
       end;
     2: // Destructive - call on boot.
       begin
-        if actnClearAndScan.Enabled then
-        begin
-          try
-            actnClearAndScanExecute(Self);
-          finally
-            fMakeSilent := false; // make safe.
-          end;
-        end;
+        if actnEmptyDataClearGrid.Enabled then
+          actnEmptyDataClearGridExecute(Self);
       end;
   end;
-  //Assert default state.
-  fMakeSilent := false;
 end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
@@ -1819,18 +1816,14 @@ begin
   // -----------------------------------------------------
 
   // most of the tools (currently) require both TD/SCM to be ready.
-  if Assigned(SCM) and SCM.DataIsActive then
-    pnlTool2.Visible := true
-  else
-    pnlTool2.Visible := false;
-
+  pnlTool2.Visible := true;
   lblEventDetailsTD.Visible := true;
 
-  if fBootClearAndScan = true then
+  if not fClearAndScan_Done then
   begin
     lbl_tdsGridOverlay.Caption := 'A scan of the ''meets''' + sLineBreak +
     'folder is needed...' + sLineBreak +
-    'Perform a ''Clear and Scan''.';
+    'Perform a ''Scan Meets Folder''.';
   end
   else
   begin
@@ -1840,104 +1833,92 @@ begin
   end;
 
   s := 'Session : ';
-  i := TDS.tblmSession.FieldByName('SessionNum').AsInteger;
-  s := s + IntToStr(i);
-
-  if TDS.tblmEvent.IsEmpty then
+  if TDS.tblmSession.IsEmpty then
+    s := s +'EMPTY'
+  else
   begin
-    lblEventDetailsTD.caption := s;
-    exit;
+    i := TDS.tblmSession.FieldByName('SessionNum').AsInteger;
+    s := s + IntToStr(i);
+    s := s + '  Event : ';
+    if TDS.tblmEvent.IsEmpty then
+      s := s + 'EMPTY'
+    else
+    begin
+      i := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
+      s := s + IntToStr(i);
+      s := s + ' - Heat : ';
+      if TDS.tblmHeat.IsEmpty then
+        s := s + 'EMPTY'
+      else
+      begin
+        i := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
+        s := s + IntToStr(i);
+      end;
+    end;
   end;
-  s := s + '  Event : ';
-  i := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
-  s := s + IntToStr(i);
-
-  if TDS.tblmHeat.IsEmpty then
-  begin
-    lblEventDetailsTD.caption := s;
-    exit;
-  end;
-  s := s + ' - Heat : ';
-  i := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
-  s := s + IntToStr(i);
   lblEventDetailsTD.caption := s;
 
 
-  // TDS.dsmHeat - AfterScroll event.
-  // UI images in grid cells need to be re-assigned.
-  tdsGrid.BeginUpdate;
-  // improve code readability ...
-  ADataSet := tdsGrid.DataSource.DataSet;
-
-  { Typically this routine is call when
-    a AppData.OnAfterScroll occurs..
-    A tdsGrid.Reload isn't required at this execution point. }
-
-  // clear out all images in TimeKeepers columns [3..5]
-  // --------------------------------------------------
-  {
-  for j := tdsGrid.FixedRows to tdsGrid.RowCount do
+  if not tdsGrid.DataSource.DataSet.IsEmpty then
   begin
-    for I := 3 to 5 do
+    // TDS.dsmHeat - AfterScroll event.
+    // UI images in grid cells need to be re-assigned.
+    tdsGrid.BeginUpdate;
+    // improve code readability ...
+    ADataSet := tdsGrid.DataSource.DataSet;
+
+    // iterate AppData and assign a cell images if needed.
+    // --------------------------------------------------
+    for j := tdsGrid.FixedRows to (tdsGrid.RowCount-tdsGrid.FixedRows) do
     begin
-      tdsGrid.RemoveImageIdx(I, j); // Remove icon.
-    end;
-    // Remove UseUserRaceTime icon.
-    tdsGrid.RemoveImageIdx(7, j);
-  end;
-  }
+      // SYNC TDS record to tdsGrid row.
+      ADataSet.RecNo := j;
 
-  // iterate AppData and assign a cell images if needed.
-  // --------------------------------------------------
-  for j := tdsGrid.FixedRows to (tdsGrid.RowCount-tdsGrid.FixedRows) do
-  begin
-    // SYNC TDS record to tdsGrid row.
-    ADataSet.RecNo := j;
+      // A C T I V E R T .
+      ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+      case ActiveRT of
+        // A U T O M A T I C .
+        artAutomatic:
+        begin
+          // Switch to the Auto-Calculated RaceTime.
+          // RacetimeA was calculated when the DT file was first imported.
+          TDS.SetActiveRT(ADataSet, artAutomatic);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
 
-    // A C T I V E R T .
-    ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
-    case ActiveRT of
-      // A U T O M A T I C .
-      artAutomatic:
-      begin
-        // Switch to the Auto-Calculated RaceTime.
-        // RacetimeA was calculated when the DT file was first imported.
-        TDS.SetActiveRT(ADataSet, artAutomatic);
-        UpdateCellIcons(ADataSet, J, ActiveRT);
-      end;
+        // M A N U A L .
+        artManual:
+        begin
+          TDS.SetActiveRT(ADataSet, artManual);
+          TDS.CalcRaceTimeM(ADataSet);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
 
-      // M A N U A L .
-      artManual:
-      begin
-        TDS.SetActiveRT(ADataSet, artManual);
-        TDS.CalcRaceTimeM(ADataSet);
-        UpdateCellIcons(ADataSet, J, ActiveRT);
-      end;
+        artUser:
+        begin
+          TDS.SetActiveRT(ADataSet, artUser);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
 
-      artUser:
-      begin
-        TDS.SetActiveRT(ADataSet, artUser);
-        UpdateCellIcons(ADataSet, J, ActiveRT);
-      end;
+        artSplit:
+        begin
+          TDS.SetActiveRT(ADataSet, artSplit);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
 
-      artSplit:
-      begin
-        TDS.SetActiveRT(ADataSet, artSplit);
-        UpdateCellIcons(ADataSet, J, ActiveRT);
-      end;
+        artNone:
+        begin
+          TDS.SetActiveRT(ADataSet, artNone);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
 
-      artNone:
-      begin
-        TDS.SetActiveRT(ADataSet, artNone);
-        UpdateCellIcons(ADataSet, J, ActiveRT);
       end;
 
     end;
-
+    ADataSet.First;
+    tdsGrid.EndUpdate;
   end;
 
-  ADataSet.First;
-  tdsGrid.EndUpdate;
   tdsGrid.ClearRowSelect;
 
 end;

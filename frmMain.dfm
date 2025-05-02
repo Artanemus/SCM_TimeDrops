@@ -10504,6 +10504,9 @@ object Main: TMain
           end
           item
             Control = ShapeSpacer
+          end
+          item
+            Control = sbtnDirWatcher
           end>
         HorizontalPositioning = sphpCenter
         Spacing = 4
@@ -10555,6 +10558,20 @@ object Main: TMain
           Margins.Top = 6
           Margins.Bottom = 6
           Brush.Color = clTomato
+        end
+        object sbtnDirWatcher: TSpeedButton
+          Left = 8
+          Top = 155
+          Width = 128
+          Height = 54
+          Hint = 'Post the TD '#39'Race-Times'#39' to the SCM heat.'
+          AllowAllUp = True
+          GroupIndex = 1
+          Down = True
+          Caption = 'Directory'#13#10'Watcher Toggle'
+          Images = IMG.vimglistMenu
+          ParentShowHint = False
+          ShowHint = True
         end
       end
     end
@@ -10742,22 +10759,25 @@ object Main: TMain
             Items = <
               item
                 Action = actnPushResults
-                Caption = '&Push result(s) to the grid...'
+                Caption = '&Push '#39'Results'#39' to the grid...'
                 ImageIndex = 0
                 ImageName = 'file_open'
               end
               item
-                Action = actnReScan
-                Caption = '&Re-scan '#39'Meets'#39' folder...'
+                Action = actnScanMeetsFolder
+                Caption = '&Scan '#39'Meets'#39' folder...'
                 ImageIndex = 2
                 ImageName = 'document_search'
+              end
+              item
+                Action = StopDirectoryWatcher
               end
               item
                 Caption = '-'
               end
               item
-                Action = actnClearAndScan
-                Caption = '&Clear and scan '#39'Meets'#39' folder...'
+                Action = actnEmptyDataClearGrid
+                Caption = '&Empty TD tables and clear the grid ...'
                 ImageIndex = 10
                 ImageName = 'scan'
               end>
@@ -10873,27 +10893,27 @@ object Main: TMain
     end
     object actnPushResults: TAction
       Category = 'TimeDrops'
-      Caption = 'Push result(s) to the grid...'
+      Caption = 'Push '#39'Results'#39' to the grid...'
       ImageIndex = 0
       ImageName = 'file_open'
       OnExecute = actnPushResultExecute
       OnUpdate = actnPushResultsUpdate
     end
-    object actnReScan: TAction
+    object actnScanMeetsFolder: TAction
       Category = 'TimeDrops'
-      Caption = 'Re-scan '#39'Meets'#39' folder...'
+      Caption = 'Scan '#39'Meets'#39' folder...'
       ImageIndex = 2
       ImageName = 'document_search'
-      OnExecute = actnReScanExecute
-      OnUpdate = actnReScanUpdate
+      OnExecute = actnScanMeetsFolderExecute
+      OnUpdate = actnScanMeetsFolderUpdate
     end
-    object actnClearAndScan: TAction
+    object actnEmptyDataClearGrid: TAction
       Category = 'TimeDrops'
-      Caption = 'Clear and scan '#39'Meets'#39' folder...'
+      Caption = 'Empty TD tables and clear the grid ...'
       ImageIndex = 10
       ImageName = 'scan'
-      OnExecute = actnClearAndScanExecute
-      OnUpdate = actnClearAndScanUpdate
+      OnExecute = actnEmptyDataClearGridExecute
+      OnUpdate = actnEmptyDataClearGridUpdate
     end
     object actnSaveSession: TAction
       Category = 'File'
@@ -10984,6 +11004,11 @@ object Main: TMain
       ImageIndex = 12
       ImageName = 'file_report'
       OnExecute = actTDTableViewerExecute
+    end
+    object StopDirectoryWatcher: TAction
+      Category = 'TimeDrops'
+      Caption = 'Toggle Directory Watcher'
+      Checked = True
     end
   end
 end

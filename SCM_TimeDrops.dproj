@@ -214,8 +214,8 @@
             <Form>InfoClearRescanResults</Form>
             <FormType>dfm</FormType>
         </DCCReference>
-        <DCCReference Include="dlgInfoRescanResults.pas">
-            <Form>InfoReScanResults</Form>
+        <DCCReference Include="dlgInfoScanResults.pas">
+            <Form>InfoScanResults</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Base">

@@ -35,7 +35,7 @@ uses
   dmTDS in 'dmTDS.pas' {TDS: TDataModule},
   dlgInfoPushResults in 'dlgInfoPushResults.pas' {InfoPushResults},
   dlgInfoClearRescanResults in 'dlgInfoClearRescanResults.pas' {InfoClearRescanResults},
-  dlgInfoRescanResults in 'dlgInfoRescanResults.pas' {InfoReScanResults};
+  dlgInfoScanResults in 'dlgInfoScanResults.pas' {InfoScanResults};
 
 {$R *.res}
 

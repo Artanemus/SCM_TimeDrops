@@ -1,8 +1,8 @@
-object InfoReScanResults: TInfoReScanResults
+object InfoScanResults: TInfoScanResults
   Left = 0
   Top = 0
   BorderStyle = bsDialog
-  Caption = 'Re-scan TimeDrops meets folder...'
+  Caption = 'Scan the TimeDrops meets folder...'
   ClientHeight = 305
   ClientWidth = 525
   Color = clBtnFace
@@ -45,18 +45,18 @@ object InfoReScanResults: TInfoReScanResults
       Font.Name = 'Segoe UI'
       Font.Style = []
       Lines.Strings = (
-        '**Instructions for re-scan TimeDrops meets folder.**'
+        '**Instructions for Scan the TimeDrops meets folder.**'
         ''
-        '1. **Re-Scan**'
-        '   - The Time-Drops meets folder will be re-scanned.'
+        '1. **Scan**'
+        '   - The Time-Drops meets folder will be scanned.'
         '   - Any new '#39'results'#39' not in the Time-Drops grid will be added.'
         
           '   - Any updated '#39'results'#39' will be handled safely and lane data ' +
           'updated.'
-        '   - A re-scan can be considered a '#39'Refresh'#39'.'
+        '   - A scan can be considered a '#39'Refresh'#39'.'
         ''
         '3. **Next Steps**  '
-        '   - Select OK to start the re-scan process.')
+        '   - Select OK to start the scan process.')
       ParentFont = False
       ReadOnly = True
       ScrollBars = ssVertical
@@ -85,7 +85,7 @@ object InfoReScanResults: TInfoReScanResults
       Top = 10
       Width = 98
       Height = 36
-      Caption = 'OK'
+      Caption = 'SCAN'
       TabOrder = 1
       OnClick = btnOkClick
     end
