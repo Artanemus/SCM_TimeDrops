@@ -10491,6 +10491,9 @@ object Main: TMain
         BevelOuter = bvNone
         ControlCollection = <
           item
+            Control = sbtnDirWatcher
+          end
+          item
             Control = sbtnSyncDTtoSCM
             HorizontalPositioning = sphpLeft
           end
@@ -10504,16 +10507,28 @@ object Main: TMain
           end
           item
             Control = ShapeSpacer
-          end
-          item
-            Control = sbtnDirWatcher
           end>
         HorizontalPositioning = sphpCenter
         Spacing = 4
         TabOrder = 0
+        object sbtnDirWatcher: TSpeedButton
+          Left = 8
+          Top = 0
+          Width = 128
+          Height = 41
+          Hint = 'Indicates the status of the Directory Watcher.'
+          AllowAllUp = True
+          GroupIndex = 1
+          ImageIndex = 18
+          ImageName = 'VisibilityOn'
+          Images = IMG.vimglistMenu
+          Enabled = False
+          ParentShowHint = False
+          ShowHint = True
+        end
         object sbtnSyncDTtoSCM: TSpeedButton
           Left = 0
-          Top = 0
+          Top = 45
           Width = 128
           Height = 41
           Hint = 'Syncronize Time Drops to SCM.'
@@ -10525,7 +10540,7 @@ object Main: TMain
         end
         object spbtnPost: TSpeedButton
           Left = 0
-          Top = 45
+          Top = 90
           Width = 128
           Height = 41
           Hint = 'Post the TD '#39'Race-Times'#39' to the SCM heat.'
@@ -10537,7 +10552,7 @@ object Main: TMain
         end
         object sbtnAutoPatch: TSpeedButton
           Left = 0
-          Top = 90
+          Top = 135
           Width = 128
           Height = 41
           Hint = 'Auto-Patch lanes and enable manual patching.'
@@ -10552,26 +10567,12 @@ object Main: TMain
         object ShapeSpacer: TShape
           AlignWithMargins = True
           Left = 11
-          Top = 141
+          Top = 186
           Width = 121
           Height = 4
           Margins.Top = 6
           Margins.Bottom = 6
           Brush.Color = clTomato
-        end
-        object sbtnDirWatcher: TSpeedButton
-          Left = 8
-          Top = 155
-          Width = 128
-          Height = 54
-          Hint = 'Post the TD '#39'Race-Times'#39' to the SCM heat.'
-          AllowAllUp = True
-          GroupIndex = 1
-          Down = True
-          Caption = 'Directory'#13#10'Watcher Toggle'
-          Images = IMG.vimglistMenu
-          ParentShowHint = False
-          ShowHint = True
         end
       end
     end
@@ -10718,7 +10719,6 @@ object Main: TMain
               end
               item
                 Action = actnConnectToSCM
-                Caption = '&Connect to the SCM database...'
                 ImageIndex = 16
                 ImageName = 'login'
               end
@@ -10770,14 +10770,15 @@ object Main: TMain
                 ImageName = 'document_search'
               end
               item
-                Action = StopDirectoryWatcher
+                Action = RestartDirectoryWatcher
+                ImageIndex = 18
+                ImageName = 'VisibilityOn'
               end
               item
                 Caption = '-'
               end
               item
-                Action = actnEmptyDataClearGrid
-                Caption = '&Empty TD tables and clear the grid ...'
+                Action = actnClearGrid
                 ImageIndex = 10
                 ImageName = 'scan'
               end>
@@ -10852,7 +10853,7 @@ object Main: TMain
     end
     object actnConnectToSCM: TAction
       Category = 'SCM'
-      Caption = 'Connect to the SCM database...'
+      Caption = 'Connect to the DB Server...'
       ImageIndex = 16
       ImageName = 'login'
       OnExecute = actnConnectToSCMExecute
@@ -10907,13 +10908,13 @@ object Main: TMain
       OnExecute = actnScanMeetsFolderExecute
       OnUpdate = actnScanMeetsFolderUpdate
     end
-    object actnEmptyDataClearGrid: TAction
+    object actnClearGrid: TAction
       Category = 'TimeDrops'
-      Caption = 'Empty TD tables and clear the grid ...'
+      Caption = 'Clear the TimeDrops grid ...'
       ImageIndex = 10
       ImageName = 'scan'
-      OnExecute = actnEmptyDataClearGridExecute
-      OnUpdate = actnEmptyDataClearGridUpdate
+      OnExecute = actnClearGridExecute
+      OnUpdate = actnClearGridUpdate
     end
     object actnSaveSession: TAction
       Category = 'File'
@@ -11005,10 +11006,12 @@ object Main: TMain
       ImageName = 'file_report'
       OnExecute = actTDTableViewerExecute
     end
-    object StopDirectoryWatcher: TAction
+    object RestartDirectoryWatcher: TAction
       Category = 'TimeDrops'
-      Caption = 'Toggle Directory Watcher'
-      Checked = True
+      Caption = 'Restart Directory Watcher'
+      ImageIndex = 18
+      ImageName = 'VisibilityOn'
+      OnExecute = RestartDirectoryWatcherExecute
     end
   end
 end

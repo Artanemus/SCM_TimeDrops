@@ -103,6 +103,7 @@ type
     function SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum: Integer): boolean;
     function SyncCheckSession(aTDSessionID: Integer): boolean;
     // .......................................................
+    function GetActive_INDVorTEAM: TDataSet;
     function SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer): boolean;
     procedure WriteConnectionDef(const ConnectionName, ParamName, ParamValue: string);
     property DataIsActive: Boolean read fDataIsActive;
@@ -373,6 +374,21 @@ begin
     qrySession.Close;
     qrySwimClub.Close;  // GRAND MASTER.
     {TODO -oBSA -cIMPORTANT : On DeActivate SCM - should we close connection?}
+  end;
+end;
+
+function TSCM.GetActive_INDVorTEAM: TDataSet;
+begin
+  result := nil;
+  // Check - connected, master-detail ok, queryies open. Has heats.
+  if (fDataIsActive = true) and (not qryHeat.IsEmpty) then
+  begin
+    case qryDistance.FieldByName('EventTypeID').AsInteger of
+    1:
+      result := qryINDV;
+    2:
+      result := qryTEAM;
+    end;
   end;
 end;
 

@@ -33,9 +33,7 @@ uses
   dmIMG in 'dmIMG.pas' {IMG: TDataModule},
   dmSCM in 'dmSCM.pas' {SCM: TDataModule},
   dmTDS in 'dmTDS.pas' {TDS: TDataModule},
-  dlgInfoPushResults in 'dlgInfoPushResults.pas' {InfoPushResults},
-  dlgInfoClearRescanResults in 'dlgInfoClearRescanResults.pas' {InfoClearRescanResults},
-  dlgInfoScanResults in 'dlgInfoScanResults.pas' {InfoScanResults};
+  dlgScanOptions in 'dlgScanOptions.pas' {ScanOptions};
 
 {$R *.res}
 

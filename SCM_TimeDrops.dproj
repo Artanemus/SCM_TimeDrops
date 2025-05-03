@@ -113,6 +113,7 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <Icon_MainIcon>SCM_TimeDrops_Icon.ico</Icon_MainIcon>
+        <DCC_MapFile>3</DCC_MapFile>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
@@ -206,16 +207,8 @@
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
-        <DCCReference Include="dlgInfoPushResults.pas">
-            <Form>InfoPushResults</Form>
-            <FormType>dfm</FormType>
-        </DCCReference>
-        <DCCReference Include="dlgInfoClearRescanResults.pas">
-            <Form>InfoClearRescanResults</Form>
-            <FormType>dfm</FormType>
-        </DCCReference>
-        <DCCReference Include="dlgInfoScanResults.pas">
-            <Form>InfoScanResults</Form>
+        <DCCReference Include="dlgScanOptions.pas">
+            <Form>ScanOptions</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Base">

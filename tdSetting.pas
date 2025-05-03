@@ -40,6 +40,8 @@ type
     DoLoginOnBoot: boolean;
     DoClearAndScanOnBoot: boolean;
     HideExtendedHelp: boolean;
+    ScanOption: integer;
+    ScanOptionSessionID: integer;
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -85,6 +87,8 @@ begin
   DoLoginOnBoot:= false;
   DoClearAndScanOnBoot:= true;
   HideExtendedHelp := false;
+  ScanOption := 0; // Scan All 'results' files in 'meets' folder.
+  ScanOptionSessionID := 0;
   {
   ForceDirectories creates a new directory as specified in Dir,
   which must be a fully-qualified path name. If the directories given in

@@ -80,7 +80,7 @@ type
     actnReConstructTDResultFiles: TAction;
     actnPreferences: TAction;
     actnPushResults: TAction;
-    actnEmptyDataClearGrid: TAction;
+    actnClearGrid: TAction;
     actnSaveSession: TAction;
     actnLoadSession: TAction;
     actnAbout: TAction;
@@ -98,12 +98,12 @@ type
     actTDTableViewer: TAction;
     actnScanMeetsFolder: TAction;
     lbl_tdsGridOverlay: TLabel;
-    StopDirectoryWatcher: TAction;
+    RestartDirectoryWatcher: TAction;
     sbtnDirWatcher: TSpeedButton;
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
-    procedure actnEmptyDataClearGridExecute(Sender: TObject);
-    procedure actnEmptyDataClearGridUpdate(Sender: TObject);
+    procedure actnClearGridExecute(Sender: TObject);
+    procedure actnClearGridUpdate(Sender: TObject);
     procedure actnPushResultExecute(Sender: TObject);
     procedure actnConnectToSCMExecute(Sender: TObject);
     procedure actnConnectToSCMUpdate(Sender: TObject);
@@ -138,6 +138,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure RestartDirectoryWatcherExecute(Sender: TObject);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
         string);
     procedure Timer1Timer(Sender: TObject);
@@ -192,8 +193,7 @@ implementation
 uses System.UITypes, System.DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
   tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin,
-  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgInfoPushResults,
-  dlgInfoClearRescanResults, dlgInfoScanResults;
+  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgScanOptions;
 
 const
 
@@ -202,24 +202,11 @@ const
   DO3_FILE_EXTENSION = 'DO3';
 
 
-procedure TMain.actnEmptyDataClearGridExecute(Sender: TObject);
+procedure TMain.actnClearGridExecute(Sender: TObject);
 var
   mr: TModalResult;
-//  dlg: TInfoClearRescanResults;
 begin
-{
-  mr:= mrCancel;
-  // a switch set on TForm.Create. assigned with Settings.DoClearAndScanOnBoot
-  if (fDoClearAndScanOnBoot = true) and (fClearAndScan_Done = false) then
-    mr := mrOk
-  else if (Settings.HideExtendedHelp = true) then
-  begin
-    // an info dialogue with information on how clear and scan works.
-    dlg := TInfoClearRescanResults.Create(Self);
-    mr := dlg.ShowModal;
-  end
-  else
-}
+
   // Because this proc is destructive - confirmation is required.
   mr := MessageDlg('Do you want to EMPTY TimeDrop''s' + sLineBreak + 'data tables and CLEAR the grid? ',
     mtConfirmation, [mbYes, mbNo], 0, mbNo);
@@ -253,6 +240,8 @@ begin
           fClearAndScan_Done := true;
           TDS.EnableAllTDControls;
           tdsGrid.EndUpdate;
+          // Assert : remove display of lbl_tdsGridOverlay.
+          fClearAndScan_Done := true;
           // paint the TDS grid.
           PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0);
         end;
@@ -272,7 +261,7 @@ begin
   end;
 end;
 
-procedure TMain.actnEmptyDataClearGridUpdate(Sender: TObject);
+procedure TMain.actnClearGridUpdate(Sender: TObject);
 begin
   if Assigned(TDS) and TDS.DataIsActive then
   begin
@@ -423,6 +412,13 @@ var
   aTDSessionID, aTDEventNum, aTDHeatNum, ALaneNum: integer;
   s: string;
 begin
+  if (TDS.tblMSession.IsEmpty) then
+  begin
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    exit;
+  end;
+
+
   // Establish if SCM AND DT are syncronized.
   aTDSessionID := TDS.tblmSession.FieldByName('SessionID').AsInteger;
   aTDEventNum := TDS.tblmSession.FieldByName('EventNum').AsInteger;
@@ -430,14 +426,16 @@ begin
   if not TDS.SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum) then
   begin
     s := '''
-      SCM and DT are not synronized. (Based on Session ID, event and heat number.)
+      Based on Session ID, event and heat number SCM and DT are not synronized.
       Do you want to CONTINUE?
+      (YES will result in a 'lane for lane' assignment of race-times.)
       ''';
     mr := MessageBox(0, PChar(s), PChar('POST ''RACE-TIMES'' WARNING'), MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
     if not IsPositiveResult(mr) then
     begin
-      StatBar.SimpleText := 'No POST was made.';
+      StatBar.SimpleText := 'User exited. No POSTS were made.';
       Timer1.Enabled := true;
+      MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound.
       exit;
     end;
   end;
@@ -484,7 +482,8 @@ end;
 
 procedure TMain.actnPostUpdate(Sender: TObject);
 begin
-  if Assigned(TDS) and Assigned(SCM) then
+  if (Assigned(TDS)) and (Assigned(SCM))
+    and (SCM.DataIsActive) and (TDS.DataIsActive) then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -521,17 +520,15 @@ procedure TMain.actnPushResultExecute(Sender: TObject);
 var
   AFile, s: string;
   mr: TModalResult;
-  dlg: TInfoPushResults;
   count: integer;
 begin
   count := 0;
-
-  if not Settings.HideExtendedHelp then
-  begin
-  // an info dialogue with information on how to push data.
-  dlg := TInfoPushResults.Create(Self);
-  mr := dlg.ShowModal;
-  end else mr := mrOk;
+  s := '''
+  Selecting Ok will open a file explorer.
+  Choose any TimeDrops ''result'' files and PUSH to the grid.
+  New ''results'' will be added, modified ''results'' will adjust existing heats.
+  ''';
+  mr := MessageBox(0, PChar(s), PChar('Push Results to Grid'), MB_ICONQUESTION or MB_OKCANCEL);
 
   if IsPositiveResult(mr) then
   begin
@@ -563,6 +560,8 @@ begin
           end;
           s := 'Pushed (' + IntToStr(Count) + ') results completed.';
           MessageDlg(s, mtInformation, [mbOK], 0);
+          // Assert : remove display of lbl_tdsGridOverlay.
+          fClearAndScan_Done := true;
         end;
       finally
         tdsGrid.EndUpdate;
@@ -721,28 +720,23 @@ begin
     StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
     + 'Your ''Results'' folder may not contain the session files required to sync.';
     timer1.enabled := true;
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
   end;
 end;
 
 procedure TMain.actnSyncSCMUpdate(Sender: TObject);
-var
-Passed: boolean;
 begin
-  passed := true;
-  if not Assigned(SCM) then passed := false;
-  if not Assigned(SCM.scmConnection) then passed := false;
-  if not SCM.scmConnection.Connected then passed := false;
-  if not Assigned(TDS) then passed := false;
-  if not TDS.DataIsActive then exit;
-  if not SCM.DataIsActive then exit;
-
-  if passed then
+  if (Assigned(SCM)) and Assigned(TDS) and (SCM.DataIsActive = true)
+    and (TDS.DataIsActive = true) and (not SCM.qryHeat.IsEmpty) then
   begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
+      if not TAction(Sender).Enabled then
+        TAction(Sender).Enabled := true;
   end
   else
+  begin
+    if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
+  end;
 end;
 
 procedure TMain.actnSyncTDExecute(Sender: TObject);
@@ -750,6 +744,13 @@ var
 found: boolean;
 aSCMSessionID, aSCMEventNum, aSCMHeatNum: integer;
 begin
+
+  if TDS.tblmLane.IsEmpty then
+  begin
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    exit;
+  end;
+
   tdsGrid.BeginUpdate;
   aSCMSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
   aSCMEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
@@ -771,11 +772,8 @@ end;
 
 procedure TMain.actnSyncTDUpdate(Sender: TObject);
 begin
-  //  if not Assigned(SCM.scmConnection) then exit;
-  //  if not SCM.scmConnection.Connected then exit;
-  if (Assigned(SCM)) and Assigned(TDS) and Assigned(SCM.scmConnection)
-    and SCM.scmConnection.Connected and (SCM.DataIsActive = true)
-    and (TDS.DataIsActive = true) then
+  if (Assigned(SCM)) and (Assigned(TDS)) and (SCM.DataIsActive = true)
+    and (TDS.DataIsActive = true)  then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -788,26 +786,24 @@ end;
 procedure TMain.actnScanMeetsFolderExecute(Sender: TObject);
 var
   mr: TModalResult;
-  dlg: TInfoScanResults;
   LList: TStringDynArray;
+  dlg : TScanOptions;
   I: integer;
   LSearchOption: TSearchOption;
-
+  WildCardStr: String;
 begin
   // Do not do recursive extract into subfolders
   LSearchOption := TSearchOption.soTopDirectoryOnly;
-
-  if not Settings.HideExtendedHelp then
-  begin
-    dlg := TInfoScanResults.Create(Self);
-    mr := dlg.ShowModal;
-  end
-  else
-    mr := mrOk;
-
+  WildCardStr := '';
+  dlg := TScanOptions.Create(Self);
+  mr := dlg.ShowModal;
 
   if IsPositiveResult(mr) then
   begin
+    if dlg.rgrpScanOptions.ItemIndex = 0 then
+      WildCardStr := 'Session*.JSON'
+    else
+      WildCardStr := 'Session' + dlg.edtSessionID.Text + '*.JSON';
     // Shut down file system watcher...
     if Assigned(FDirectoryWatcher) then
     begin
@@ -829,7 +825,7 @@ begin
       begin
         try
           // For files use GetFiles method
-          LList := TDirectory.GetFiles(Settings.MeetsFolder, 'Session*.JSON', LSearchOption);
+          LList := TDirectory.GetFiles(Settings.MeetsFolder, WildCardStr, LSearchOption);
         except
           // Catch the possible exceptions
         end;
@@ -866,6 +862,8 @@ begin
       FreeAndNil(fDirectoryWatcher);
     end;
   end;
+
+  dlg.Free;
 
 end;
 
@@ -936,6 +934,14 @@ var
   lastHtID, lastEvID, IDht, IDev: integer;
   found: boolean;
 begin
+  // OR - if any are true then exit.
+  if (not Assigned(TDS)) or (not TDS.DataIsActive) or
+  (TDS.tblmlane.IsEmpty) then
+  begin
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    exit;
+  end;
+
   tdsGrid.BeginUpdate;
   // this hack find the last event ID and last heat ID in the current
   // Master-Detail linked Dolphin Timing data tables.
@@ -1003,8 +1009,12 @@ var
   sql: string;
   id: integer;
 begin
-  if not Assigned(SCM) then exit;
-  if not SCM.DataIsActive then exit;
+  // OR - if any are true then exit.
+  if (not Assigned(SCM)) or (SCM.DataIsActive = false) or (SCM.qryHeat.IsEmpty) then
+  begin
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    exit;
+  end;
 
   if (GetKeyState(VK_CONTROL) < 0) then
   begin
@@ -1041,6 +1051,14 @@ mr: TModalResult;
 found: boolean;
 SearchOptions: TLocateOptions;
 begin
+  // OR - if any are true then exit.
+  if (not Assigned(TDS)) or (TDS.DataIsActive = false) or
+    (TDS.tblmSession.IsEmpty) then
+  begin
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    exit;
+  end;
+
   {
   MANATORY HERE - ELSE IT DOESN'T WORK!
   Use the ApplyMaster method to synchronize this detail dataset with the
@@ -1126,9 +1144,12 @@ sess, ev, ht: integer;
 mr: TModalResult;
 found: boolean;
 begin
-
-  if not Assigned(SCM) then exit;
-  if not SCM.DataIsActive then exit;
+  // OR - if any are true then exit.
+  if (not Assigned(SCM)) or (SCM.DataIsActive = false) then
+  begin
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    exit;
+  end;
 
   // Open the SCM TreeView.
   dlg := TTreeViewSCM.Create(Self);
@@ -1168,11 +1189,16 @@ procedure TMain.btnPrevDTFileClick(Sender: TObject);
 var
   evNum, htNum: integer;
 begin
-
+  // OR - if any are true then exit.
+  if ((not Assigned(TDS)) or (TDS.DataIsActive = false)) or
+  (TDS.tblmlane.IsEmpty) then
+  begin
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    exit;
+  end;
 
   evNum := TDS.dsmEvent.DataSet.FieldByName('EventNum').AsInteger;
   htNum := TDS.dsmHeat.DataSet.FieldByName('HeatNum').AsInteger;
-
 
   // CNTRL+SHIFT - quick key to move to previous session.
   if (GetKeyState(VK_CONTROL) < 0) and (GetKeyState(VK_SHIFT) < 0) then
@@ -1213,8 +1239,13 @@ end;
 
 procedure TMain.btnPrevEventClick(Sender: TObject);
 begin
-  if not Assigned(SCM) then exit;
-  if not SCM.DataIsActive then exit;
+  // OR - if any are true then exit.
+  if ((not Assigned(SCM)) or (SCM.DataIsActive = false))
+     and (SCM.qryHeat.IsEmpty) then
+  begin
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    exit;
+  end;
 
   if (GetKeyState(VK_CONTROL) < 0) then
   begin
@@ -1525,8 +1556,8 @@ begin
       end;
     2: // Destructive - call on boot.
       begin
-        if actnEmptyDataClearGrid.Enabled then
-          actnEmptyDataClearGridExecute(Self);
+        if actnClearGrid.Enabled then
+          actnClearGridExecute(Self);
       end;
   end;
 end;
@@ -1947,6 +1978,13 @@ procedure TMain.Prepare(AConnection: TFDConnection);
 begin
   FConnection := AConnection;
   Caption := 'SwimClubMeet - Dolphin Timing. ';
+end;
+
+procedure TMain.RestartDirectoryWatcherExecute(Sender: TObject);
+begin
+  // Assert : remove display of lbl_tdsGridOverlay.
+  fClearAndScan_Done := true;
+
 end;
 
 procedure TMain.SaveToSettings;
