@@ -98,13 +98,16 @@ type
     actTDTableViewer: TAction;
     actnScanMeetsFolder: TAction;
     lbl_tdsGridOverlay: TLabel;
-    RestartDirectoryWatcher: TAction;
+    actnRestartDirectoryWatcher: TAction;
     sbtnDirWatcher: TSpeedButton;
+    actnClearAndScan: TAction;
+    procedure actnClearAndScanExecute(Sender: TObject);
+    procedure actnClearAndScanUpdate(Sender: TObject);
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearGridExecute(Sender: TObject);
     procedure actnClearGridUpdate(Sender: TObject);
-    procedure actnPushResultExecute(Sender: TObject);
+    procedure actnPushResultsExecute(Sender: TObject);
     procedure actnConnectToSCMExecute(Sender: TObject);
     procedure actnConnectToSCMUpdate(Sender: TObject);
     procedure actnPostExecute(Sender: TObject);
@@ -138,7 +141,8 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormHide(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure RestartDirectoryWatcherExecute(Sender: TObject);
+    procedure actnRestartDirectoryWatcherExecute(Sender: TObject);
+    procedure actnRestartDirectoryWatcherUpdate(Sender: TObject);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
         string);
     procedure Timer1Timer(Sender: TObject);
@@ -175,7 +179,10 @@ type
     // 1 = RESCAN, 2 = CLEARANDRESCAN (destrucive).
     // make silent based on Msg.lParam
     // 0 = verbose, 1 = silent.
-    procedure MSG_CallTimeDrop(var Msg: TMessage); message SCM_CALL_TIME_DROPS;
+    procedure MSG_ClearGrid(var Msg: TMessage); message SCM_CLEAR_TIMEDROPS;
+    procedure MSG_ClearAndScan(var Msg: TMessage); message SCM_CLEARANDSCAN_TIMEDROPS;
+    procedure MSG_ScanMeets(var Msg: TMessage); message SCM_SCAN_TIMEDROPS;
+    procedure MSG_PushResults(var Msg: TMessage); message SCM_PUSH_TIMEDROPS;
 
   public
     { Public declarations }
@@ -198,35 +205,44 @@ uses System.UITypes, System.DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeView
 const
 
   CAPTION_RECONSTRUCT = '%s files ...';
-  DO4_FILE_EXTENSION = 'DO4';
-  DO3_FILE_EXTENSION = 'DO3';
 
+
+procedure TMain.actnClearAndScanExecute(Sender: TObject);
+begin
+  actnClearGridExecute(actnClearGrid);
+  actnScanMeetsFolderExecute(actnClearGrid);
+end;
+
+procedure TMain.actnClearAndScanUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
+end;
 
 procedure TMain.actnClearGridExecute(Sender: TObject);
 var
   mr: TModalResult;
 begin
+  if (not fClearAndScan_Done) then
+    mr := mrOk
+  else
+    // Because this proc is destructive - confirmation is required.
+    mr := MessageDlg('Do you want to EMPTY TimeDrop''s' + sLineBreak + 'data tables and CLEAR the grid? ',
+      mtConfirmation, [mbYes, mbNo], 0, mbNo);
 
-  // Because this proc is destructive - confirmation is required.
-  mr := MessageDlg('Do you want to EMPTY TimeDrop''s' + sLineBreak + 'data tables and CLEAR the grid? ',
-    mtConfirmation, [mbYes, mbNo], 0, mbNo);
   { IsPositiveResult returns true if AModalResult is mrYes, mrOk,
     mrYesToAll or mrAll, false otherwise }
   if IsPositiveResult(mr) then
   begin
     // Shut down file system watcher...
-    if Assigned(FDirectoryWatcher) then
-    begin
-      try
-        FDirectoryWatcher.Terminate;
-        {  Problems terminating ... }
-        // Signal the termination event...
-        FDirectoryWatcher.SignalTerminate;
-        FDirectoryWatcher.WaitFor;
-      finally
-        FreeAndNil(FDirectoryWatcher);
-      end;
-    end;
+    StopWatcher(fDirectoryWatcher);
+
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
     begin
@@ -237,7 +253,6 @@ begin
         try
           TDS.EmptyAllTDDataSets;
         finally
-          fClearAndScan_Done := true;
           TDS.EnableAllTDControls;
           tdsGrid.EndUpdate;
           // Assert : remove display of lbl_tdsGridOverlay.
@@ -248,17 +263,8 @@ begin
       end;
     end;
   end;
-  if not Assigned(fDirectoryWatcher) then
-  begin
-    // restart file system watcher...
-    try
-      fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
-      fDirectoryWatcher.OnFileChanged := OnFileChanged;
-      fDirectoryWatcher.Start;
-    except on E: Exception do
-      FreeAndNil(fDirectoryWatcher);
-    end;
-  end;
+
+  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
 end;
 
 procedure TMain.actnClearGridUpdate(Sender: TObject);
@@ -412,23 +418,22 @@ var
   aTDSessionID, aTDEventNum, aTDHeatNum, ALaneNum: integer;
   s: string;
 begin
-  if (TDS.tblMSession.IsEmpty) then
+  if (TDS.tblMHeat.IsEmpty) or (SCM.qryHeat.IsEmpty) then
   begin
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
     exit;
   end;
 
-
   // Establish if SCM AND DT are syncronized.
-  aTDSessionID := TDS.tblmSession.FieldByName('SessionID').AsInteger;
-  aTDEventNum := TDS.tblmSession.FieldByName('EventNum').AsInteger;
-  aTDHeatNum := TDS.tblmSession.FieldByName('HeatNum').AsInteger;
+  aTDSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
+  aTDEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
+  aTDHeatNum := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
   if not TDS.SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum) then
   begin
     s := '''
-      Based on Session ID, event and heat number SCM and DT are not synronized.
+      Based on the Session ID, event and heat number, SCM and DT are not synronized.
       Do you want to CONTINUE?
-      (YES will result in a 'lane for lane' assignment of race-times.)
+      (YES will result in syncronization begin ignored and a 'lane for lane' assignment of race-times to be made.)
       ''';
     mr := MessageBox(0, PChar(s), PChar('POST ''RACE-TIMES'' WARNING'), MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
     if not IsPositiveResult(mr) then
@@ -516,7 +521,7 @@ begin
   UpdateCaption;
 end;
 
-procedure TMain.actnPushResultExecute(Sender: TObject);
+procedure TMain.actnPushResultsExecute(Sender: TObject);
 var
   AFile, s: string;
   mr: TModalResult;
@@ -533,18 +538,7 @@ begin
   if IsPositiveResult(mr) then
   begin
     // Shut down file system watcher...
-    if Assigned(FDirectoryWatcher) then
-    begin
-      try
-        FDirectoryWatcher.Terminate;
-        {  Problems terminating ... }
-        // Signal the termination event...
-        FDirectoryWatcher.SignalTerminate;
-        FDirectoryWatcher.WaitFor;
-      finally
-        FreeAndNil(FDirectoryWatcher);
-      end;
-    end;
+    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
 
     if TDPushResultFile.Execute() then
     begin
@@ -569,17 +563,8 @@ begin
     end;
   end;
 
-  if not Assigned(fDirectoryWatcher) then
-  begin
-      // restart file system watcher...
-      try
-        fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
-        fDirectoryWatcher.OnFileChanged := OnFileChanged;
-        fDirectoryWatcher.Start;
-      except on E: Exception do
-          FreeAndNil(fDirectoryWatcher);
-      end;
-  end;
+  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
+
 end;
 
 procedure TMain.actnPushResultsUpdate(Sender: TObject);
@@ -805,18 +790,7 @@ begin
     else
       WildCardStr := 'Session' + dlg.edtSessionID.Text + '*.JSON';
     // Shut down file system watcher...
-    if Assigned(FDirectoryWatcher) then
-    begin
-      try
-        FDirectoryWatcher.Terminate;
-        {  Problems terminating ... }
-        // Signal the termination event...
-        FDirectoryWatcher.SignalTerminate;
-        FDirectoryWatcher.WaitFor;
-      finally
-        FreeAndNil(FDirectoryWatcher);
-      end;
-    end;
+    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
 
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
@@ -851,17 +825,7 @@ begin
     end;
   end;
 
-  if not Assigned(fDirectoryWatcher) then
-  begin
-    // restart file system watcher...
-    try
-      fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
-      fDirectoryWatcher.OnFileChanged := OnFileChanged;
-      fDirectoryWatcher.Start;
-    except on E: Exception do
-      FreeAndNil(fDirectoryWatcher);
-    end;
-  end;
+  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
 
   dlg.Free;
 
@@ -1402,14 +1366,18 @@ begin
       tdsGrid.DataSource := TDS.dsmLane; // Bind grid to data source
   end;
 
-  // Set up the file system watcher
-  try
-    fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
-    fDirectoryWatcher.OnFileChanged := OnFileChanged;
-    fDirectoryWatcher.Start;
-  except on E: Exception do
-    FreeAndNil(fDirectoryWatcher);
-  end;
+  // Set up the file system watcher ...
+  // uses Settings.MeetsFolder else reverts to TimeDrops default folder.
+  // on error fDirectoryWatcher = nil.
+  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
+
+//  try
+//    fDirectoryWatcher := TDirectoryWatcher.Create(Settings.MeetsFolder);
+//    fDirectoryWatcher.OnFileChanged := OnFileChanged;
+//    fDirectoryWatcher.Start;
+//  except on E: Exception do
+//    FreeAndNil(fDirectoryWatcher);
+//  end;
 
   (*
     {$IFNDEF DEBUG}
@@ -1512,10 +1480,11 @@ begin
   else
     // Assert UI display is up-to-date.
     PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 );
+
   // Fill the grid with available 'results'
-  if fDoClearAndScanOnBoot then
+  if fDoClearAndScanOnBoot and (not fClearAndScan_Done )then
     // calling ... sets fDoClearAndScanOnBoot := false.
-    PostMessage(Self.Handle, SCM_CALL_TIME_DROPS, 2, 0)
+    PostMessage(Self.Handle, SCM_CLEARANDSCAN_TIMEDROPS, 0, 0)
   else
     // Assert UI display is up-to-date.
     PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0 );
@@ -1545,21 +1514,31 @@ begin
       actnConnectToSCMExecute(Self);
 end;
 
-procedure TMain.MSG_CallTimeDrop(var Msg: TMessage);
+procedure TMain.MSG_PushResults(var Msg: TMessage);
 begin
-  // select method.
-  case Msg.WParam of
-    1: // Scan meet's folder - non destructive. (Refresh TDS Data).
-      begin
-        if actnScanMeetsFolder.Enabled then
-          actnScanMeetsFolderExecute(Self);
-      end;
-    2: // Destructive - call on boot.
-      begin
-        if actnClearGrid.Enabled then
-          actnClearGridExecute(Self);
-      end;
-  end;
+  if actnPushResults.Enabled then
+    actnPushResultsExecute(Self);
+end;
+
+procedure TMain.MSG_ScanMeets(var Msg: TMessage);
+begin
+  // Scan meet's folder - non destructive. (Refresh TDS Data).
+  if actnScanMeetsFolder.Enabled then
+    actnScanMeetsFolderExecute(Self);
+end;
+
+procedure TMain.MSG_ClearGrid(var Msg: TMessage);
+begin
+  // Destructive - call on boot.
+  if actnClearGrid.Enabled then
+    actnClearGridExecute(Self);
+end;
+
+procedure TMain.MSG_ClearAndScan(var Msg: TMessage);
+begin
+  // Destructive - call on boot.
+  if actnClearAndScan.Enabled and (not fClearAndScan_Done) then
+    actnClearAndScanExecute(Self);
 end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
@@ -1980,11 +1959,18 @@ begin
   Caption := 'SwimClubMeet - Dolphin Timing. ';
 end;
 
-procedure TMain.RestartDirectoryWatcherExecute(Sender: TObject);
+procedure TMain.actnRestartDirectoryWatcherExecute(Sender: TObject);
 begin
-  // Assert : remove display of lbl_tdsGridOverlay.
-  fClearAndScan_Done := true;
+  DirectoryWatcher.StopWatcher(fDirectoryWatcher);
+  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
+end;
 
+procedure TMain.actnRestartDirectoryWatcherUpdate(Sender: TObject);
+begin
+  if Assigned(fDirectoryWatcher) then
+    actnRestartDirectoryWatcher.ImageName := 'VisibilityOn'
+  else
+    actnRestartDirectoryWatcher.ImageName := 'VisibilityOff'
 end;
 
 procedure TMain.SaveToSettings;

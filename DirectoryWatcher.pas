@@ -34,9 +34,58 @@ type
     FileName: array[0..0] of WideChar;
   end;
 
+  procedure StopWatcher(FDirectoryWatcher: TDirectoryWatcher);
+  procedure StartWatcher(fDirectoryWatcher: TDirectoryWatcher; FOnFileChanged: TFileChangedEvent);
+
 implementation
 
+uses
+  tdSetting, uAppUtils;
+
 { TDirectoryWatcher }
+
+procedure StopWatcher(FDirectoryWatcher: TDirectoryWatcher);
+begin
+    if Assigned(FDirectoryWatcher) then
+    begin
+      try
+        FDirectoryWatcher.Terminate;
+        {  Problems terminating ... }
+        // Signal the termination event...
+        FDirectoryWatcher.SignalTerminate;
+        FDirectoryWatcher.WaitFor;
+      finally
+        FreeAndNil(FDirectoryWatcher);
+      end;
+    end;
+end;
+
+procedure StartWatcher(fDirectoryWatcher: TDirectoryWatcher; FOnFileChanged: TFileChangedEvent);
+var
+watchFolder: string;
+begin
+  watchFolder := ExpandEnvVars('%SYSTEMDRIVE%\TimeDrops\Meets'); // default folder.
+  if (not Assigned(fDirectoryWatcher)) then
+  begin
+    if Assigned(Settings) then
+    begin
+      if FileExists(Settings.MeetsFolder) then
+        watchFolder := Settings.MeetsFolder;
+    end;
+
+    // restart file system watcher...
+    try
+      if DirectoryExists(watchFolder) then
+      begin
+        fDirectoryWatcher := TDirectoryWatcher.Create(watchFolder);
+        fDirectoryWatcher.OnFileChanged := FOnFileChanged;
+        fDirectoryWatcher.Start;
+      end;
+    except on E: Exception do
+      FreeAndNil(fDirectoryWatcher);
+    end;
+  end;
+end;
 
 constructor TDirectoryWatcher.Create(const Directory: string);
 begin

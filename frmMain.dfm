@@ -10719,6 +10719,7 @@ object Main: TMain
               end
               item
                 Action = actnConnectToSCM
+                Caption = '&Connect to the DB Server...'
                 ImageIndex = 16
                 ImageName = 'login'
               end
@@ -10770,7 +10771,8 @@ object Main: TMain
                 ImageName = 'document_search'
               end
               item
-                Action = RestartDirectoryWatcher
+                Action = actnRestartDirectoryWatcher
+                Caption = '&Restart Directory Watcher'
                 ImageIndex = 18
                 ImageName = 'VisibilityOn'
               end
@@ -10779,6 +10781,7 @@ object Main: TMain
               end
               item
                 Action = actnClearGrid
+                Caption = '&Clear the TimeDrops grid ...'
                 ImageIndex = 10
                 ImageName = 'scan'
               end>
@@ -10897,7 +10900,7 @@ object Main: TMain
       Caption = 'Push '#39'Results'#39' to the grid...'
       ImageIndex = 0
       ImageName = 'file_open'
-      OnExecute = actnPushResultExecute
+      OnExecute = actnPushResultsExecute
       OnUpdate = actnPushResultsUpdate
     end
     object actnScanMeetsFolder: TAction
@@ -11006,12 +11009,21 @@ object Main: TMain
       ImageName = 'file_report'
       OnExecute = actTDTableViewerExecute
     end
-    object RestartDirectoryWatcher: TAction
+    object actnClearAndScan: TAction
+      Category = 'TimeDrops'
+      Caption = 'Clear and Scan ...'
+      ImageIndex = 10
+      ImageName = 'scan'
+      OnExecute = actnClearAndScanExecute
+      OnUpdate = actnClearAndScanUpdate
+    end
+    object actnRestartDirectoryWatcher: TAction
       Category = 'TimeDrops'
       Caption = 'Restart Directory Watcher'
       ImageIndex = 18
       ImageName = 'VisibilityOn'
-      OnExecute = RestartDirectoryWatcherExecute
+      OnExecute = actnRestartDirectoryWatcherExecute
+      OnUpdate = actnRestartDirectoryWatcherUpdate
     end
   end
 end
