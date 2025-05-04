@@ -39,7 +39,8 @@ uses
   FireDAC.Stan.Pool, FireDAC.Stan.Async, FireDAC.Phys, FireDAC.Phys.MSSQL,
   FireDAC.Phys.MSSQLDef, FireDAC.VCLUI.Wait, FireDAC.Stan.Param, FireDAC.DatS,
   FireDAC.DApt.Intf, FireDAC.DApt, FireDAC.Comp.Client, Data.DB,
-  FireDAC.Comp.DataSet, WinApi.Windows, SCMDefines, System.Variants;
+  FireDAC.Comp.DataSet, WinApi.Windows, SCMDefines, System.Variants,
+  System.UITypes;
 
 type
   TSCM = class(TDataModule)
@@ -103,7 +104,7 @@ type
     function SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum: Integer): boolean;
     function SyncCheckSession(aTDSessionID: Integer): boolean;
     // .......................................................
-    function GetActive_INDVorTEAM: TDataSet;
+    function GetActive_INDVorTEAM: TDataSource;
     function SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer): boolean;
     procedure WriteConnectionDef(const ConnectionName, ParamName, ParamValue: string);
     property DataIsActive: Boolean read fDataIsActive;
@@ -116,7 +117,7 @@ var
 implementation
 
 uses
-  System.DateUtils, uAppUtils;
+  System.DateUtils, uAppUtils, Vcl.Dialogs;
 
 {%CLASSGROUP 'Vcl.Controls.TControl'}
 
@@ -377,7 +378,7 @@ begin
   end;
 end;
 
-function TSCM.GetActive_INDVorTEAM: TDataSet;
+function TSCM.GetActive_INDVorTEAM: TDataSource;
 begin
   result := nil;
   // Check - connected, master-detail ok, queryies open. Has heats.
@@ -385,9 +386,9 @@ begin
   begin
     case qryDistance.FieldByName('EventTypeID').AsInteger of
     1:
-      result := qryINDV;
+      result := dsINDV;
     2:
-      result := qryTEAM;
+      result := dsTEAM;
     end;
   end;
 end;
@@ -636,18 +637,26 @@ begin
   result := false;
   found := false;
 
-  if not SyncCheckSession(aTDSessionNum) then exit;
+  if not SyncCheckSession(aTDSessionNum) then
+  begin
+    MessageDlg('The SwimClubMeet andTimeDrops sessions don''t match.'+#13+#10+
+    'Open the correct session with ''Select SCM Session'' and try  again.',
+    mtInformation, [mbOK], 0);
+    exit;
+  end;
 
   qryTEAM.DisableControls;
   qryINDV.DisableControls;
   qryHeat.DisableControls;
   qryEvent.DisableControls;
   qrySession.DisableControls;
-
+  qryEvent.ApplyMaster;
   if qryEvent.Locate('EventNum', aTDEventNum, [])
   then
+  begin
+    qryHeat.ApplyMaster;
     found := qryHeat.Locate('HeatNum', aTDHeatNum, []);
-
+  end;
   result := found;
   qrySession.EnableControls;
   qryEvent.EnableControls;

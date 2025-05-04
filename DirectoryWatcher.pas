@@ -6,8 +6,7 @@ uses
   VCL.Dialogs;
 
 type
-
-  TFileChangedEvent = procedure(Sender: TObject; const FileName: string) of object;
+  TFileChangedEvent = procedure(Sender: TObject; const FileName: string; Action: DWORD) of object;
 
   TDirectoryWatcher = class(TThread)
   private
@@ -91,6 +90,7 @@ constructor TDirectoryWatcher.Create(const Directory: string);
 begin
   inherited Create(True);
   FDirectory := Directory;
+
   FNotifyHandle := CreateFile(PChar(FDirectory), FILE_LIST_DIRECTORY,
     FILE_SHARE_READ or FILE_SHARE_WRITE or FILE_SHARE_DELETE, nil, OPEN_EXISTING,
     FILE_FLAG_BACKUP_SEMANTICS or FILE_FLAG_OVERLAPPED, 0);
@@ -116,6 +116,7 @@ var
   Info: PFileNotifyInformation;
   Offset: DWORD;
   FileName: string;
+  Action: DWORD;
 begin
   Info := PFileNotifyInformation(@FBuffer[0]);
   repeat
@@ -123,9 +124,12 @@ begin
     SetLength(FileName, Info.FileNameLength div SizeOf(WideChar));
     Move(Info.FileName[0], FileName[1], Info.FileNameLength);
     FileName := FDirectory + '\' + FileName;
+    Action := Info.Action; // Capture the action type
+
     // Handle the file change event (e.g., notify or process the file)
     if Assigned(FOnFileChanged) then
-      FOnFileChanged(Self, FileName);
+      FOnFileChanged(Self, FileName, Action); // Pass the action to the event
+
     Info := PFileNotifyInformation(PByte(Info) + Offset);
   until Offset = 0;
 end;

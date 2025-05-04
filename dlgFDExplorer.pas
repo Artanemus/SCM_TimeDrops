@@ -12,7 +12,7 @@ type
     pnlFooter: TPanel;
     btnOk: TButton;
     btnCancel: TButton;
-    lblBodyText2: TLabel;
+    memoInfo: TMemo;
     procedure btnCancelClick(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);

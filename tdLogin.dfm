@@ -19033,6 +19033,18 @@ object Login: TLogin
         ParentFont = False
         WordWrap = True
       end
+      object vimgVisibility: TVirtualImage
+        Left = 379
+        Top = 112
+        Width = 40
+        Height = 40
+        ImageCollection = IMG.imgcolDT
+        ImageWidth = 0
+        ImageHeight = 0
+        ImageIndex = 81
+        ImageName = 'VisibilityOff'
+        OnClick = vimgVisibilityClick
+      end
       object chkbOSAuthent: TCheckBox
         Left = 110
         Top = 168

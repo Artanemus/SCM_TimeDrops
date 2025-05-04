@@ -10,7 +10,8 @@ uses
   tdSetting, SCMDefines, SCMSimpleConnect,
   FireDAC.Comp.Client, FireDAC.Stan.Intf, FireDAC.Stan.Option,
   FireDAC.Stan.Error, FireDAC.UI.Intf, FireDAC.Phys.Intf, FireDAC.Stan.Pool,
-  FireDAC.Stan.Async, FireDAC.Phys, FireDAC.VCLUI.Wait, Data.DB;
+  FireDAC.Stan.Async, FireDAC.Phys, FireDAC.VCLUI.Wait, Data.DB,
+  Vcl.VirtualImage, dmIMG;
 
 type
   TLogin = class(TForm)
@@ -31,6 +32,7 @@ type
     pnlBody: TPanel;
     btnDone: TButton;
     lblConnectionInfo: TLabel;
+    vimgVisibility: TVirtualImage;
 
     procedure btnDisconnectClick(Sender: TObject);
     procedure btnConnectClick(Sender: TObject);
@@ -38,6 +40,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure vimgVisibilityClick(Sender: TObject);
   private
     procedure ReadLoginParams();
     procedure SetConnectionInfo;
@@ -116,13 +119,17 @@ end;
 
 procedure TLogin.btnDoneClick(Sender: TObject);
 begin
-  ModalResult := mrClose;
+  ModalResult := mrOk;
 end;
 
 procedure TLogin.FormCreate(Sender: TObject);
 begin
   lblStatusMsg.Caption := '';
   lblConnectionInfo.Caption := '';
+  // by default always hide password.
+  edtPassword.PasswordChar := '*';
+  vimgVisibility.imageName := 'VisibilityOff';
+
   ReadLoginParams;
   if Assigned(SCM.scmConnection) then
   begin
@@ -239,6 +246,21 @@ begin
     else
       lblConnectionInfo.Caption := '';
   end;
+end;
+
+procedure TLogin.vimgVisibilityClick(Sender: TObject);
+begin
+  // toggle image
+  if vimgVisibility.imageName = 'VisibilityOff' then
+    vimgVisibility.imageName := 'VisibilityOn'
+  else
+    vimgVisibility.imageName := 'VisibilityOff';
+
+  if vimgVisibility.imageName = 'VisibilityOn' then
+    edtPassword.PasswordChar := #0
+  else
+    edtPassword.PasswordChar := '*';
+
 end;
 
 procedure TLogin.WriteLoginParams();

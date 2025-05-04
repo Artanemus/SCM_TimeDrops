@@ -23005,9 +23005,4 @@ object IMG: TIMG
     Left = 312
     Top = 16
   end
-  object ImageCollection2: TImageCollection
-    Images = <>
-    Left = 192
-    Top = 16
-  end
 end

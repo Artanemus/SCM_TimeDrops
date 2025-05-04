@@ -9247,6 +9247,16 @@ object Main: TMain
         Layout = tlCenter
         WordWrap = True
       end
+      object lblSwimClubName: TLabel
+        Left = 0
+        Top = 0
+        Width = 497
+        Height = 28
+        Alignment = taCenter
+        AutoSize = False
+        Caption = 'Swimming Club'
+        Layout = tlCenter
+      end
       object btnNextEvent: TButton
         Left = 0
         Top = 683
@@ -10585,7 +10595,7 @@ object Main: TMain
     Hint = 'Check here for information, messages and warnings.'
     Panels = <>
     ParentShowHint = False
-    ShowHint = True
+    ShowHint = False
     SimplePanel = True
     SimpleText = 'Check here for information and messages.'
     StyleElements = [seClient, seBorder]

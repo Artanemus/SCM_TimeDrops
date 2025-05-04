@@ -31,6 +31,7 @@ uses
   System.Types, System.IOUtils, System.Math, DirectoryWatcher,
   tdReConstructDlg, dmIMG;
 
+
 type
   TMain = class(TForm)
     actnMenuBar: TActionMainMenuBar;
@@ -101,6 +102,7 @@ type
     actnRestartDirectoryWatcher: TAction;
     sbtnDirWatcher: TSpeedButton;
     actnClearAndScan: TAction;
+    lblSwimClubName: TLabel;
     procedure actnClearAndScanExecute(Sender: TObject);
     procedure actnClearAndScanUpdate(Sender: TObject);
     procedure actnExportMeetProgramExecute(Sender: TObject);
@@ -159,7 +161,7 @@ type
     fDoClearAndScanOnBoot: boolean;
     fClearAndScan_Done: Boolean;
 
-    procedure OnFileChanged(Sender: TObject; const FileName: string);
+    procedure OnFileChanged(Sender: TObject; const FileName: string; Action: DWORD);
 
     procedure LoadFromSettings; // JSON Program Settings
     procedure LoadSettings; // JSON Program Settings
@@ -241,7 +243,7 @@ begin
   if IsPositiveResult(mr) then
   begin
     // Shut down file system watcher...
-    StopWatcher(fDirectoryWatcher);
+//    StopWatcher(fDirectoryWatcher);
 
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
@@ -264,7 +266,7 @@ begin
     end;
   end;
 
-  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
+//  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
 end;
 
 procedure TMain.actnClearGridUpdate(Sender: TObject);
@@ -277,94 +279,6 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
-end;
-
-procedure TMain.actnSCMSessionExecute(Sender: TObject);
-var
-  dlg: TSessionPicker;
-  mr: TModalResult;
-begin
-  dlg := TSessionPicker.Create(Self);
-  dlg.rtnSessionID := 0;
-  // the picker will locate to the given session id.
-  if SCM.qrySession.Active and not SCM.qrySession.IsEmpty then
-  begin
-    dlg.rtnSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
-  end;
-
-  // Prompt to pick session
-  mr := dlg.ShowModal;
-  if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
-  begin
-    SCM.MSG_Handle := 0;
-    SCM.LocateSessionID(dlg.rtnSessionID);
-    SCM.MSG_Handle := Self.Handle;
-  end;
-  dlg.Free;
-
-  UpdateCaption;
-  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
-end;
-
-procedure TMain.actnSCMSessionUpdate(Sender: TObject);
-begin
-  if (Assigned(SCM)) and (SCM.DataIsActive = true) then
-  begin
-    if (TAction(Sender).Enabled = false) then
-      TAction(Sender).Enabled := true;
-  end
-  else
-  begin
-    if TAction(Sender).Enabled = true then
-      TAction(Sender).Enabled := false;
-  end;
-end;
-
-procedure TMain.actnExportMeetProgramExecute(Sender: TObject);
-var
-  fn: TFileName;
-  dlg: TMeetProgramPick;
-  AModalResult: TModalResult;
-begin
-  dlg := TMeetProgramPick.Create(self);
-  AModalResult := dlg.ShowModal;
-  if IsPositiveResult(AModalResult) then
-  begin
-    // The meet program folder may have changed.
-    Settings.LoadFromFile();
-    // The default filename required by TimeDrops
-    fn := IncludeTrailingPathDelimiter(Settings.ProgramFolder)  + 'meet_program.json';
-    SCMGrid.BeginUpdate;
-    if Settings.MeetProgramType = 1 then
-      BuildAndSaveMeetProgramDetailed(fn) // Detailed meet program.
-    else if Settings.MeetProgramType = 0 then
-      BuildAndSaveMeetProgramBasic(fn); // Basic meet program.
-    // re-set to head of session.
-    SCM.dsEvent.DataSet.First;
-    SCM.dsHeat.DataSet.First;
-    // update grid.
-    SCMGrid.EndUpdate;
-    // Message user.
-    MessageBox(0,
-      PChar('Export of the Time Drops Meet Program has been completed.'),
-      PChar('Export Meet Program'), MB_ICONINFORMATION or MB_OK);
-  end;
-  dlg.Free;
-end;
-
-procedure TMain.actnExportMeetProgramUpdate(Sender: TObject);
-begin
-  if Assigned(SCM) and SCM.DataIsActive
-    and Assigned(TDS) and TDS.DataIsActive then
-    begin
-    if (TAction(Sender).Enabled = false) then
-      TAction(Sender).Enabled := true;
-    end
-  else
-    begin
-    if (TAction(Sender).Enabled = true) then
-      TAction(Sender).Enabled := false;
-    end;
 end;
 
 procedure TMain.actnConnectToSCMExecute(Sender: TObject);
@@ -395,7 +309,7 @@ begin
     TAction(Sender).Caption := 'Connect to the SCM database...';
   end;
 
-  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 ); // UPDATE UI
+//  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 ); // UPDATE UI
 end;
 
 procedure TMain.actnConnectToSCMUpdate(Sender: TObject);
@@ -408,6 +322,63 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
+end;
+
+procedure TMain.actnExportMeetProgramExecute(Sender: TObject);
+var
+  fn: TFileName;
+  dlg: TMeetProgramPick;
+  AModalResult: TModalResult;
+begin
+
+  if (SCM.qrySession.IsEmpty) or (SCM.qryEvent.IsEmpty)
+    or (SCM.qryHeat.IsEmpty) then
+  begin
+    MessageDlg('Missing elements in the SwimClubMeet Session.'
+    +#13+#10+
+    'Check that the session contains events with heats, else a ''Meet Program'' can''t be built). ',
+    mtInformation, [mbOK], 0);
+    exit;
+  end;
+
+  dlg := TMeetProgramPick.Create(self);
+  AModalResult := dlg.ShowModal;
+  if IsPositiveResult(AModalResult) then
+  begin
+    // The meet program folder may have changed.
+    Settings.LoadFromFile();
+    // The default filename required by TimeDrops
+    fn := IncludeTrailingPathDelimiter(Settings.ProgramFolder)  + 'meet_program.json';
+    SCMGrid.BeginUpdate;
+    if Settings.MeetProgramType = 1 then
+      BuildAndSaveMeetProgramDetailed(fn) // Detailed meet program.
+    else if Settings.MeetProgramType = 0 then
+      BuildAndSaveMeetProgramBasic(fn); // Basic meet program.
+    // re-set to head of session.
+    SCM.dsEvent.DataSet.First;
+    SCM.dsHeat.DataSet.First;
+    // update grid.
+    SCMGrid.EndUpdate;
+    // Message user.
+    MessageBox(0,
+      PChar('Export of the Time Drops Meet Program has been completed.'),
+      PChar('Export Meet Program'), MB_ICONINFORMATION or MB_OK);
+  end;
+  dlg.Free;
+end;
+
+procedure TMain.actnExportMeetProgramUpdate(Sender: TObject);
+begin
+  if Assigned(SCM) and SCM.DataIsActive then
+    begin
+    if (TAction(Sender).Enabled = false) then
+      TAction(Sender).Enabled := true;
+    end
+  else
+    begin
+    if (TAction(Sender).Enabled = true) then
+      TAction(Sender).Enabled := false;
+    end;
 end;
 
 procedure TMain.actnPostExecute(Sender: TObject);
@@ -438,7 +409,7 @@ begin
     mr := MessageBox(0, PChar(s), PChar('POST ''RACE-TIMES'' WARNING'), MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
     if not IsPositiveResult(mr) then
     begin
-      StatBar.SimpleText := 'User exited. No POSTS were made.';
+      StatBar.SimpleText := 'No POSTS were made.';
       Timer1.Enabled := true;
       MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound.
       exit;
@@ -484,6 +455,7 @@ begin
     Timer1.Enabled := true;
   end;
 end;
+
 
 procedure TMain.actnPostUpdate(Sender: TObject);
 begin
@@ -538,7 +510,7 @@ begin
   if IsPositiveResult(mr) then
   begin
     // Shut down file system watcher...
-    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
+//    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
 
     if TDPushResultFile.Execute() then
     begin
@@ -563,7 +535,7 @@ begin
     end;
   end;
 
-  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
+//  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
 
 end;
 
@@ -631,6 +603,22 @@ begin
   SCMGrid.BeginUpdate;
   SCM.RefreshSCM;
   SCMGrid.EndUpdate;
+  StatBar.SimpleText := 'Refresh done.'; // not painting text?
+  Timer1.Enabled := true;
+end;
+
+procedure TMain.actnRestartDirectoryWatcherExecute(Sender: TObject);
+begin
+  DirectoryWatcher.StopWatcher(fDirectoryWatcher);
+  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
+end;
+
+procedure TMain.actnRestartDirectoryWatcherUpdate(Sender: TObject);
+begin
+  if Assigned(fDirectoryWatcher) then
+    actnRestartDirectoryWatcher.ImageName := 'VisibilityOn'
+  else
+    actnRestartDirectoryWatcher.ImageName := 'VisibilityOff'
 end;
 
 procedure TMain.actnSelectSwimClubExecute(Sender: TObject);
@@ -659,6 +647,47 @@ begin
     UpdateCaption;
     PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
     *)
+end;
+
+procedure TMain.actnSCMSessionExecute(Sender: TObject);
+var
+  dlg: TSessionPicker;
+  mr: TModalResult;
+begin
+  dlg := TSessionPicker.Create(Self);
+  dlg.rtnSessionID := 0;
+  // the picker will locate to the given session id.
+  if SCM.qrySession.Active and not SCM.qrySession.IsEmpty then
+  begin
+    dlg.rtnSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
+  end;
+
+  // Prompt to pick session
+  mr := dlg.ShowModal;
+  if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
+  begin
+    SCM.MSG_Handle := 0;
+    SCM.LocateSessionID(dlg.rtnSessionID);
+    SCM.MSG_Handle := Self.Handle;
+  end;
+  dlg.Free;
+
+  UpdateCaption;
+  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+end;
+
+procedure TMain.actnSCMSessionUpdate(Sender: TObject);
+begin
+  if (Assigned(SCM)) and (SCM.DataIsActive = true) then
+  begin
+    if (TAction(Sender).Enabled = false) then
+      TAction(Sender).Enabled := true;
+  end
+  else
+  begin
+    if TAction(Sender).Enabled = true then
+      TAction(Sender).Enabled := false;
+  end;
 end;
 
 procedure TMain.actnSelectSwimClubUpdate(Sender: TObject);
@@ -706,6 +735,11 @@ begin
     + 'Your ''Results'' folder may not contain the session files required to sync.';
     timer1.enabled := true;
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+  end
+  else
+  begin
+    StatBar.SimpleText := 'Syncronization done.';
+    timer1.enabled := true;
   end;
 end;
 
@@ -752,6 +786,11 @@ begin
     + 'Your ''Results'' folder may not contain the session files required to sync.';
     timer1.enabled := true;
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+  end
+  else
+  begin
+    StatBar.SimpleText := 'Syncronization done.';
+    timer1.enabled := true;
   end;
 end;
 
@@ -780,17 +819,27 @@ begin
   // Do not do recursive extract into subfolders
   LSearchOption := TSearchOption.soTopDirectoryOnly;
   WildCardStr := '';
-  dlg := TScanOptions.Create(Self);
-  mr := dlg.ShowModal;
 
-  if IsPositiveResult(mr) then
+  if (not fClearAndScan_Done) or (fDoClearAndScanOnBoot) then
   begin
+    mr := mrOK;
+    WildCardStr := 'Session*.JSON';
+  end
+  else
+  begin
+    dlg := TScanOptions.Create(Self);
+    mr := dlg.ShowModal;
     if dlg.rgrpScanOptions.ItemIndex = 0 then
       WildCardStr := 'Session*.JSON'
     else
       WildCardStr := 'Session' + dlg.edtSessionID.Text + '*.JSON';
+    dlg.free;
+  end;
+
+  if IsPositiveResult(mr) then
+  begin
     // Shut down file system watcher...
-    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
+//    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
 
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
@@ -825,11 +874,9 @@ begin
     end;
   end;
 
-  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
+//  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
 
-  dlg.Free;
-
-end;
+  end;
 
 procedure TMain.actnScanMeetsFolderUpdate(Sender: TObject);
 begin
@@ -1023,80 +1070,70 @@ begin
     exit;
   end;
 
-  {
-  MANATORY HERE - ELSE IT DOESN'T WORK!
-  Use the ApplyMaster method to synchronize this detail dataset with the
-  current master record.  This method is useful, when DisableControls was
-  called for the master dataset or when scrolling is disabled by
-  MasterLink.DisableScroll.
-  }
+  SearchOptions := [];
   tdsGrid.BeginUpdate;
 
-  // Open the SCM TreeView.
+  // Params required to locate branch in tree.
+  sessID := TDS.dsmSession.DataSet.FieldByName('SessionID').AsInteger;
+  evID := TDS.dsmEvent.DataSet.FieldByName('EventID').AsInteger;
+  htID := TDS.dsmHeat.DataSet.FieldByName('HeatID').AsInteger;
+
+  // Open the SCM TreeView - cue-to-node based on params.
   dlg := TTreeViewData.Create(Self);
-  SearchOptions := [];
-  // Params to cue-to-record in DT TreeView.
-    sessID := TDS.dsmSession.DataSet.FieldByName('SessionID').AsInteger;
-    evID := TDS.dsmEvent.DataSet.FieldByName('EventID').AsInteger;
-    htID := TDS.dsmHeat.DataSet.FieldByName('HeatID').AsInteger;
-
-  // DT TreeView will attemp to cue-to-node based on params.
-
   dlg.Prepare(sessID, evID, htID);
   mr := dlg.ShowModal;
+  sessID := dlg.SelectedSessionID;
+  evID := dlg.SelectedEventID;
+  htID := dlg.SelectedHeatID;
+  dlg.Free;
+
   // A TreeView node was selected.
   if IsPositiveResult(mr) then
   begin
     { NOTE: DT session pick by the user may differ from the current
       SCM session being operated on. }
-
     TDS.dsmLane.DataSet.DisableControls;
     TDS.dsmHeat.DataSet.DisableControls;
     TDS.dsmEvent.DataSet.DisableControls;
     TDS.dsmSession.DataSet.DisableControls;
-    // Attempt to cue-to-data in Dolphin Timing tables.
-    if (dlg.SelectedSessionID > 0) then
-    begin
-      found := TDS.LocateTSessionID(dlg.SelectedSessionID);
-      if not found then
-        TDS.tblmSession.First;
-      TDS.tblmEvent.ApplyMaster;
-      TDS.tblmEvent.First;
-      TDS.tblmHeat.ApplyMaster;
-      TDS.tblmHeat.First;
-    end;
-    if (dlg.SelectedEventID > 0) then
-    begin
-      found := TDS.LocateTEventID(dlg.SelectedEventID);
-      if not found then
+    try
+      // Attempt to cue-to-data in Dolphin Timing tables.
+      if (sessID > 0) then
+      begin
+        found := TDS.LocateTSessionID(sessID);
+        if not found then
+          TDS.tblmSession.First;
+        TDS.tblmEvent.ApplyMaster;
         TDS.tblmEvent.First;
-      TDS.tblmHeat.ApplyMaster;
-      TDS.tblmHeat.First;
-      TDS.tblmLane.ApplyMaster;
-      TDS.tblmLane.First;
-
-    end;
-    if (dlg.SelectedHeatID > 0) then
-    begin
-      found := TDS.LocateTHeatID(dlg.SelectedHeatID);
-      if not found then
+        TDS.tblmHeat.ApplyMaster;
         TDS.tblmHeat.First;
+      end;
+      if (evID > 0) then
+      begin
+        found := TDS.LocateTEventID(evID);
+        if not found then
+          TDS.tblmEvent.First;
+        TDS.tblmHeat.ApplyMaster;
+        TDS.tblmHeat.First;
+        TDS.tblmLane.ApplyMaster;
+        TDS.tblmLane.First;
+
+      end;
+      if (htID > 0) then
+      begin
+        found := TDS.LocateTHeatID(htID);
+        if not found then
+          TDS.tblmHeat.First;
+      end;
+    finally
+      TDS.dsmSession.DataSet.EnableControls;
+      TDS.dsmEvent.DataSet.EnableControls;
+      TDS.dsmHeat.DataSet.EnableControls;
+      TDS.dsmLane.DataSet.EnableControls;
+      PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
     end;
+  end;
 
-    // Update the Dolphin Timing TDBAdvGrid.
-    TDS.dsmSession.DataSet.EnableControls;
-    TDS.dsmEvent.DataSet.EnableControls;
-    TDS.dsmHeat.DataSet.EnableControls;
-    TDS.dsmLane.DataSet.EnableControls;
-
-//    tdsGrid.update
-
-    // Update UI controls ...
-    // paint cell icons
-    PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
-
-    end;
-  dlg.Free;
   tdsGrid.EndUpdate;
 
 end;
@@ -1104,7 +1141,7 @@ end;
 procedure TMain.btnPickSCMTreeViewClick(Sender: TObject);
 var
 dlg: TTreeViewSCM;
-sess, ev, ht: integer;
+sess, ev, ht, aEventID, aHeatID: integer;
 mr: TModalResult;
 found: boolean;
 begin
@@ -1114,39 +1151,42 @@ begin
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
     exit;
   end;
-
-  // Open the SCM TreeView.
-  dlg := TTreeViewSCM.Create(Self);
-
+  // information to locate branch in tree.
   sess := SCM.dsSession.DataSet.FieldByName('SessionID').AsInteger;
   ev := SCM.dsEvent.DataSet.FieldByName('EventID').AsInteger;
   ht := SCM.dsHeat.DataSet.FieldByName('HeatID').AsInteger;
+  // Open the SCM TreeView.
+  dlg := TTreeViewSCM.Create(Self);
   dlg.Prepare(SCM.scmConnection, sess, ev, ht);
   mr := dlg.ShowModal;
-
-    // CUE-TO selected TreeView item ...
-  if IsPositiveResult(mr) then
-  begin
-    SCM.dsEvent.DataSet.DisableControls;
-    SCM.dsHeat.DataSet.DisableControls;
-    if (dlg.SelectedEventID <> 0) then
-    begin
-      found := SCM.LocateEventID(dlg.SelectedEventID);
-      if found then
-      begin
-        SCM.dsHeat.DataSet.Close;
-        SCM.dsHeat.DataSet.Open;
-        if (dlg.SelectedHeatID <> 0) then
-          SCM.LocateHeatID(dlg.SelectedHeatID);
-      end;
-    end;
-    SCM.dsEvent.DataSet.EnableControls;
-    SCM.dsHeat.DataSet.EnableControls;
-    // Update UI controls ...
-    PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
-  end;
+  aEventID := dlg.SelectedEventID;
+  aHeatID := dlg.SelectedHeatID;
   dlg.Free;
 
+  // CUE-TO selected TreeView item ...
+  if IsPositiveResult(mr) then
+  begin
+    try
+      SCM.dsEvent.DataSet.DisableControls;
+      SCM.dsHeat.DataSet.DisableControls;
+      if (aEventID <> 0) then
+      begin
+        found := SCM.LocateEventID(aEventID);
+        if found then
+        begin
+          SCM.dsHeat.DataSet.Close;
+          SCM.dsHeat.DataSet.Open;
+          if (aHeatID <> 0) then
+            SCM.LocateHeatID(aHeatID);
+        end;
+      end;
+    finally
+      SCM.dsEvent.DataSet.EnableControls;
+      SCM.dsHeat.DataSet.EnableControls;
+      // Update UI controls ...
+      PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+    end;
+  end;
 end;
 
 procedure TMain.btnPrevDTFileClick(Sender: TObject);
@@ -1395,8 +1435,11 @@ begin
   // Ensure that the StyleElements property does not include seFont
   //  StatBar.StyleElements := StatBar.StyleElements - [seFont];
   //  StatBar.ParentFont := False;
+
   StatBar.Font.Size := 12;
   StatBar.Font.Color := clWebAntiqueWhite;
+  StatBar.ShowHint := false;
+  StatBar.SimplePanel := true;
 
   // Enable hint information
   Application.ShowHint := true;
@@ -1582,6 +1625,7 @@ begin
   lbl_scmGridOverlay.Caption := '';
   lblEventDetails.Caption := '';
   lbl_scmGridOverlay.Visible := true;
+  lblSwimClubName.Caption := '';
   lblSessionStart.Caption := '';
   ASessionID := 0;
   StatBar.SimpleText := '';
@@ -1633,18 +1677,11 @@ begin
   lbl_scmGridOverlay.Caption := '';
   pnlTool1.Visible := true;
 
+  lblSwimClubName.Caption := SCM.qrySwimClub.FieldByName('Caption').AsString;
+
   // ASSERT DATASOURCE.
   if not Assigned(scmGrid.DataSource) then
-  begin
-    scmGrid.DataSource := SCM.dsINDV;
-    if SCM.DataIsActive then
-    begin
-      if SCM.qryDistance.FieldByName('EventTypeID').AsInteger = 1 then
-        scmGrid.DataSource := SCM.dsINDV
-      else
-        scmGrid.DataSource := SCM.dsTEAM;
-    end;
-  end;
+    scmGrid.DataSource := SCM.GetActive_INDVorTEAM;
 
   // UPDATE pnlSCM HEADER DESCRIPTION.
   s := '';
@@ -1933,10 +1970,21 @@ begin
 
 end;
 
-procedure TMain.OnFileChanged(Sender: TObject; const FileName: string);
+procedure TMain.OnFileChanged(Sender: TObject; const FileName: string; Action: DWORD);
 var
-s: string;
+  s, ActionDescription: string;
 begin
+  // Determine the type of action
+  case Action of
+    FILE_ACTION_ADDED: ActionDescription := 'File added';
+    FILE_ACTION_REMOVED: ActionDescription := 'File removed';
+    FILE_ACTION_MODIFIED: ActionDescription := 'File modified';
+    FILE_ACTION_RENAMED_OLD_NAME: ActionDescription := 'File renamed (old name)';
+    FILE_ACTION_RENAMED_NEW_NAME: ActionDescription := 'File renamed (new name)';
+  else
+    ActionDescription := 'Unknown action';
+  end;
+
   // Handle the new file
   s := UpperCase(ExtractFileExt(FileName));
 
@@ -1945,7 +1993,7 @@ begin
     s := UpperCase(FileName);
     if s.Contains('SESSION') then
     begin
-      ShowMessage('A new results file was added to the directory: ' + FileName);
+      ShowMessage(Format('The meets folder was modified: %s (%s)', [FileName, ActionDescription]));
       tdsGrid.BeginUpdate;
       tdResults.ProcessFile(FileName);
       tdsGrid.EndUpdate;
@@ -1957,20 +2005,6 @@ procedure TMain.Prepare(AConnection: TFDConnection);
 begin
   FConnection := AConnection;
   Caption := 'SwimClubMeet - Dolphin Timing. ';
-end;
-
-procedure TMain.actnRestartDirectoryWatcherExecute(Sender: TObject);
-begin
-  DirectoryWatcher.StopWatcher(fDirectoryWatcher);
-  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
-end;
-
-procedure TMain.actnRestartDirectoryWatcherUpdate(Sender: TObject);
-begin
-  if Assigned(fDirectoryWatcher) then
-    actnRestartDirectoryWatcher.ImageName := 'VisibilityOn'
-  else
-    actnRestartDirectoryWatcher.ImageName := 'VisibilityOff'
 end;
 
 procedure TMain.SaveToSettings;
@@ -2300,7 +2334,6 @@ begin
   tdsGrid.EndUpdate;
 
 end;
-
 
 
 

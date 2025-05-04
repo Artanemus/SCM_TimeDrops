@@ -9031,7 +9031,7 @@ object Options: TOptions
       Top = 0
       Width = 661
       Height = 397
-      ActivePage = TabSheet1
+      ActivePage = tabsheetPaths
       Align = alClient
       TabOrder = 0
       object tabSettings: TTabSheet
@@ -9371,6 +9371,7 @@ object Options: TOptions
           Width = 233
           Height = 17
           Caption = 'Hide extended help and info.'
+          Enabled = False
           TabOrder = 2
         end
       end

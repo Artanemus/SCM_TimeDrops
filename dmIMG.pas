@@ -17,7 +17,6 @@ type
     vimglistStateImages: TVirtualImageList;
     vimglistDTCell: TVirtualImageList;
     VirtualImageList1: TVirtualImageList;
-    ImageCollection2: TImageCollection;
   private
     { Private declarations }
     fIMGIsactive: boolean;

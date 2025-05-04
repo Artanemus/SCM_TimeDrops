@@ -371,7 +371,7 @@ begin
   It is convenient to be logged into the SwimClubMeet
   DB Server upon starting the application. However,
   this is optional — you can still view and manage the
-  TimeDrops grid data without logging in.
+  TimeDrops grid data without a SCM connection.
   ''';
   bhintOptions.ShowHint(TControl(Sender));
 end;
