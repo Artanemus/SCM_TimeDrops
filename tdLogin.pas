@@ -190,6 +190,8 @@ var
   iFile: TIniFile;
   iniFileName, UseOsAuthentication: string;
 begin
+  // scmFDManager SHOULD point to this connection definition file...
+  // %AppData%\Artanemus\scm\FDConnectionDefs.ini
   iniFileName := SCM.scmFDManager.ActualConnectionDefFileName;
   if not FileExists(iniFileName) then exit;
   iFile := TIniFile.Create(iniFileName);
@@ -208,6 +210,7 @@ var
   VersionInfo: string;
   HostMachine: string;
 begin
+  HostMachine := '';
   if Assigned(SCM.scmConnection) then
   begin
     if SCM.scmConnection.Connected then

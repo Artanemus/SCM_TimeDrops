@@ -10646,8 +10646,8 @@ object Main: TMain
     OkButtonLabel = 'PUSH'
     Options = [fdoStrictFileTypes, fdoAllowMultiSelect, fdoPathMustExist, fdoFileMustExist]
     Title = 'Push TimeDrops '#39'results'#39' files to grid...'
-    Left = 983
-    Top = 548
+    Left = 759
+    Top = 420
   end
   object Timer1: TTimer
     Enabled = False
@@ -10834,6 +10834,9 @@ object Main: TMain
                 ImageName = 'file_report'
               end
               item
+                Caption = '-'
+              end
+              item
                 Action = actBuildTDTables
                 Caption = '&Re-Build TimeDrops Tables ... '
                 ImageIndex = 3
@@ -10935,6 +10938,8 @@ object Main: TMain
       Enabled = False
       ImageIndex = 1
       ImageName = 'file_saveAlt'
+      OnExecute = actnSaveSessionExecute
+      OnUpdate = actnSaveSessionUpdate
     end
     object actnLoadSession: TAction
       Category = 'File'
@@ -10942,6 +10947,8 @@ object Main: TMain
       Enabled = False
       ImageIndex = 0
       ImageName = 'file_open'
+      OnExecute = actnLoadSessionExecute
+      OnUpdate = actnLoadSessionUpdate
     end
     object actnAbout: TAction
       Category = 'Help'
@@ -11011,6 +11018,8 @@ object Main: TMain
       Enabled = False
       ImageIndex = 3
       ImageName = 'Settings'
+      OnExecute = actBuildTDTablesExecute
+      OnUpdate = actBuildTDTablesUpdate
     end
     object actTDTableViewer: TAction
       Category = 'Tools'
@@ -11035,5 +11044,43 @@ object Main: TMain
       OnExecute = actnRestartDirectoryWatcherExecute
       OnUpdate = actnRestartDirectoryWatcherUpdate
     end
+  end
+  object FileSaveDlg: TFileSaveDialog
+    DefaultExtension = '.zip'
+    FavoriteLinks = <>
+    FileNameLabel = 'SCM_TimeDrops_'
+    FileTypes = <
+      item
+        DisplayName = 'SCM_TimeDrops (*.zip)'
+        FileMask = '*.zip'
+      end
+      item
+        DisplayName = 'Any File (*.*)'
+        FileMask = '*.*'
+      end>
+    OkButtonLabel = 'Save'
+    Options = []
+    Title = 'Save the SwimClubMeet TimeDrops session...'
+    Left = 756
+    Top = 288
+  end
+  object FileOpenDlg: TFileOpenDialog
+    DefaultExtension = '.zip'
+    FavoriteLinks = <>
+    FileNameLabel = 'SCM_TimeDrops_'
+    FileTypes = <
+      item
+        DisplayName = 'SCM_TimeDrops (*.zip)'
+        FileMask = '*.zip'
+      end
+      item
+        DisplayName = 'Any file (*.*)'
+        FileMask = '*.*'
+      end>
+    OkButtonLabel = 'Open'
+    Options = [fdoFileMustExist]
+    Title = 'Open the SwimClubMeet TimeDrops session...'
+    Left = 756
+    Top = 352
   end
 end

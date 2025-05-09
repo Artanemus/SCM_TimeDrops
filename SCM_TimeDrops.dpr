@@ -33,7 +33,8 @@ uses
   dmIMG in 'dmIMG.pas' {IMG: TDataModule},
   dmSCM in 'dmSCM.pas' {SCM: TDataModule},
   dmTDS in 'dmTDS.pas' {TDS: TDataModule},
-  dlgScanOptions in 'dlgScanOptions.pas' {ScanOptions};
+  dlgScanOptions in 'dlgScanOptions.pas' {ScanOptions},
+  rptReportsSCM in 'rptReportsSCM.pas' {ReportsSCM: TDataModule};
 
 {$R *.res}
 

@@ -103,6 +103,10 @@ type
     sbtnDirWatcher: TSpeedButton;
     actnClearAndScan: TAction;
     lblSwimClubName: TLabel;
+    FileSaveDlg: TFileSaveDialog;
+    FileOpenDlg: TFileOpenDialog;
+    procedure actBuildTDTablesExecute(Sender: TObject);
+    procedure actBuildTDTablesUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);
     procedure actnClearAndScanUpdate(Sender: TObject);
     procedure actnExportMeetProgramExecute(Sender: TObject);
@@ -112,6 +116,8 @@ type
     procedure actnPushResultsExecute(Sender: TObject);
     procedure actnConnectToSCMExecute(Sender: TObject);
     procedure actnConnectToSCMUpdate(Sender: TObject);
+    procedure actnLoadSessionExecute(Sender: TObject);
+    procedure actnLoadSessionUpdate(Sender: TObject);
     procedure actnPostExecute(Sender: TObject);
     procedure actnPostUpdate(Sender: TObject);
     procedure actnPreferencesExecute(Sender: TObject);
@@ -145,6 +151,8 @@ type
     procedure FormShow(Sender: TObject);
     procedure actnRestartDirectoryWatcherExecute(Sender: TObject);
     procedure actnRestartDirectoryWatcherUpdate(Sender: TObject);
+    procedure actnSaveSessionExecute(Sender: TObject);
+    procedure actnSaveSessionUpdate(Sender: TObject);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
         string);
     procedure Timer1Timer(Sender: TObject);
@@ -208,6 +216,26 @@ const
 
   CAPTION_RECONSTRUCT = '%s files ...';
 
+
+procedure TMain.actBuildTDTablesExecute(Sender: TObject);
+begin
+  // Allow only in debug
+{$IFDEF DEBUG}
+  TDS.BuildAppData;
+{$ENDIF};
+end;
+
+procedure TMain.actBuildTDTablesUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
+end;
 
 procedure TMain.actnClearAndScanExecute(Sender: TObject);
 begin
@@ -379,6 +407,44 @@ begin
     if (TAction(Sender).Enabled = true) then
       TAction(Sender).Enabled := false;
     end;
+end;
+
+procedure TMain.actnLoadSessionExecute(Sender: TObject);
+begin
+  // open file explorer
+  // Assign default folder - else use components persistent data.
+  if Assigned(Settings) then
+  begin
+    if DirectoryExists(Settings.AppDataFolder) then
+        FileOpenDlg.DefaultFolder := Settings.AppDataFolder;
+  end;
+  //  FileOpenDlg.FileName := '';  // ignore last selection.
+  // open TFileSaveDlg to select folder to save too.
+  if FileOpenDlg.Execute then
+  begin
+    // Assert file extension?...
+    try
+      tdsGrid.BeginUpdate;
+      TDS.ReadFromBinary(FileOpenDlg.FileName);
+    finally
+
+      tdsGrid.EndUpdate;
+    end;
+  end;
+end;
+
+procedure TMain.actnLoadSessionUpdate(Sender: TObject);
+begin
+  if (Assigned(TDS)) and (TDS.DataIsActive = true) then
+  begin
+    if (TAction(Sender).Enabled = false) then
+      TAction(Sender).Enabled := true;
+  end
+  else
+  begin
+    if TAction(Sender).Enabled = true then
+      TAction(Sender).Enabled := false;
+  end;
 end;
 
 procedure TMain.actnPostExecute(Sender: TObject);
@@ -619,6 +685,39 @@ begin
     actnRestartDirectoryWatcher.ImageName := 'VisibilityOn'
   else
     actnRestartDirectoryWatcher.ImageName := 'VisibilityOff'
+end;
+
+procedure TMain.actnSaveSessionExecute(Sender: TObject);
+begin
+  // Assign default folder - else leave as null string.
+  if Assigned(Settings) then
+  begin
+    if DirectoryExists(Settings.AppDataFolder) then
+        FileSaveDlg.DefaultFolder := Settings.AppDataFolder;
+  end;
+  // Build a suitable filename.
+  FileSaveDlg.FileName := 'SCM_TimeDrops_' +
+    IntToStr(TDS.tblmSession.FieldByName('SessionID').AsInteger);
+  // open TFileSaveDlg to select folder to save too.
+  if FileSaveDlg.Execute then
+  begin
+    // Assert file extension?...
+    TDS.WriteToBinary(FileSaveDlg.FileName);
+  end;
+end;
+
+procedure TMain.actnSaveSessionUpdate(Sender: TObject);
+begin
+  if (Assigned(TDS)) and (TDS.DataIsActive = true) then
+  begin
+    if (TAction(Sender).Enabled = false) then
+      TAction(Sender).Enabled := true;
+  end
+  else
+  begin
+    if TAction(Sender).Enabled = true then
+      TAction(Sender).Enabled := false;
+  end;
 end;
 
 procedure TMain.actnSelectSwimClubExecute(Sender: TObject);

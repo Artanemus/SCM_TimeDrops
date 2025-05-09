@@ -11,7 +11,8 @@ uses
   System.ImageList, Vcl.ImgList, Vcl.VirtualImageList, Vcl.BaseImageCollection,
   Vcl.ImageCollection, SCMDefines, Windows, Winapi.Messages, vcl.Forms,
   FireDAC.Phys.SQLiteVDataSet, Datasnap.DBClient, FireDAC.Stan.StorageXML,
-  FireDAC.Stan.StorageBin, FireDAC.Stan.Storage, Datasnap.Provider, uWatchTime;
+  FireDAC.Stan.StorageBin, FireDAC.Stan.Storage, Datasnap.Provider, uWatchTime,
+  AbZipper, AbBase, AbBrowse, AbZBrows, AbZipKit, system.zip;
 
 
 type
@@ -85,7 +86,7 @@ type
     procedure POST_Lane(ALaneNum: Integer);
 
     // Read/Write Application Data State to file
-    procedure ReadFromBinary(AFilePath:string);
+    procedure ReadFromBinary(AFileName: string);
 
     // SET dtActiveRT : artAutomatic, artManual, artUser, artSplit, artNone
     procedure SetActiveRT(ADataSet: TDataSet; aActiveRT: scmActiveRT);
@@ -96,7 +97,7 @@ type
     function ValidateWatchTime(ADataSet: TDataSet; TimeKeeperIndx: integer; art:
         scmActiveRT): boolean;
     // Read/Write Application Data State to file
-    procedure WriteToBinary(AFilePath:string);
+    procedure WriteToBinary(AFileName: string);
 
 //    property ActiveSessionID: integer read GetSCMActiveSessionID;   //---
     property Connection: TFDConnection read FConnection write FConnection; //---
@@ -157,14 +158,14 @@ end;
 
 procedure TTDS.BuildAppData;
 var
-fn: TFileName;
+  fn: TFileName;
 
-function GetDocumentDir_TPath: string;
-begin
-  Result := TPath.GetDocumentsPath;
-  // TPath functions usually don't include the trailing delimiter,
-  Result := IncludeTrailingPathDelimiter(Result);
-end;
+  function GetDocumentDir_TPath: string;
+  begin
+    Result := TPath.GetDocumentsPath;
+    // TPath functions usually don't include the trailing delimiter,
+    Result := IncludeTrailingPathDelimiter(Result);
+  end;
 
 begin
   fDataIsActive := false;
@@ -494,6 +495,8 @@ begin
 end;
 
 procedure TTDS.DisableTDMasterDetail();
+var
+fld: TField;
 begin
   // ASSERT Master - Detail
   tblmSession.IndexFieldNames := 'SessionID';
@@ -520,13 +523,13 @@ begin
   called for the master dataset or when scrolling is disabled by
   MasterLink.DisableScroll.
   }
-  tblmEvent.ApplyMaster;
+//  tblmEvent.ApplyMaster;
   tblmEvent.First;
-  tblmHeat.ApplyMaster;
+//  tblmHeat.ApplyMaster;
   tblmHeat.First;
-  tblmLane.ApplyMaster;
+//  tblmLane.ApplyMaster;
   tblmLane.First;
-  tblmNoodle.ApplyMaster;
+//  tblmNoodle.ApplyMaster;
   tblmNoodle.First;
 
   fMasterDetailActive := false;
@@ -879,13 +882,14 @@ begin
   SCM.qryINDV.EnableControls;
 end;
 
-procedure TTDS.ReadFromBinary(AFilePath:string);
+(*
+procedure TTDS.ReadFromBinary(AFileName:string);
 var
 s: string;
 begin
-  if Length(AFilePath) > 0 then
+  if Length(AFileName) > 0 then
     // Assert that the end delimiter is attached
-    s := IncludeTrailingPathDelimiter(AFilePath)
+    s := IncludeTrailingPathDelimiter(AFileName)
   else
     s := ''; // or handle this case if the path is mandatory
   tblmSession.LoadFromFile(s + 'DTMaster.fsBinary');
@@ -893,6 +897,81 @@ begin
   tblmHeat.LoadFromFile(s + 'DTHeat.fsBinary');
   tblmLane.LoadFromFile(s + 'DTLane.fsBinary');
   tblmNoodle.LoadFromFile(s + 'DTNoodle.fsBinary');
+end;
+*)
+
+procedure TTDS.ReadFromBinary(AFileName: string);
+var
+  myZip: TZipFile;
+  crcStream: TStream;
+  memStream: TMemoryStream;
+  zipHeader: TZipHeader;
+  fileIndex: Integer;
+  procedure StreamFromZip(AFileIndex: integer; AMemTable: TFDMemTable);
+  begin
+    if AFileIndex < 0 then Exit; // invalid index.
+    crcStream := nil;
+    memStream := TMemoryStream.Create;
+    try
+      // Read the file into a CRC Stream
+      myZip.Read(AFileIndex, crcStream, zipHeader, True);
+      if not Assigned(crcStream) then
+        raise Exception.Create('Failed to read file from zip archive.');
+      try
+        memStream.LoadFromStream(crcStream);
+      except
+        on E: Exception do
+          raise Exception.Create('Error loading data into TMemoryStream: ' + E.Message);
+      end;
+      // Reset the stream position
+      memStream.Position := 0;
+      // Load the data into the TFDMemTable
+      try
+        AMemTable.LoadFromStream(memStream, sfBinary);
+        ActivateDataTDS;
+      except
+        // ExceptionMessage="TCRCStream.Seek not implemented"
+        on E: Exception do
+          raise Exception.Create('Error loading data into TFDMemTable: ' + E.Message);
+      end;
+    finally
+      if Assigned(crcStream) then
+        crcStream.Free; // Free only if it was successfully created
+      memStream.Free;
+    end;
+  end;
+
+begin
+  if not FileExists(AFileName) then exit;
+  if (not Assigned(TDS)) or (TDS.fDataIsActive = false) then exit;
+  DisableAllTDControls;
+  DisableTDMasterDetail;
+  myZip := TZipFile.Create;  // Create the zip file object
+  try
+    // Open the zip file for reading
+    myZip.Open(AFileName, zmRead);
+    // Load DTSession.fsBinary into tblmEvent
+    fileIndex := myZip.IndexOf('TDSession.fsBinary');
+    StreamFromZip(fileIndex, tblmSession);
+    // Load DTEvent.fsBinary into tblmEvent
+    fileIndex := myZip.IndexOf('TDEvent.fsBinary');
+    StreamFromZip(fileIndex, tblmEvent);
+    // Load DTHeat.fsBinary into tblmHeat
+    fileIndex := myZip.IndexOf('TDHeat.fsBinary');
+    StreamFromZip(fileIndex, tblmHeat);
+    // Load DTLane.fsBinary into tblmLane
+    fileIndex := myZip.IndexOf('TDLane.fsBinary');
+    StreamFromZip(fileIndex, tblmLane);
+    // Load DTNoodle.fsBinary into tblmNoodle
+    fileIndex := myZip.IndexOf('TDNoodle.fsBinary');
+    StreamFromZip(fileIndex, tblmNoodle);
+  finally
+    // Close and free the zip file
+    myZip.Close;
+    myZip.Free;
+    EnableAllTDControls;
+    EnableTDMasterDetail;
+  end;
 end;
 
 procedure TTDS.SetActiveRT(ADataSet: TDataSet; aActiveRT: scmActiveRT);
@@ -1183,20 +1262,64 @@ begin
   result := true;
 end;
 
-procedure TTDS.WriteToBinary(AFilePath:string);
+(*
+procedure TTDS.WriteToBinary(AFileName:string);
 var
 s: string;
 begin
-  if Length(AFilePath) > 0 then
+  if Length(AFileName) > 0 then
     // Assert that the end delimiter is attached
-    s := IncludeTrailingPathDelimiter(AFilePath)
+    s := IncludeTrailingPathDelimiter(AFileName)
   else
     s := ''; // or handle this case if the path is mandatory
+
   tblmSession.SaveToFile(s + 'DTMaster.fsBinary', sfXML);
   tblmEvent.SaveToFile(s + 'DTEvent.fsBinary', sfXML);
   tblmHeat.SaveToFile(s + 'DTHeat.fsBinary', sfXML);
   tblmLane.SaveToFile(s + 'DTLane.fsBinary', sfXML);
   tblmNoodle.SaveToFile(s + 'DTNoodle.fsBinary', sfXML);
+end;
+*)
+
+procedure TTDS.WriteToBinary(AFileName: string);
+var
+  myZip: TZipFile;
+  memStream: TMemoryStream;
+
+  procedure StreamToZip(AFileName: string; AMemTable: TFDMemTable);
+  begin
+    memStream := TMemoryStream.Create;
+    try
+      if not AMemTable.Active then AMemTable.Open;
+      AMemTable.SaveToStream(memStream, sfBinary);
+      memStream.Position := 0;
+      myZip.Add(memStream, AFileName);
+    finally
+      memStream.Free;
+    end;
+  end;
+
+begin
+  // Create the zip file
+  myZip := TZipFile.Create;
+  try
+    // Open the zip file for writing
+    myZip.Open(AFileName, zmWrite);
+    DisableAllTDControls;
+    DisableTDMasterDetail;
+    // Save TFDMemTables to stream and add it to the zip
+    StreamToZip('TDSession.fsBinary',tblmSession);
+    StreamToZip('TDEvent.fsBinary',tblmEvent);
+    StreamToZip('TDHeat.fsBinary',tblmHeat);
+    StreamToZip('TDLane.fsBinary',tblmLane);
+    StreamToZip('TDNoodle.fsBinary',tblmNoodle);
+  finally
+    // Close and free the zip file
+    EnableTDMasterDetail;
+    EnableAllTDControls;
+    myZip.Close;
+    myZip.Free;
+  end;
 end;
 
 

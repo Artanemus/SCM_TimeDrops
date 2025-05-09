@@ -332,7 +332,9 @@ begin
     While preparing the FireDAC's connection manager, the application
     was unable to find %APPDATA%\Artanemus\SCM\FDConnectionDefs.ini.
     A connection can't be made with the SwimClubMeet database.
-    (NOTE: The application's folder contains a backup of this file.)
+    ...
+    (NOTE: The application's folder contains a vanilla version of this file
+    and can be used to assist in reconstruction of the missing file.)
     ''';
     raise Exception.Create(msg);
   end;
