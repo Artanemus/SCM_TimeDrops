@@ -87,8 +87,8 @@ type
     actnAbout: TAction;
     actnSyncTD: TAction;
     actnPost: TAction;
-    actnReportSCMSession: TAction;
-    actnReportSCMEvent: TAction;
+    actnRptSCMEventBasic: TAction;
+    actnRptSCMEventDetailed: TAction;
     actnReportTD: TAction;
     actnSyncSCM: TAction;
     lblKeyBoardInfo: TLabel;
@@ -151,6 +151,8 @@ type
     procedure FormShow(Sender: TObject);
     procedure actnRestartDirectoryWatcherExecute(Sender: TObject);
     procedure actnRestartDirectoryWatcherUpdate(Sender: TObject);
+    procedure actnRptSCMEventBasicExecute(Sender: TObject);
+    procedure actnRptSCMEventBasicUpdate(Sender: TObject);
     procedure actnSaveSessionExecute(Sender: TObject);
     procedure actnSaveSessionUpdate(Sender: TObject);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
@@ -210,7 +212,7 @@ implementation
 uses System.UITypes, System.DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
   tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin,
-  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgScanOptions;
+  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgScanOptions, rptReportsSCM;
 
 const
 
@@ -357,15 +359,17 @@ var
   fn: TFileName;
   dlg: TMeetProgramPick;
   AModalResult: TModalResult;
+  msg: string;
 begin
 
   if (SCM.qrySession.IsEmpty) or (SCM.qryEvent.IsEmpty)
     or (SCM.qryHeat.IsEmpty) then
   begin
-    MessageDlg('Missing elements in the SwimClubMeet Session.'
-    +#13+#10+
-    'Check that the session contains events with heats, else a ''Meet Program'' can''t be built). ',
-    mtInformation, [mbOK], 0);
+    msg := '''
+    Missing elements in the SwimClubMeet Session.
+    Check that the session contains events with heats, else a ''Meet Program'' can''t be built).
+    ''';
+    MessageDlg(msg, mtInformation, [mbOK], 0);
     exit;
   end;
 
@@ -393,6 +397,7 @@ begin
       PChar('Export Meet Program'), MB_ICONINFORMATION or MB_OK);
   end;
   dlg.Free;
+
 end;
 
 procedure TMain.actnExportMeetProgramUpdate(Sender: TObject);
@@ -407,6 +412,7 @@ begin
     if (TAction(Sender).Enabled = true) then
       TAction(Sender).Enabled := false;
     end;
+
 end;
 
 procedure TMain.actnLoadSessionExecute(Sender: TObject);
@@ -431,6 +437,7 @@ begin
       tdsGrid.EndUpdate;
     end;
   end;
+
 end;
 
 procedure TMain.actnLoadSessionUpdate(Sender: TObject);
@@ -445,6 +452,7 @@ begin
     if TAction(Sender).Enabled = true then
       TAction(Sender).Enabled := false;
   end;
+
 end;
 
 procedure TMain.actnPostExecute(Sender: TObject);
@@ -520,6 +528,7 @@ begin
     StatBar.SimpleText := 'The POST was aborted.';
     Timer1.Enabled := true;
   end;
+
 end;
 
 
@@ -533,6 +542,7 @@ begin
   end
   else
       TAction(Sender).Enabled := false;
+
 end;
 
 procedure TMain.actnPreferencesExecute(Sender: TObject);
@@ -557,6 +567,7 @@ begin
     end;
   dlg.Free;
   UpdateCaption;
+
 end;
 
 procedure TMain.actnPushResultsExecute(Sender: TObject);
@@ -575,9 +586,6 @@ begin
 
   if IsPositiveResult(mr) then
   begin
-    // Shut down file system watcher...
-//    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
-
     if TDPushResultFile.Execute() then
     begin
       tdsGrid.BeginUpdate;
@@ -600,9 +608,6 @@ begin
       end;
     end;
   end;
-
-//  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
-
 end;
 
 procedure TMain.actnPushResultsUpdate(Sender: TObject);
@@ -615,6 +620,7 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
+
 end;
 
 procedure TMain.actnReConstructTDResultFilesExecute(Sender: TObject);
@@ -642,6 +648,7 @@ begin
       PChar('Re-Construct & Export TD Results'), MB_ICONINFORMATION or MB_OK);
   end;
   dlg.Free;
+
 end;
 
 procedure TMain.actnReConstructTDResultFilesUpdate(Sender: TObject);
@@ -662,6 +669,7 @@ begin
   end
   else
       TAction(Sender).Enabled := false;
+
 end;
 
 procedure TMain.actnRefreshExecute(Sender: TObject);
@@ -671,12 +679,14 @@ begin
   SCMGrid.EndUpdate;
   StatBar.SimpleText := 'Refresh done.'; // not painting text?
   Timer1.Enabled := true;
+
 end;
 
 procedure TMain.actnRestartDirectoryWatcherExecute(Sender: TObject);
 begin
   DirectoryWatcher.StopWatcher(fDirectoryWatcher);
   DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
+
 end;
 
 procedure TMain.actnRestartDirectoryWatcherUpdate(Sender: TObject);
@@ -684,7 +694,36 @@ begin
   if Assigned(fDirectoryWatcher) then
     actnRestartDirectoryWatcher.ImageName := 'VisibilityOn'
   else
-    actnRestartDirectoryWatcher.ImageName := 'VisibilityOff'
+    actnRestartDirectoryWatcher.ImageName := 'VisibilityOff';
+
+end;
+
+procedure TMain.actnRptSCMEventBasicExecute(Sender: TObject);
+var
+rpt: TReportsSCM;
+begin
+  try
+    rpt := TReportsSCM.Create(Self);
+  except
+    on E: Exception do
+    exit;
+  end;
+  rpt.RptExecute;
+  FreeAndNil(rpt);
+end;
+
+procedure TMain.actnRptSCMEventBasicUpdate(Sender: TObject);
+begin
+  if (Assigned(SCM)) and (SCM.DataIsActive = true) then
+  begin
+    if (TAction(Sender).Enabled = false) then
+      TAction(Sender).Enabled := true;
+  end
+  else
+  begin
+    if TAction(Sender).Enabled = true then
+      TAction(Sender).Enabled := false;
+  end;
 end;
 
 procedure TMain.actnSaveSessionExecute(Sender: TObject);

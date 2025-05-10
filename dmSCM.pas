@@ -67,6 +67,7 @@ type
     qryTEAMEntrant: TFDQuery;
     scmFDManager: TFDManager;
     TestFDConnection: TFDConnection;
+    dsDistance: TDataSource;
     procedure DataModuleCreate(Sender: TObject);
     procedure DataModuleDestroy(Sender: TObject);
     procedure qryHeatAfterScroll(DataSet: TDataSet);

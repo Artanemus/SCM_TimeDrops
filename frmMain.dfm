@@ -10800,14 +10800,14 @@ object Main: TMain
           item
             Items = <
               item
-                Action = actnReportSCMSession
-                Caption = '&SwimClubMeet Session Report...'
+                Action = actnRptSCMEventBasic
+                Caption = '&SwimClubMeet Event Report ...'
                 ImageIndex = 12
                 ImageName = 'file_report'
               end
               item
-                Action = actnReportSCMEvent
-                Caption = 'S&wimClubMeet Event Report...'
+                Action = actnRptSCMEventDetailed
+                Caption = 'S&wimClubMeet Event Report (Detailed) ...'
                 ImageIndex = 12
                 ImageName = 'file_report'
               end
@@ -10980,15 +10980,17 @@ object Main: TMain
       OnExecute = actnPostExecute
       OnUpdate = actnPostUpdate
     end
-    object actnReportSCMSession: TAction
+    object actnRptSCMEventBasic: TAction
       Category = 'Reports'
-      Caption = 'SwimClubMeet Session Report...'
+      Caption = 'SwimClubMeet Event Report ...'
       ImageIndex = 12
       ImageName = 'file_report'
+      OnExecute = actnRptSCMEventBasicExecute
+      OnUpdate = actnRptSCMEventBasicUpdate
     end
-    object actnReportSCMEvent: TAction
+    object actnRptSCMEventDetailed: TAction
       Category = 'Reports'
-      Caption = 'SwimClubMeet Event Report...'
+      Caption = 'SwimClubMeet Event Report (Detailed) ...'
       ImageIndex = 12
       ImageName = 'file_report'
     end

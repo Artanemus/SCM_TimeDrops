@@ -72,7 +72,7 @@
         <UWP_DelphiLogo150>$(BDS)\bin\Artwork\Windows\UWP\delphi_UwpDefault_150.png</UWP_DelphiLogo150>
         <SanitizedProjectName>SCM_TimeDrops</SanitizedProjectName>
         <Custom_Styles>&quot;Windows10 SlateGray|VCLSTYLE|$(BDSCOMMONDIR)\Styles\Windows10SlateGray.vsf&quot;</Custom_Styles>
-        <DCC_UnitSearchPath>C:\Users\Ben\Documents\GitHub\VCL_TMS;C:\Users\Ben\Documents\GitHub\SVGIconImageList\Lib\D12\Win32\Release;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
+        <DCC_UnitSearchPath>C:\Users\Ben\Documents\GitHub\VCL_TMS;C:\Users\Ben\Documents\GitHub\SVGIconImageList\Lib\D12\Win32\Release;$(FastReports)\Source;$(FastReports)\FastScript;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
         <VerInfo_Locale>3081</VerInfo_Locale>
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
     </PropertyGroup>

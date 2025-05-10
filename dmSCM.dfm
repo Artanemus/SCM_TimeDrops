@@ -275,10 +275,12 @@ object SCM: TSCM
       end>
   end
   object qryDistance: TFDQuery
+    Active = True
     IndexFieldNames = 'DistanceID'
     MasterSource = dsEvent
     MasterFields = 'DistanceID'
     DetailFields = 'DistanceID'
+    Connection = TestFDConnection
     UpdateOptions.AssignedValues = [uvEDelete, uvEInsert, uvEUpdate]
     UpdateOptions.EnableDelete = False
     UpdateOptions.EnableInsert = False
@@ -498,5 +500,10 @@ object SCM: TSCM
     LoginPrompt = False
     Left = 120
     Top = 112
+  end
+  object dsDistance: TDataSource
+    DataSet = qryDistance
+    Left = 416
+    Top = 400
   end
 end
