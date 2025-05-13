@@ -495,8 +495,6 @@ begin
 end;
 
 procedure TTDS.DisableTDMasterDetail();
-var
-fld: TField;
 begin
   // ASSERT Master - Detail
   tblmSession.IndexFieldNames := 'SessionID';
@@ -1149,7 +1147,10 @@ end;
 procedure TTDS.tblmHeatAfterScroll(DataSet: TDataSet);
 begin
   if (msgHandle <> 0) then
+  begin
     PostMessage(msgHandle, SCM_UPDATEUI_TDS, 0,0);
+    PostMessage(msgHandle, SCM_UPDATE_NOODLES, 0,0);
+  end;
 end;
 
 function TTDS.ToggleActiveRT(ADataSet: TDataSet; Direction: Integer = 0):

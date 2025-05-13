@@ -544,7 +544,10 @@ end;
 procedure TSCM.qryHeatAfterScroll(DataSet: TDataSet);
 begin
   if (msgHandle <> 0) then
+  begin
     PostMessage(msgHandle, SCM_UPDATEUI_SCM, 0,0);
+    PostMessage(msgHandle, SCM_UPDATE_NOODLES, 0,0);
+  end;
 end;
 
 procedure TSCM.ReadConnectionDef(const ConnectionName, ParamName: string;

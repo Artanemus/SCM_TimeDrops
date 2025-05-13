@@ -29,113 +29,120 @@ uses
   Vcl.ExtDlgs, FireDAC.Stan.Param, Vcl.ComCtrls, Vcl.DBCtrls, tdReConstruct,
   Vcl.PlatformVclStylesActnCtrls, Vcl.WinXPanels, Vcl.WinXCtrls,
   System.Types, System.IOUtils, System.Math, DirectoryWatcher,
-  tdReConstructDlg, dmIMG;
+  tdReConstructDlg, dmIMG, uNoodleLink, System.Generics.Collections;
 
+type
+  // State for dragging operations
+  TNoodleDragState = (ndsIdle, ndsDraggingNew, ndsDraggingExistingHandle);
 
 type
   TMain = class(TForm)
+    actBuildTDTables: TAction;
+    actnAbout: TAction;
+    actnClearAndScan: TAction;
+    actnClearGrid: TAction;
+    actnConnectToSCM: TAction;
+    actnExportMeetProgram: TAction;
+    actnLoadSession: TAction;
+    actnManager: TActionManager;
     actnMenuBar: TActionMainMenuBar;
-    tdsGrid: TDBAdvGrid;
+    actnPost: TAction;
+    actnPreferences: TAction;
+    actnPushResults: TAction;
+    actnReConstructTDResultFiles: TAction;
+    actnRefresh: TAction;
+    actnReportTD: TAction;
+    actnRestartDirectoryWatcher: TAction;
+    actnRptSCMEventBasic: TAction;
+    actnRptSCMEventDetailed: TAction;
+    actnSaveSession: TAction;
+    actnScanMeetsFolder: TAction;
+    actnSCMSession: TAction;
+    actnSelectSwimClub: TAction;
+    actnSyncSCM: TAction;
+    actnSyncTD: TAction;
+    actTDTableViewer: TAction;
+    act_FireDACExplorer: TAction;
     btnNextDTFile: TButton;
     btnNextEvent: TButton;
+    btnPickDTTreeView: TButton;
+    btnPickSCMTreeView: TButton;
     btnPrevDTFile: TButton;
     btnPrevEvent: TButton;
-    FileSaveDlgMeetProgram: TFileSaveDialog;
+    dbtxtDTFileName: TDBText;
+    FileOpenDlg: TFileOpenDialog;
+    FileSaveDlg: TFileSaveDialog;
     lblEventDetails: TLabel;
+    lblEventDetailsTD: TLabel;
     lblHeatNum: TLabel;
+    lblKeyBoardInfo: TLabel;
     lblMeters: TLabel;
-    PickDTFolderDlg: TFileOpenDialog;
+    lblMetersRelay: TLabel;
+    lblSessionStart: TLabel;
+    lblSwimClubName: TLabel;
+    lbl_scmGridOverlay: TLabel;
+    lbl_tdsGridOverlay: TLabel;
+    PaintBoxNoodles: TPaintBox;
+    pBar: TProgressBar;
+    pnlSCM: TPanel;
+    pnlTDS: TPanel;
+    pnlTool1: TPanel;
+    pnlTool2: TPanel;
+    rpnlBody: TRelativePanel;
+    sbtnAutoPatch: TSpeedButton;
+    sbtnDirWatcher: TSpeedButton;
+    sbtnRefreshSCM: TSpeedButton;
     sbtnSyncDTtoSCM: TSpeedButton;
+    sbtnSyncSCMtoDT: TSpeedButton;
     scmGrid: TDBAdvGrid;
+    ShapeSpaceerSCM: TShape;
+    ShapeSpacer: TShape;
     spbtnPost: TSpeedButton;
+    stackpnlTool2: TStackPanel;
+    StatBar: TStatusBar;
+    TDPushResultFile: TFileOpenDialog;
+    tdsGrid: TDBAdvGrid;
+    Timer1: TTimer;
     vimgHeatNum: TVirtualImage;
     vimgHeatStatus: TVirtualImage;
     vimgRelayBug: TVirtualImage;
     vimgStrokeBug: TVirtualImage;
-    pBar: TProgressBar;
-    dbtxtDTFileName: TDBText;
-    pnlSCM: TPanel;
-    pnlTDS: TPanel;
-    rpnlBody: TRelativePanel;
-    pnlTool1: TPanel;
-    pnlTool2: TPanel;
-    stackpnlTool2: TStackPanel;
-    ShapeSpacer: TShape;
-    lblMetersRelay: TLabel;
-    lblSessionStart: TLabel;
-    btnPickSCMTreeView: TButton;
-    btnPickDTTreeView: TButton;
-    lblEventDetailsTD: TLabel;
-    TDPushResultFile: TFileOpenDialog;
-    sbtnAutoPatch: TSpeedButton;
-    sbtnSyncSCMtoDT: TSpeedButton;
-    sbtnRefreshSCM: TSpeedButton;
-    ShapeSpaceerSCM: TShape;
-    StatBar: TStatusBar;
-    Timer1: TTimer;
-    actnManager: TActionManager;
-    actnRefresh: TAction;
-    actnSelectSwimClub: TAction;
-    actnSCMSession: TAction;
-    actnExportMeetProgram: TAction;
-    actnReConstructTDResultFiles: TAction;
-    actnPreferences: TAction;
-    actnPushResults: TAction;
-    actnClearGrid: TAction;
-    actnSaveSession: TAction;
-    actnLoadSession: TAction;
-    actnAbout: TAction;
-    actnSyncTD: TAction;
-    actnPost: TAction;
-    actnRptSCMEventBasic: TAction;
-    actnRptSCMEventDetailed: TAction;
-    actnReportTD: TAction;
-    actnSyncSCM: TAction;
-    lblKeyBoardInfo: TLabel;
-    actnConnectToSCM: TAction;
-    lbl_scmGridOverlay: TLabel;
-    act_FireDACExplorer: TAction;
-    actBuildTDTables: TAction;
-    actTDTableViewer: TAction;
-    actnScanMeetsFolder: TAction;
-    lbl_tdsGridOverlay: TLabel;
-    actnRestartDirectoryWatcher: TAction;
-    sbtnDirWatcher: TSpeedButton;
-    actnClearAndScan: TAction;
-    lblSwimClubName: TLabel;
-    FileSaveDlg: TFileSaveDialog;
-    FileOpenDlg: TFileOpenDialog;
     procedure actBuildTDTablesExecute(Sender: TObject);
     procedure actBuildTDTablesUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);
     procedure actnClearAndScanUpdate(Sender: TObject);
-    procedure actnExportMeetProgramExecute(Sender: TObject);
-    procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearGridExecute(Sender: TObject);
     procedure actnClearGridUpdate(Sender: TObject);
-    procedure actnPushResultsExecute(Sender: TObject);
     procedure actnConnectToSCMExecute(Sender: TObject);
     procedure actnConnectToSCMUpdate(Sender: TObject);
+    procedure actnExportMeetProgramExecute(Sender: TObject);
+    procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnLoadSessionExecute(Sender: TObject);
     procedure actnLoadSessionUpdate(Sender: TObject);
     procedure actnPostExecute(Sender: TObject);
     procedure actnPostUpdate(Sender: TObject);
     procedure actnPreferencesExecute(Sender: TObject);
+    procedure actnPushResultsExecute(Sender: TObject);
+    procedure actnPushResultsUpdate(Sender: TObject);
     procedure actnReConstructTDResultFilesExecute(Sender: TObject);
     procedure actnReConstructTDResultFilesUpdate(Sender: TObject);
     procedure actnRefreshExecute(Sender: TObject);
-    procedure actnSCMSessionExecute(Sender: TObject);
-    procedure actnSCMSessionUpdate(Sender: TObject);
-    procedure actnPushResultsUpdate(Sender: TObject);
-    procedure actnSelectSwimClubExecute(Sender: TObject);
-    procedure actnSelectSwimClubUpdate(Sender: TObject);
-    procedure actnSetDTMeetsFolderExecute(Sender: TObject);
-    procedure actnSyncTDExecute(Sender: TObject);
-    procedure actnSyncSCMExecute(Sender: TObject);
-    procedure actnSyncSCMUpdate(Sender: TObject);
-    procedure actnSyncTDUpdate(Sender: TObject);
+    procedure actnRestartDirectoryWatcherExecute(Sender: TObject);
+    procedure actnRestartDirectoryWatcherUpdate(Sender: TObject);
+    procedure actnRptSCMEventBasicExecute(Sender: TObject);
+    procedure actnRptSCMEventBasicUpdate(Sender: TObject);
+    procedure actnSaveSessionExecute(Sender: TObject);
+    procedure actnSaveSessionUpdate(Sender: TObject);
     procedure actnScanMeetsFolderExecute(Sender: TObject);
     procedure actnScanMeetsFolderUpdate(Sender: TObject);
+    procedure actnSCMSessionExecute(Sender: TObject);
+    procedure actnSCMSessionUpdate(Sender: TObject);
+    procedure actnSelectSwimClubExecute(Sender: TObject);
+    procedure actnSelectSwimClubUpdate(Sender: TObject);
+    procedure actnSyncSCMExecute(Sender: TObject);
+    procedure actnSyncSCMUpdate(Sender: TObject);
+    procedure actnSyncTDExecute(Sender: TObject);
+    procedure actnSyncTDUpdate(Sender: TObject);
     procedure actTDTableViewerExecute(Sender: TObject);
     procedure act_FireDACExplorerExecute(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
@@ -144,63 +151,90 @@ type
     procedure btnPickSCMTreeViewClick(Sender: TObject);
     procedure btnPrevDTFileClick(Sender: TObject);
     procedure btnPrevEventClick(Sender: TObject);
-    procedure tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormHide(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure actnRestartDirectoryWatcherExecute(Sender: TObject);
-    procedure actnRestartDirectoryWatcherUpdate(Sender: TObject);
-    procedure actnRptSCMEventBasicExecute(Sender: TObject);
-    procedure actnRptSCMEventBasicUpdate(Sender: TObject);
-    procedure actnSaveSessionExecute(Sender: TObject);
-    procedure actnSaveSessionUpdate(Sender: TObject);
+    procedure PaintBoxNoodlesMouseDown(Sender: TObject; Button: TMouseButton;
+        Shift: TShiftState; X, Y: Integer);
+    procedure PaintBoxNoodlesMouseMove(Sender: TObject; Shift: TShiftState; X, Y:
+        Integer);
+    procedure PaintBoxNoodlesMouseUp(Sender: TObject; Button: TMouseButton; Shift:
+        TShiftState; X, Y: Integer);
+    procedure PaintBoxNoodlesPaint(Sender: TObject);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
         string);
+    procedure tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
     procedure Timer1Timer(Sender: TObject);
 
   private
+  var
+    fClearAndScan_Done: Boolean;
     { Private declarations }
-    FConnection: TFDConnection;
-    fDolphinMeetsFolder: string;
+    FDestDotColumn: Integer;
     fDirectoryWatcher: TDirectoryWatcher;
-    { User preference: Connect to the SCM DB Server on boot. Default: FALSE }
-    fDoLoginOnBoot: boolean;
     { User preference: On boot-up, populated the TDS data tables with any
       'results' that may reside in the 'meets' folder. }
     fDoClearAndScanOnBoot: boolean;
-    fClearAndScan_Done: Boolean;
-
-    procedure OnFileChanged(Sender: TObject; const FileName: string; Action: DWORD);
-
-    procedure LoadFromSettings; // JSON Program Settings
+    { User preference: Connect to the SCM DB Server on boot. Default: FALSE }
+    fDoLoginOnBoot: boolean;
+    FDragCurrentPoint: TPoint; // Current mouse position during drag (PaintBox coords)
+    FDraggingHandle: TLinkEndPointType; // Which handle of FDraggingLink is being dragged
+    FDraggingLink: TNoodleLink; // The existing link being dragged (if ndsDraggingExistingHandle)
+    FDragStartConnPoint: TNoodleConnectionPoint; // Info about the dot where drag started
+    FDragStartPoint: TPoint; // Point where drag started (PaintBox coords)
+    FDragState: TNoodleDragState;
+    FHandleColor: TColor;
+    FHandleRadius: Integer;
+    FHitTolerance: Integer; // Pixels tolerance for hitting lines/handles
+    FNoodles: TObjectList<TNoodleLink>;
+    FRopeColor: TColor;
+    FRopeThickness: Integer;
+    // Configuration
+    FSagFactor: Single;
+    FSelectedLink: TNoodleLink;
+    FSelectedRopeColor: TColor;
+    FSourceDotColumn: Integer;
+    procedure DeleteSelectedLink;
+    procedure DeselectAllLinks;
+    procedure DrawHandle(ACanvas: TCanvas; P: TPoint; AColor: TColor; ARadius: Integer);
+    // Helper methods
+    procedure DrawNoodle(ACanvas: TCanvas; P0, P1: TPoint; AColor: TColor; AThickness: Integer; ASelected: Boolean);
+    procedure DrawQuadraticBezier(ACanvas: TCanvas; P0, P1, P2: TPoint; NumSegments: Integer); // Adapted for TPoint
+    function FindConnectionPointAt(P: TPoint; out ConnPoint: TNoodleConnectionPoint): Boolean; // Find grid dot under point P
+    function FindLinkAt(P: TPoint; out HitLink: TNoodleLink; out HitHandle: TLinkEndPointType): Boolean; // Find link/handle under point P
     procedure LoadSettings; // JSON Program Settings
-    procedure SaveToSettings; // JSON Program Settings
+    procedure OnFileChanged(Sender: TObject; const FileName: string; Action: DWORD);
+    procedure SelectLink(ALink: TNoodleLink);
     procedure UpdateCaption();
     procedure UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
         scmActiveRT);
-
-  const
-    AcceptedTimeKeeperDeviation = 0.3;
-
+    procedure UpdatePaintBoxBounds; // Keep PaintBox over grids
   protected
-    procedure MSG_UpdateUISCM(var Msg: TMessage); message SCM_UPDATEUI_SCM;
-    procedure MSG_UpdateUITDS(var Msg: TMessage); message SCM_UPDATEUI_TDS;
-    procedure MSG_Connect(var Msg: TMessage); message SCM_CONNECT;
+    procedure MSG_ClearAndScan(var Msg: TMessage); message SCM_CLEARANDSCAN_TIMEDROPS;
     // perform either RESCAN or CLEARANDRESCAN based on Msg.wParam
     // 1 = RESCAN, 2 = CLEARANDRESCAN (destrucive).
     // make silent based on Msg.lParam
     // 0 = verbose, 1 = silent.
     procedure MSG_ClearGrid(var Msg: TMessage); message SCM_CLEAR_TIMEDROPS;
-    procedure MSG_ClearAndScan(var Msg: TMessage); message SCM_CLEARANDSCAN_TIMEDROPS;
-    procedure MSG_ScanMeets(var Msg: TMessage); message SCM_SCAN_TIMEDROPS;
+    procedure MSG_Connect(var Msg: TMessage); message SCM_CONNECT;
     procedure MSG_PushResults(var Msg: TMessage); message SCM_PUSH_TIMEDROPS;
+    procedure MSG_ScanMeets(var Msg: TMessage); message SCM_SCAN_TIMEDROPS;
+    procedure MSG_UpdateUISCM(var Msg: TMessage); message SCM_UPDATEUI_SCM;
+    procedure MSG_UpdateUITDS(var Msg: TMessage); message SCM_UPDATEUI_TDS;
+    procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
 
   public
     { Public declarations }
-    procedure Prepare(AConnection: TFDConnection);
-    property DolphinFolder: string read fDolphinMeetsFolder write fDolphinMeetsFolder;
+    property DestDotColumn: Integer read FDestDotColumn write FDestDotColumn default 0;
+    // *** Define your dot columns here (make consistent with NoodleLinkUnit) ***
+    property SourceDotColumn: Integer read FSourceDotColumn write FSourceDotColumn default 1;
   end;
+
+  const
+    AcceptedTimeKeeperDeviation = 0.3;
 
 var
   Main: TMain;
@@ -267,14 +301,8 @@ begin
     // Because this proc is destructive - confirmation is required.
     mr := MessageDlg('Do you want to EMPTY TimeDrop''s' + sLineBreak + 'data tables and CLEAR the grid? ',
       mtConfirmation, [mbYes, mbNo], 0, mbNo);
-
-  { IsPositiveResult returns true if AModalResult is mrYes, mrOk,
-    mrYesToAll or mrAll, false otherwise }
   if IsPositiveResult(mr) then
   begin
-    // Shut down file system watcher...
-//    StopWatcher(fDirectoryWatcher);
-
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
     begin
@@ -295,8 +323,6 @@ begin
       end;
     end;
   end;
-
-//  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
 end;
 
 procedure TMain.actnClearGridUpdate(Sender: TObject);
@@ -316,7 +342,6 @@ var
   aLoginDlg: TLogin;  // 24/04/2020 uses simple INI access
 begin
   fDoLoginOnBoot := false; // Do Once...
-
   // -----------------------------------------------------------
   // 02/05/2025 connect - %AppData%\Artanemus\SCM\FDConnectionDefs.ini
   // -----------------------------------------------------------
@@ -338,7 +363,6 @@ begin
   begin
     TAction(Sender).Caption := 'Connect to the SCM database...';
   end;
-
 //  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 ); // UPDATE UI
 end;
 
@@ -412,32 +436,26 @@ begin
     if (TAction(Sender).Enabled = true) then
       TAction(Sender).Enabled := false;
     end;
-
 end;
 
 procedure TMain.actnLoadSessionExecute(Sender: TObject);
 begin
-  // open file explorer
-  // Assign default folder - else use components persistent data.
+  // file explorer init
   if Assigned(Settings) then
   begin
     if DirectoryExists(Settings.AppDataFolder) then
         FileOpenDlg.DefaultFolder := Settings.AppDataFolder;
   end;
-  //  FileOpenDlg.FileName := '';  // ignore last selection.
-  // open TFileSaveDlg to select folder to save too.
+  // open - select folder to save too.
   if FileOpenDlg.Execute then
   begin
-    // Assert file extension?...
     try
       tdsGrid.BeginUpdate;
       TDS.ReadFromBinary(FileOpenDlg.FileName);
     finally
-
       tdsGrid.EndUpdate;
     end;
   end;
-
 end;
 
 procedure TMain.actnLoadSessionUpdate(Sender: TObject);
@@ -452,7 +470,6 @@ begin
     if TAction(Sender).Enabled = true then
       TAction(Sender).Enabled := false;
   end;
-
 end;
 
 procedure TMain.actnPostExecute(Sender: TObject);
@@ -468,7 +485,6 @@ begin
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
     exit;
   end;
-
   // Establish if SCM AND DT are syncronized.
   aTDSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
   aTDEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
@@ -489,7 +505,6 @@ begin
       exit;
     end;
   end;
-
   // dialogue to pick 'selected' or 'all'.
   dlg := TPostData.Create(Self);
   mr := dlg.ShowModal;
@@ -528,9 +543,7 @@ begin
     StatBar.SimpleText := 'The POST was aborted.';
     Timer1.Enabled := true;
   end;
-
 end;
-
 
 procedure TMain.actnPostUpdate(Sender: TObject);
 begin
@@ -561,8 +574,7 @@ begin
     TDS.tblmHeat.ApplyMaster;
     TDS.tblmLane.ApplyMaster;
     tdsGrid.EndUpdate;
-    // Update lblEventDetailsTD.
-    // paint cell icons into grid
+    // Update lblEventDetailsTD. Paint cell icons into grid.
     PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
     end;
   dlg.Free;
@@ -620,7 +632,6 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
-
 end;
 
 procedure TMain.actnReConstructTDResultFilesExecute(Sender: TObject);
@@ -648,7 +659,6 @@ begin
       PChar('Re-Construct & Export TD Results'), MB_ICONINFORMATION or MB_OK);
   end;
   dlg.Free;
-
 end;
 
 procedure TMain.actnReConstructTDResultFilesUpdate(Sender: TObject);
@@ -669,7 +679,6 @@ begin
   end
   else
       TAction(Sender).Enabled := false;
-
 end;
 
 procedure TMain.actnRefreshExecute(Sender: TObject);
@@ -679,14 +688,12 @@ begin
   SCMGrid.EndUpdate;
   StatBar.SimpleText := 'Refresh done.'; // not painting text?
   Timer1.Enabled := true;
-
 end;
 
 procedure TMain.actnRestartDirectoryWatcherExecute(Sender: TObject);
 begin
   DirectoryWatcher.StopWatcher(fDirectoryWatcher);
   DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
-
 end;
 
 procedure TMain.actnRestartDirectoryWatcherUpdate(Sender: TObject);
@@ -695,7 +702,6 @@ begin
     actnRestartDirectoryWatcher.ImageName := 'VisibilityOn'
   else
     actnRestartDirectoryWatcher.ImageName := 'VisibilityOff';
-
 end;
 
 procedure TMain.actnRptSCMEventBasicExecute(Sender: TObject);
@@ -759,32 +765,81 @@ begin
   end;
 end;
 
-procedure TMain.actnSelectSwimClubExecute(Sender: TObject);
-begin
-  (*
+procedure TMain.actnScanMeetsFolderExecute(Sender: TObject);
 var
-  dlg: TSwimClubPicker;
   mr: TModalResult;
+  LList: TStringDynArray;
+  dlg : TScanOptions;
+  I: integer;
+  LSearchOption: TSearchOption;
+  WildCardStr: String;
 begin
-    dlg := TSwimClubPicker.Create(Self);
-    dlg.rtnSwimClubID := 0;
-    // the picker will locate to the given session id.
-    if AppData.qrySwimClub.Active and not AppData.qrySwimClub.IsEmpty then
-    begin
-      dlg.rtnSwimClubID := AppData.qrySwimClub.FieldByName('SwimClubID').AsInteger;
-    end;
+  // Do not do recursive extract into subfolders
+  LSearchOption := TSearchOption.soTopDirectoryOnly;
+  WildCardStr := '';
 
+  if (not fClearAndScan_Done) or (fDoClearAndScanOnBoot) then
+  begin
+    mr := mrOK;
+    WildCardStr := 'Session*.JSON';
+  end
+  else
+  begin
+    dlg := TScanOptions.Create(Self);
     mr := dlg.ShowModal;
-    if IsPositiveResult(mr) and (dlg.rtnSwimClubID > 0) then
+    if dlg.rgrpScanOptions.ItemIndex = 0 then
+      WildCardStr := 'Session*.JSON'
+    else
+      WildCardStr := 'Session' + dlg.edtSessionID.Text + '*.JSON';
+    dlg.free;
+  end;
+
+  if IsPositiveResult(mr) then
+  begin
+    // Test DT directory exists...
+    if DirectoryExists(Settings.MeetsFolder) then
     begin
-      AppData.MSG_Handle := 0;
-      AppData.LocateSCMSwimClubID(dlg.rtnSwimClubID);
-      AppData.MSG_Handle := Self.Handle;
+      if DirHasResultFiles(Settings.MeetsFolder) then
+      begin
+        try
+          // For files use GetFiles method
+          LList := TDirectory.GetFiles(Settings.MeetsFolder, WildCardStr, LSearchOption);
+        except
+          // Catch the possible exceptions
+        end;
+
+        if Length(LList) > 0 then
+        begin
+          TDS.DisableAllTDControls;
+          tdsGrid.BeginUpdate;
+          try
+            // NOTE: ProcessFile.
+            for I := 0 to Length(LList) - 1 do
+            begin
+              ProcessFile(LList[i]);
+            end;
+          finally
+            TDS.EnableAllTDControls;
+            tdsGrid.EndUpdate;
+          end;
+        end;
+        fClearAndScan_Done :=  true;
+        PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0); // Update UI.
+      end;
     end;
-    dlg.Free;
-    UpdateCaption;
-    PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
-    *)
+  end;
+end;
+
+procedure TMain.actnScanMeetsFolderUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnSCMSessionExecute(Sender: TObject);
@@ -828,6 +883,34 @@ begin
   end;
 end;
 
+procedure TMain.actnSelectSwimClubExecute(Sender: TObject);
+begin
+  (*
+var
+  dlg: TSwimClubPicker;
+  mr: TModalResult;
+begin
+    dlg := TSwimClubPicker.Create(Self);
+    dlg.rtnSwimClubID := 0;
+    // the picker will locate to the given session id.
+    if AppData.qrySwimClub.Active and not AppData.qrySwimClub.IsEmpty then
+    begin
+      dlg.rtnSwimClubID := AppData.qrySwimClub.FieldByName('SwimClubID').AsInteger;
+    end;
+
+    mr := dlg.ShowModal;
+    if IsPositiveResult(mr) and (dlg.rtnSwimClubID > 0) then
+    begin
+      AppData.MSG_Handle := 0;
+      AppData.LocateSCMSwimClubID(dlg.rtnSwimClubID);
+      AppData.MSG_Handle := Self.Handle;
+    end;
+    dlg.Free;
+    UpdateCaption;
+    PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
+    *)
+end;
+
 procedure TMain.actnSelectSwimClubUpdate(Sender: TObject);
 begin
   if (Assigned(SCM)) and (SCM.DataIsActive = true) then
@@ -838,19 +921,6 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
-end;
-
-procedure TMain.actnSetDTMeetsFolderExecute(Sender: TObject);
-var
-  fn: TFileName;
-begin
-  if PickDTFolderDlg.Execute then
-    fn := PickDTFolderDlg.FileName
-  else
-    Exit; // User cancelled.
-  // Make the path persistent in JSON.
-  fDolphinMeetsFolder := fn;
-  // SavePreferencesToJSON.
 end;
 
 procedure TMain.actnSyncSCMExecute(Sender: TObject);
@@ -936,89 +1006,6 @@ procedure TMain.actnSyncTDUpdate(Sender: TObject);
 begin
   if (Assigned(SCM)) and (Assigned(TDS)) and (SCM.DataIsActive = true)
     and (TDS.DataIsActive = true)  then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-    if TAction(Sender).Enabled then
-      TAction(Sender).Enabled := false;
-end;
-
-procedure TMain.actnScanMeetsFolderExecute(Sender: TObject);
-var
-  mr: TModalResult;
-  LList: TStringDynArray;
-  dlg : TScanOptions;
-  I: integer;
-  LSearchOption: TSearchOption;
-  WildCardStr: String;
-begin
-  // Do not do recursive extract into subfolders
-  LSearchOption := TSearchOption.soTopDirectoryOnly;
-  WildCardStr := '';
-
-  if (not fClearAndScan_Done) or (fDoClearAndScanOnBoot) then
-  begin
-    mr := mrOK;
-    WildCardStr := 'Session*.JSON';
-  end
-  else
-  begin
-    dlg := TScanOptions.Create(Self);
-    mr := dlg.ShowModal;
-    if dlg.rgrpScanOptions.ItemIndex = 0 then
-      WildCardStr := 'Session*.JSON'
-    else
-      WildCardStr := 'Session' + dlg.edtSessionID.Text + '*.JSON';
-    dlg.free;
-  end;
-
-  if IsPositiveResult(mr) then
-  begin
-    // Shut down file system watcher...
-//    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
-
-    // Test DT directory exists...
-    if DirectoryExists(Settings.MeetsFolder) then
-    begin
-      if DirHasResultFiles(Settings.MeetsFolder) then
-      begin
-        try
-          // For files use GetFiles method
-          LList := TDirectory.GetFiles(Settings.MeetsFolder, WildCardStr, LSearchOption);
-        except
-          // Catch the possible exceptions
-        end;
-
-        if Length(LList) > 0 then
-        begin
-          TDS.DisableAllTDControls;
-          tdsGrid.BeginUpdate;
-          try
-            // NOTE: ProcessFile.
-            for I := 0 to Length(LList) - 1 do
-            begin
-              ProcessFile(LList[i]);
-            end;
-          finally
-            TDS.EnableAllTDControls;
-            tdsGrid.EndUpdate;
-          end;
-        end;
-        fClearAndScan_Done :=  true;
-        PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0); // Update UI.
-      end;
-    end;
-  end;
-
-//  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
-
-  end;
-
-procedure TMain.actnScanMeetsFolderUpdate(Sender: TObject);
-begin
-  if Assigned(TDS) and TDS.DataIsActive then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -1413,7 +1400,178 @@ begin
         SCM.dsHeat.DataSet.prior;
       end;
     end;
+    // A scroll event in qryHeat may occur and message is posted twice.
     PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+end;
+
+procedure TMain.DeleteSelectedLink;
+begin
+  if FSelectedLink <> nil then
+  begin
+    var LinkToDelete := FSelectedLink;
+    DeselectAllLinks; // Deselect first
+    FNoodles.Remove(LinkToDelete); // TObjectList will Free it
+    // Optional: Trigger OnLinkDeleted event
+    // if Assigned(FOnLinkDeleted) then FOnLinkDeleted(Self, LinkToDelete);
+    PaintBoxNoodles.Invalidate; // Redraw without the deleted link
+  end;
+end;
+
+procedure TMain.DeselectAllLinks;
+var
+  Link: TNoodleLink;
+begin
+  if FSelectedLink <> nil then
+  begin
+    FSelectedLink.IsSelected := False;
+    FSelectedLink := nil;
+  end;
+  // Also iterate just in case state is inconsistent
+  for Link in FNoodles do
+    Link.IsSelected := False;
+  FSelectedLink := nil; // Ensure this is cleared
+end;
+
+procedure TMain.DrawHandle(ACanvas: TCanvas; P: TPoint; AColor: TColor;
+  ARadius: Integer);
+begin
+  ACanvas.Brush.Color := AColor;
+  ACanvas.Brush.Style := bsSolid;
+  ACanvas.Pen.Color := clBlack; // Optional outline
+  ACanvas.Pen.Width := 1;
+  ACanvas.Ellipse(P.X - ARadius, P.Y - ARadius, P.X + ARadius + 1, P.Y + ARadius + 1);
+  ACanvas.Brush.Style := bsClear; // Reset brush
+end;
+
+procedure TMain.DrawNoodle(ACanvas: TCanvas; P0, P1: TPoint; AColor: TColor;
+  AThickness: Integer; ASelected: Boolean);
+var
+  P_Control: TPoint;
+  MidPointX, MidPointY, Distance, ActualSag: Double;
+begin
+  // Calculate control point for Bezier
+  MidPointX := (P0.X + P1.X) / 2;
+  MidPointY := (P0.Y + P1.Y) / 2;
+  Distance := System.Math.Hypot(P1.X - P0.X, P1.Y - P0.Y);
+
+  ActualSag := 0.0;
+  if Distance > 10 then ActualSag := Distance * FSagFactor;
+
+  P_Control.X := Round(MidPointX);
+  P_Control.Y := Round(MidPointY + ActualSag); // Simple vertical sag
+
+  // Setup pen
+  ACanvas.Pen.Color := AColor;
+  ACanvas.Pen.Width := AThickness;
+  ACanvas.Pen.Style := psSolid;
+
+  // Draw the Bezier curve
+  DrawQuadraticBezier(ACanvas, P0, P_Control, P1, 30); // 30 segments
+
+  // Draw handles if selected
+  if ASelected then
+  begin
+    DrawHandle(ACanvas, P0, FHandleColor, FHandleRadius);
+    DrawHandle(ACanvas, P1, FHandleColor, FHandleRadius);
+  end;
+end;
+
+procedure TMain.DrawQuadraticBezier(ACanvas: TCanvas; P0, P1, P2: TPoint;
+  NumSegments: Integer);
+var
+  i: Integer;
+  t: Single;
+  pt: TPoint;
+begin
+  if NumSegments < 1 then NumSegments := 1;
+  ACanvas.MoveTo(P0.X, P0.Y);
+
+  for i := 1 to NumSegments do
+  begin
+    t := i / NumSegments;
+    // Quadratic Bezier formula: B(t) = (1-t)^2 * P0 + 2*(1-t)*t * P1 + t^2 * P2
+    pt.X := Round(Power(1 - t, 2) * P0.X + 2 * (1 - t) * t * P1.X + Power(t, 2) * P2.X);
+    pt.Y := Round(Power(1 - t, 2) * P0.Y + 2 * (1 - t) * t * P1.Y + Power(t, 2) * P2.Y);
+    ACanvas.LineTo(pt.X, pt.Y);
+  end;
+end;
+
+function TMain.FindConnectionPointAt(P: TPoint;
+  out ConnPoint: TNoodleConnectionPoint): Boolean;
+var
+  Grid: TDBAdvGrid;
+  Row: Integer;
+  DotPos: TPoint;
+  DotCol: Integer;
+  HandleRadiusSq: Integer;
+  DistSq: Int64;
+  GridsToCheck: array[0..1] of TDBAdvGrid;
+begin
+  Result := False;
+  ConnPoint.IsValid := False;
+  HandleRadiusSq := FHandleRadius * FHandleRadius;
+  GridsToCheck[0] := scmGrid;
+  GridsToCheck[1] := tdsGrid;
+
+  for Grid in GridsToCheck do
+  begin
+    // Determine which column index to use for this grid
+    if Grid = scmGrid then
+       DotCol := FSourceDotColumn // Use SourceDotColumn for DBAdvGrid1
+    else
+       DotCol := FDestDotColumn;  // Use DestDotColumn for DBAdvGrid2
+
+
+    // Iterate through VISIBLE rows only for efficiency
+    for Row := Grid.FixedRows to Grid.RowCount - 1 do // Check actual rows
+    begin
+       // Check if row is visible (might need grid-specific function if available,
+       // otherwise CellRect might work even if partially scrolled out)
+       // For now, assume CellRect works correctly for rows partially in view.
+
+
+      DotPos := uNoodleLink.GetGridDotPosition(Grid, Row, DotCol, PaintBoxNoodles);
+
+      if DotPos.X = -1 then Continue; // Skip invalid/invisible rows
+
+      DistSq := Int64(P.X - DotPos.X) * (P.X - DotPos.X) + Int64(P.Y - DotPos.Y) * (P.Y - DotPos.Y);
+
+      if DistSq <= HandleRadiusSq then
+      begin
+        ConnPoint.Grid := Grid;
+        ConnPoint.Row := Row;
+        ConnPoint.Position := DotPos; // Store the calculated position
+        ConnPoint.IsValid := True;
+        Result := True;
+        Exit; // Found the first one
+      end;
+    end;
+  end;
+end;
+
+function TMain.FindLinkAt(P: TPoint; out HitLink: TNoodleLink;
+  out HitHandle: TLinkEndPointType): Boolean;
+var
+  Link: TNoodleLink;
+  TempHandle: TLinkEndPointType;
+  i: Integer;
+begin
+  Result := False;
+  HitLink := nil;
+  HitHandle := lepSource; // Default
+
+  // Iterate backwards through the TObjectList
+  for i := FNoodles.Count - 1 downto 0 do
+  begin
+    Link := FNoodles[i]; // Get the link at the current index
+    if Link.HitTest(P, PaintBoxNoodles, FSagFactor, FHitTolerance, FHandleRadius, TempHandle) then
+    begin
+      Result := True;
+      HitLink := Link;
+      HitHandle := TempHandle;
+      Exit; // Exit as soon as a match is found
+    end;
+  end;
 end;
 
 procedure TMain.FormCreate(Sender: TObject);
@@ -1454,6 +1612,41 @@ begin
     if Settings.DoClearAndScanOnBoot then
       fDoClearAndScanOnBoot := true;
   end;
+
+  // ---------------------------------------------------------------------
+  // NOODLE INITIALISATION. BEGIN
+  FNoodles := TObjectList<TNoodleLink>.Create(True); // True = OwnsObjects
+  FDragState := ndsIdle;
+  FSelectedLink := nil;
+  FDraggingLink := nil;
+
+  // --- Configure Appearance ---
+  FSagFactor := 0.2;  // 20% sag relative to distance
+  FRopeColor := clGray;
+  FSelectedRopeColor := clHighlight;
+  FRopeThickness := 2;
+  FHandleColor := clRed;
+  FHandleRadius := 4; // Size of the selection handles
+  FHitTolerance := 5; // Click within 5 pixels to hit
+
+  // Define dot columns
+  FSourceDotColumn := 6; // Example: Column index for dots in AdvDBGrid1
+  FDestDotColumn := 1;   // Example: Column index for dots in AdvDBGrid2
+
+  // Ensure PaintBox is on top and covers the grid areas
+  PaintBoxNoodles.BringToFront;
+  UpdatePaintBoxBounds; // Initial positioning
+
+  // Hook grid scroll events to repaint noodles
+//  scmGrid.OnScroll := AdvDBGridScroll;
+//  tdsBGrid.OnScroll := AdvDBGridScroll;
+
+  // Allow the form to receive KeyDown events even if PaintBox has focus
+  Self.KeyPreview := True;
+  // NOODLE INITIALISATION. END.
+  // ---------------------------------------------------------------------
+
+
 
   // CREATE THE CORE SCM CONNECTION DATAMODULE.
   if not Assigned(SCM) then
@@ -1590,6 +1783,9 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
+
+  fNoodles.Free;  // release noodle collection.
+
 {
 Summary:
 SignalTerminate Method: This public method in TDirectoryWatcher signals the
@@ -1615,12 +1811,10 @@ gracefully without causing the application to hang.
   end;
 
   if Assigned(Settings) then
-  begin
-    SaveToSettings;
-    if Assigned(TDS) then TDS.MSG_Handle := 0;
-    if Assigned(SCM) then SCM.MSG_Handle := 0;
     FreeAndNil(Settings);
-  end;
+
+  if Assigned(TDS) then TDS.MSG_Handle := 0;
+  if Assigned(SCM) then SCM.MSG_Handle := 0;
 
 end;
 
@@ -1628,6 +1822,24 @@ procedure TMain.FormHide(Sender: TObject);
 begin
   if Assigned(TDS) then TDS.MSG_Handle := 0;
   if Assigned(SCM) then SCM.MSG_Handle := 0;
+end;
+
+procedure TMain.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key = VK_DELETE then
+  begin
+    if FSelectedLink <> nil then
+    begin
+      DeleteSelectedLink;
+      Key := 0; // Mark key as handled
+    end;
+  end;
+end;
+
+procedure TMain.FormResize(Sender: TObject);
+begin
+//  PaintBoxNoodles.Invalidate;
+   UpdatePaintBoxBounds; // Reposition paintbox when form resizes
 end;
 
 procedure TMain.FormShow(Sender: TObject);
@@ -1669,12 +1881,6 @@ begin
   else
     // Assert UI display is up-to-date.
     PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0 );
-
-end;
-
-procedure TMain.LoadFromSettings;
-begin
-  fDolphinMeetsFolder := Settings.MeetsFolder;
 end;
 
 procedure TMain.LoadSettings;
@@ -1685,7 +1891,20 @@ begin
     Settings.SaveToFile();
   end;
   Settings.LoadFromFile();
-  LoadFromSettings();
+end;
+
+procedure TMain.MSG_ClearAndScan(var Msg: TMessage);
+begin
+  // Destructive - call on boot.
+  if actnClearAndScan.Enabled and (not fClearAndScan_Done) then
+    actnClearAndScanExecute(Self);
+end;
+
+procedure TMain.MSG_ClearGrid(var Msg: TMessage);
+begin
+  // Destructive - call on boot.
+  if actnClearGrid.Enabled then
+    actnClearGridExecute(Self);
 end;
 
 procedure TMain.MSG_Connect(var Msg: TMessage);
@@ -1708,18 +1927,10 @@ begin
     actnScanMeetsFolderExecute(Self);
 end;
 
-procedure TMain.MSG_ClearGrid(var Msg: TMessage);
+procedure TMain.MSG_UpdateUINOODLES(var Msg: TMessage);
 begin
-  // Destructive - call on boot.
-  if actnClearGrid.Enabled then
-    actnClearGridExecute(Self);
-end;
-
-procedure TMain.MSG_ClearAndScan(var Msg: TMessage);
-begin
-  // Destructive - call on boot.
-  if actnClearAndScan.Enabled and (not fClearAndScan_Done) then
-    actnClearAndScanExecute(Self);
+  PaintBoxNoodles.BringToFront;
+  UpdatePaintBoxBounds; // Initial positioning
 end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
@@ -2139,17 +2350,274 @@ begin
   end;
 end;
 
-procedure TMain.Prepare(AConnection: TFDConnection);
+procedure TMain.PaintBoxNoodlesMouseDown(Sender: TObject; Button: TMouseButton;
+    Shift: TShiftState; X, Y: Integer);
+var
+  ClickedPoint: TPoint;
+  HitLink: TNoodleLink;
+  HitHandle: TLinkEndPointType;
+  HitConnPoint: TNoodleConnectionPoint;
 begin
-  FConnection := AConnection;
-  Caption := 'SwimClubMeet - Dolphin Timing. ';
+  if Button <> mbLeft then Exit;
+
+  ClickedPoint := Point(X, Y);
+  DeselectAllLinks; // Deselect previous link first
+
+  // 1. Check if clicking on an existing link's HANDLE
+  if FindLinkAt(ClickedPoint, HitLink, HitHandle) and (HitHandle <> lepSource) then // HitTest returns lepSource for line hit, lepDestination or lepSource for specific handle
+  begin
+     // Check the exact position again to confirm it's a handle
+     if System.Math.Hypot(ClickedPoint.X - HitLink.GetEndPointPosition(HitHandle, PaintBoxNoodles).X,
+                          ClickedPoint.Y - HitLink.GetEndPointPosition(HitHandle, PaintBoxNoodles).Y) <= FHandleRadius then
+     begin
+        FDragState := ndsDraggingExistingHandle;
+        FDraggingLink := HitLink; // Store the link being dragged
+        FDraggingHandle := HitHandle; // Store which handle is grabbed
+        FDragStartPoint := ClickedPoint;
+        FDragCurrentPoint := ClickedPoint;
+        SelectLink(HitLink); // Select the link visually
+        PaintBoxNoodles.Invalidate;
+        Exit; // Don't check for other things
+     end;
+  end;
+
+
+  // 2. Check if clicking on an existing link's LINE (not handles)
+  if FindLinkAt(ClickedPoint, HitLink, HitHandle) then // HitHandle will be default if line is hit
+  begin
+    SelectLink(HitLink);
+    PaintBoxNoodles.Invalidate;
+    // Don't start drag, just select
+    Exit;
+  end;
+
+  // 3. Check if clicking on a connection point (a dot)
+  if FindConnectionPointAt(ClickedPoint, HitConnPoint) then
+  begin
+    FDragState := ndsDraggingNew;
+    FDragStartConnPoint := HitConnPoint; // Store grid/row/position of start
+    FDragStartPoint := ClickedPoint;
+    FDragCurrentPoint := ClickedPoint;
+    PaintBoxNoodles.Invalidate; // Show drag preview
+    Exit;
+  end;
+
+  // 4. Clicked on empty space
+  DeselectAllLinks; // Already done, but good practice
+  PaintBoxNoodles.Invalidate; // Redraw without selection
+
 end;
 
-procedure TMain.SaveToSettings;
+procedure TMain.PaintBoxNoodlesMouseMove(Sender: TObject; Shift: TShiftState;
+    X, Y: Integer);
 begin
-  Settings.MeetsFolder := fDolphinMeetsFolder;
-  Settings.SaveToFile();
+  if FDragState <> ndsIdle then
+  begin
+    FDragCurrentPoint := Point(X, Y);
+    PaintBoxNoodles.Invalidate; // Redraw preview line
+  end;
+  // Add hover effects here if desired (check FindLinkAt/FindConnectionPointAt)
 end;
+
+procedure TMain.PaintBoxNoodlesMouseUp(Sender: TObject; Button: TMouseButton;
+    Shift: TShiftState; X, Y: Integer);
+var
+  EndPoint: TPoint;
+  EndConnPoint: TNoodleConnectionPoint;
+  NewLink: TNoodleLink;
+  ExistingLink: TNoodleLink;
+  SourceGrid, DestGrid : TDBAdvGrid;
+  SourceRow, DestRow : Integer;
+begin
+  if Button <> mbLeft then Exit;
+
+  EndPoint := Point(X, Y);
+
+  if FDragState = ndsDraggingNew then
+  begin
+  { // Check if dropped on a valid connection point }
+    if FindConnectionPointAt(EndPoint, EndConnPoint) then
+    begin
+      // --- Validation: Prevent linking dot to itself or same grid row ---
+      if (EndConnPoint.Grid = FDragStartConnPoint.Grid) and (EndConnPoint.Row = FDragStartConnPoint.Row) then
+      begin
+         // Dropped on same start point, cancel
+      end
+      // --- Add more validation if needed (e.g., prevent linking Grid1 to Grid1) ---
+      // else if EndConnPoint.Grid = FDragStartConnPoint.Grid then
+      // begin
+      //    // Linking within the same grid - cancel if not allowed
+      // end
+      else
+      begin
+        // --- Check for duplicate link ---
+        var IsDuplicate := False;
+        for ExistingLink in FNoodles do
+        begin
+            // Check both directions
+            if ((ExistingLink.SourceGrid = FDragStartConnPoint.Grid) and (ExistingLink.SourceRow = FDragStartConnPoint.Row) and
+                (ExistingLink.DestGrid = EndConnPoint.Grid) and (ExistingLink.DestRow = EndConnPoint.Row)) or
+               ((ExistingLink.SourceGrid = EndConnPoint.Grid) and (ExistingLink.SourceRow = EndConnPoint.Row) and
+                (ExistingLink.DestGrid = FDragStartConnPoint.Grid) and (ExistingLink.DestRow = FDragStartConnPoint.Row)) then
+            begin
+                IsDuplicate := True;
+                Break;
+            end;
+        end;
+
+        if not IsDuplicate then
+        begin
+            // Create the new link
+            NewLink := TNoodleLink.Create(FDragStartConnPoint.Grid, FDragStartConnPoint.Row,
+                                          EndConnPoint.Grid, EndConnPoint.Row);
+            FNoodles.Add(NewLink);
+            SelectLink(NewLink); // Select the newly created link
+            // Optional: Trigger an OnLinkCreated event here
+            // if Assigned(FOnLinkCreated) then FOnLinkCreated(Self, NewLink);
+        end
+        else
+        begin
+            // Handle duplicate link (e.g., show message)
+            ShowMessage('This link already exists.');
+        end;
+
+      end;
+    end; // else: Dropped on empty space, cancel drag
+
+  FDragState := ndsIdle;
+  PaintBoxNoodles.Invalidate; // Redraw final state
+  end
+
+  else if FDragState = ndsDraggingExistingHandle then
+  begin
+      // Check if dropped on a valid connection point
+      if FindConnectionPointAt(EndPoint, EndConnPoint) then
+      begin
+          // Validation: Prevent linking to self, etc.
+          var IsValidTarget := True;
+          var OriginalSourceGrid, OriginalDestGrid: TDBAdvGrid;
+          var OriginalSourceRow, OriginalDestRow: Integer;
+
+          OriginalSourceGrid := FDraggingLink.SourceGrid;
+          OriginalSourceRow := FDraggingLink.SourceRow;
+          OriginalDestGrid := FDraggingLink.DestGrid;
+          OriginalDestRow := FDraggingLink.DestRow;
+
+
+          if FDraggingHandle = lepSource then // We are changing the Source endpoint
+          begin
+              // Check if new source is same as original destination
+              if (EndConnPoint.Grid = OriginalDestGrid) and (EndConnPoint.Row = OriginalDestRow) then
+                 IsValidTarget := False;
+              // Add other checks (e.g., prevent same grid connection if needed)
+              // if EndConnPoint.Grid = OriginalDestGrid then IsValidTarget := False;
+
+              // Check for duplicate link with the new source
+               for ExistingLink in FNoodles do
+               begin
+                   if ExistingLink = FDraggingLink then Continue; // Skip self
+                   if ((ExistingLink.SourceGrid = EndConnPoint.Grid) and (ExistingLink.SourceRow = EndConnPoint.Row) and
+                       (ExistingLink.DestGrid = OriginalDestGrid) and (ExistingLink.DestRow = OriginalDestRow)) or
+                      ((ExistingLink.SourceGrid = OriginalDestGrid) and (ExistingLink.SourceRow = OriginalDestRow) and
+                       (ExistingLink.DestGrid = EndConnPoint.Grid) and (ExistingLink.DestRow = EndConnPoint.Row)) then
+                   begin
+                       IsValidTarget := False;
+                       ShowMessage('This modification would create a duplicate link.');
+                       Break;
+                   end;
+               end;
+
+              if IsValidTarget then
+              begin
+                  FDraggingLink.SourceGrid := EndConnPoint.Grid;
+                  FDraggingLink.SourceRow := EndConnPoint.Row;
+                  // Optional: Trigger OnLinkChanged event
+              end;
+          end
+          else // We are changing the Destination endpoint (FDraggingHandle = lepDestination)
+          begin
+              // Check if new destination is same as original source
+              if (EndConnPoint.Grid = OriginalSourceGrid) and (EndConnPoint.Row = OriginalSourceRow) then
+                 IsValidTarget := False;
+              // Add other checks
+              // if EndConnPoint.Grid = OriginalSourceGrid then IsValidTarget := False;
+
+               // Check for duplicate link with the new destination
+               for ExistingLink in FNoodles do
+               begin
+                   if ExistingLink = FDraggingLink then Continue; // Skip self
+                   if ((ExistingLink.SourceGrid = OriginalSourceGrid) and (ExistingLink.SourceRow = OriginalSourceRow) and
+                       (ExistingLink.DestGrid = EndConnPoint.Grid) and (ExistingLink.DestRow = EndConnPoint.Row)) or
+                      ((ExistingLink.SourceGrid = EndConnPoint.Grid) and (ExistingLink.SourceRow = EndConnPoint.Row) and
+                       (ExistingLink.DestGrid = OriginalSourceGrid) and (ExistingLink.DestRow = OriginalSourceRow)) then
+                   begin
+                       IsValidTarget := False;
+                       ShowMessage('This modification would create a duplicate link.');
+                       Break;
+                   end;
+               end;
+
+
+              if IsValidTarget then
+              begin
+                  FDraggingLink.DestGrid := EndConnPoint.Grid;
+                  FDraggingLink.DestRow := EndConnPoint.Row;
+                  // Optional: Trigger OnLinkChanged event
+              end;
+          end;
+      end; // else: Dropped on empty space, snap back (implicitly handled by redraw)
+
+      FDragState := ndsIdle;
+      FDraggingLink := nil; // Clear the link being dragged
+      PaintBoxNoodles.Invalidate; // Redraw final state
+  end;
+
+end;
+
+procedure TMain.PaintBoxNoodlesPaint(Sender: TObject);
+var
+  Link: TNoodleLink;
+  P0, P1: TPoint;
+  Canvas: TCanvas;
+  AColor: TColor;
+begin
+  Canvas := (Sender as TPaintBox).Canvas;
+  Canvas.Brush.Style := bsClear; // Make background transparent (won't erase grids)
+
+  // 1. Draw all existing noodles
+  for Link in FNoodles do
+  begin
+    P0 := Link.GetEndPointPosition(lepSource, PaintBoxNoodles);
+    P1 := Link.GetEndPointPosition(lepDestination, PaintBoxNoodles);
+
+    // Only draw if both endpoints are valid (visible/exist)
+    if (P0.X <> -1) and (P1.X <> -1) then
+    begin
+      if Link.IsSelected then
+        AColor := FSelectedRopeColor else  AColor := FRopeColor;
+      DrawNoodle(Canvas, P0, P1,AColor, FRopeThickness, Link.IsSelected);
+    end;
+  end;
+
+  // 2. Draw dragging preview line (if any)
+  if FDragState = ndsDraggingNew then
+  begin
+    // Draw from start dot to current mouse pos
+    DrawNoodle(Canvas, FDragStartConnPoint.Position, FDragCurrentPoint, clLime, FRopeThickness, False);
+  end
+  else if FDragState = ndsDraggingExistingHandle then
+  begin
+    // Draw from fixed end to current mouse pos
+    var FixedEndPos: TPoint;
+    if FDraggingHandle = lepSource then // Dragging source handle
+      FixedEndPos := FDraggingLink.GetEndPointPosition(lepDestination, PaintBoxNoodles)
+    else // Dragging destination handle
+      FixedEndPos := FDraggingLink.GetEndPointPosition(lepSource, PaintBoxNoodles);
+
+    DrawNoodle(Canvas, FixedEndPos, FDragCurrentPoint, clLime, FRopeThickness, False);
+  end;
+end;
+
 
 procedure TMain.scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var
   Value: string);
@@ -2178,6 +2646,16 @@ begin
       ...but it will have a single empty row 1.
     }
     if scmGrid.DataSource.DataSet.IsEmpty then Value := ' ';
+  end;
+end;
+
+procedure TMain.SelectLink(ALink: TNoodleLink);
+begin
+  DeselectAllLinks; // Ensure only one is selected
+  if ALink <> nil then
+  begin
+    ALink.IsSelected := True;
+    FSelectedLink := ALink;
   end;
 end;
 
@@ -2473,6 +2951,40 @@ begin
 
 end;
 
+procedure TMain.UpdatePaintBoxBounds;
+var
+  Rect1, Rect2, UnionRect: TRect;
+  P1, P2, P3, P4: TPoint;
+begin
+  // Get screen coordinates of the top-left/bottom-right of the dot columns
+  P1 := GetGridDotPosition(scmGrid, scmGrid.FixedRows, FSourceDotColumn, PaintBoxNoodles); // Top-left of grid1 col
+  P2 := GetGridDotPosition(scmGrid, scmGrid.RowCount - 1, FSourceDotColumn, PaintBoxNoodles); // Bottom-left of grid1 col
+  P3 := GetGridDotPosition(TDSGrid, TDSGrid.FixedRows, FDestDotColumn, PaintBoxNoodles); // Top-right of grid2 col
+  P4 := GetGridDotPosition(TDSGrid, TDSGrid.RowCount - 1, FDestDotColumn, PaintBoxNoodles); // Bottom-right of grid2 col
+
+  if (P1.X = -1) or (P2.X = -1) or (P3.X = -1) or (P4.X = -1) then
+  begin
+     // Fallback if grids are empty or something is wrong - cover grids roughly
+     Rect1 := scmGrid.BoundsRect;
+     Rect2 := TDSGrid.BoundsRect;
+     UnionRect := Rect(Min(Rect1.Left, Rect2.Left), Min(Rect1.Top, Rect2.Top),
+                       Max(Rect1.Right, Rect2.Right), Max(Rect1.Bottom, Rect2.Bottom));
+  end else
+  begin
+     // Create a bounding box around the dot columns relative to the Form
+     UnionRect.Left := Min(P1.X, P3.X) - FHandleRadius - 10; // Add some padding
+     UnionRect.Top := Min(P1.Y, P3.Y) - FHandleRadius - 10;
+     UnionRect.Right := Max(P2.X, P4.X) + FHandleRadius + 10;
+     UnionRect.Bottom := Max(P2.Y, P4.Y) + FHandleRadius + 10;
+  end;
+
+
+  // Set PaintBox bounds (relative to its parent, the Form)
+  PaintBoxNoodles.SetBounds(UnionRect.Left, UnionRect.Top,
+                           UnionRect.Right - UnionRect.Left,
+                           UnionRect.Bottom - UnionRect.Top);
+  PaintBoxNoodles.Invalidate; // Redraw after moving/resizing
+end;
 
 
 

@@ -34,7 +34,8 @@ uses
   dmSCM in 'dmSCM.pas' {SCM: TDataModule},
   dmTDS in 'dmTDS.pas' {TDS: TDataModule},
   dlgScanOptions in 'dlgScanOptions.pas' {ScanOptions},
-  rptReportsSCM in 'rptReportsSCM.pas' {ReportsSCM: TDataModule};
+  rptReportsSCM in 'rptReportsSCM.pas' {ReportsSCM: TDataModule},
+  uNoodleLink in 'uNoodleLink.pas';
 
 {$R *.res}
 

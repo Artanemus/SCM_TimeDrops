@@ -8972,8 +8972,26 @@ object Main: TMain
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnHide = FormHide
+  OnKeyDown = FormKeyDown
+  OnResize = FormResize
   OnShow = FormShow
+  DesignSize = (
+    1444
+    833)
   TextHeight = 21
+  object PaintBoxNoodles: TPaintBox
+    Left = 616
+    Top = 222
+    Width = 131
+    Height = 587
+    Anchors = []
+    Color = clBtnFace
+    ParentColor = False
+    OnMouseDown = PaintBoxNoodlesMouseDown
+    OnMouseMove = PaintBoxNoodlesMouseMove
+    OnMouseUp = PaintBoxNoodlesMouseUp
+    OnPaint = PaintBoxNoodlesPaint
+  end
   object actnMenuBar: TActionMainMenuBar
     Left = 0
     Top = 0
@@ -9042,6 +9060,7 @@ object Main: TMain
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitTop = 21
     DesignSize = (
       1444
       771)
@@ -10599,35 +10618,6 @@ object Main: TMain
     SimplePanel = True
     SimpleText = 'Check here for information and messages.'
     StyleElements = [seClient, seBorder]
-  end
-  object FileSaveDlgMeetProgram: TFileSaveDialog
-    DefaultExtension = '.json'
-    DefaultFolder = 'c:\TimeDrops\Meets'
-    FavoriteLinks = <>
-    FileTypes = <
-      item
-        DisplayName = 'JSON  (*.json)'
-        FileMask = '*.json'
-      end
-      item
-        DisplayName = 'Any file type (*.*)'
-        FileMask = '*.*'
-      end>
-    OkButtonLabel = 'Save TD Meet Program file'
-    Options = []
-    Title = 'Create a Time Drops '#39'Meet Program'#39' file.'
-    Left = 984
-    Top = 480
-  end
-  object PickDTFolderDlg: TFileOpenDialog
-    DefaultFolder = 'c:\Dolphin\Meets'
-    FavoriteLinks = <>
-    FileTypes = <>
-    OkButtonLabel = 'Select DT folder'
-    Options = [fdoPickFolders]
-    Title = 'Select the Dolphin Timing folder.'
-    Left = 984
-    Top = 424
   end
   object TDPushResultFile: TFileOpenDialog
     DefaultExtension = '.JSON'
