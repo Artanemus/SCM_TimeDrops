@@ -35,7 +35,8 @@ uses
   dmTDS in 'dmTDS.pas' {TDS: TDataModule},
   dlgScanOptions in 'dlgScanOptions.pas' {ScanOptions},
   rptReportsSCM in 'rptReportsSCM.pas' {ReportsSCM: TDataModule},
-  uNoodleLink in 'uNoodleLink.pas';
+  uNoodleLink in 'uNoodleLink.pas',
+  TransparentPanel in 'TransparentPanel.pas';
 
 {$R *.res}
 

@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{B8677C9E-4683-4667-80DC-C3E9BDD89554}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="TimeDropsPackage.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="SCM_TimeDrops.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="TimeDropsPackage">
+        <MSBuild Projects="TimeDropsPackage.dproj"/>
+    </Target>
+    <Target Name="TimeDropsPackage:Clean">
+        <MSBuild Projects="TimeDropsPackage.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="TimeDropsPackage:Make">
+        <MSBuild Projects="TimeDropsPackage.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SCM_TimeDrops">
+        <MSBuild Projects="SCM_TimeDrops.dproj"/>
+    </Target>
+    <Target Name="SCM_TimeDrops:Clean">
+        <MSBuild Projects="SCM_TimeDrops.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SCM_TimeDrops:Make">
+        <MSBuild Projects="SCM_TimeDrops.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="TimeDropsPackage;SCM_TimeDrops"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="TimeDropsPackage:Clean;SCM_TimeDrops:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="TimeDropsPackage:Make;SCM_TimeDrops:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

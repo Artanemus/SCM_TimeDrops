@@ -29,7 +29,8 @@ uses
   Vcl.ExtDlgs, FireDAC.Stan.Param, Vcl.ComCtrls, Vcl.DBCtrls, tdReConstruct,
   Vcl.PlatformVclStylesActnCtrls, Vcl.WinXPanels, Vcl.WinXCtrls,
   System.Types, System.IOUtils, System.Math, DirectoryWatcher,
-  tdReConstructDlg, dmIMG, uNoodleLink, System.Generics.Collections;
+  tdReConstructDlg, dmIMG, uNoodleLink, System.Generics.Collections,
+  TransparentPanel;
 
 type
   // State for dragging operations
@@ -83,9 +84,7 @@ type
     lbl_scmGridOverlay: TLabel;
     lbl_tdsGridOverlay: TLabel;
     PaintBoxNoodles: TPaintBox;
-    pBar: TProgressBar;
-    pnlSCM: TPanel;
-    pnlTDS: TPanel;
+    pnlGrids: TPanel;
     pnlTool1: TPanel;
     pnlTool2: TPanel;
     rpnlBody: TRelativePanel;
@@ -107,6 +106,7 @@ type
     vimgHeatStatus: TVirtualImage;
     vimgRelayBug: TVirtualImage;
     vimgStrokeBug: TVirtualImage;
+    TransparentPanel1: TTransparentPanel;
     procedure actBuildTDTablesExecute(Sender: TObject);
     procedure actBuildTDTablesUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);
@@ -1614,7 +1614,7 @@ begin
   end;
 
   // ---------------------------------------------------------------------
-  // NOODLE INITIALISATION. BEGIN
+  // NOODLE INITIALISATION. BEGIN ...
   FNoodles := TObjectList<TNoodleLink>.Create(True); // True = OwnsObjects
   FDragState := ndsIdle;
   FSelectedLink := nil;
@@ -1635,7 +1635,7 @@ begin
 
   // Ensure PaintBox is on top and covers the grid areas
   PaintBoxNoodles.BringToFront;
-  UpdatePaintBoxBounds; // Initial positioning
+//  UpdatePaintBoxBounds; // Initial positioning
 
   // Hook grid scroll events to repaint noodles
 //  scmGrid.OnScroll := AdvDBGridScroll;
@@ -1839,7 +1839,7 @@ end;
 procedure TMain.FormResize(Sender: TObject);
 begin
 //  PaintBoxNoodles.Invalidate;
-   UpdatePaintBoxBounds; // Reposition paintbox when form resizes
+//   UpdatePaintBoxBounds; // Reposition paintbox when form resizes
 end;
 
 procedure TMain.FormShow(Sender: TObject);
@@ -1930,7 +1930,7 @@ end;
 procedure TMain.MSG_UpdateUINOODLES(var Msg: TMessage);
 begin
   PaintBoxNoodles.BringToFront;
-  UpdatePaintBoxBounds; // Initial positioning
+//  UpdatePaintBoxBounds; // Initial positioning
 end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);

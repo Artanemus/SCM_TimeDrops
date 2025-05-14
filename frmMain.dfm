@@ -4,7 +4,7 @@ object Main: TMain
   BorderStyle = bsSingle
   Caption = 'SwimClubMeet - TimeDrops'
   ClientHeight = 833
-  ClientWidth = 1444
+  ClientWidth = 1488
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -8975,27 +8975,11 @@ object Main: TMain
   OnKeyDown = FormKeyDown
   OnResize = FormResize
   OnShow = FormShow
-  DesignSize = (
-    1444
-    833)
   TextHeight = 21
-  object PaintBoxNoodles: TPaintBox
-    Left = 616
-    Top = 222
-    Width = 131
-    Height = 587
-    Anchors = []
-    Color = clBtnFace
-    ParentColor = False
-    OnMouseDown = PaintBoxNoodlesMouseDown
-    OnMouseMove = PaintBoxNoodlesMouseMove
-    OnMouseUp = PaintBoxNoodlesMouseUp
-    OnPaint = PaintBoxNoodlesPaint
-  end
   object actnMenuBar: TActionMainMenuBar
     Left = 0
     Top = 0
-    Width = 1444
+    Width = 1488
     Height = 27
     UseSystemFont = False
     ActionManager = actnManager
@@ -9015,7 +8999,7 @@ object Main: TMain
   object rpnlBody: TRelativePanel
     Left = 0
     Top = 27
-    Width = 1444
+    Width = 1488
     Height = 771
     ControlCollection = <
       item
@@ -9028,7 +9012,7 @@ object Main: TMain
         AlignVerticalCenterWithPanel = False
       end
       item
-        Control = pnlSCM
+        Control = pnlGrids
         AlignBottomWithPanel = True
         AlignHorizontalCenterWithPanel = False
         AlignLeftWithPanel = False
@@ -9038,16 +9022,6 @@ object Main: TMain
         RightOf = pnlTool1
       end
       item
-        Control = pnlTDS
-        AlignBottomWithPanel = True
-        AlignHorizontalCenterWithPanel = False
-        AlignLeftWithPanel = False
-        AlignRightWithPanel = False
-        AlignTopWithPanel = True
-        AlignVerticalCenterWithPanel = False
-        RightOf = pnlSCM
-      end
-      item
         Control = pnlTool2
         AlignBottomWithPanel = True
         AlignHorizontalCenterWithPanel = False
@@ -9055,14 +9029,13 @@ object Main: TMain
         AlignRightWithPanel = False
         AlignTopWithPanel = True
         AlignVerticalCenterWithPanel = False
-        RightOf = pnlTDS
+        RightOf = pnlGrids
       end>
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitTop = 21
     DesignSize = (
-      1444
+      1488
       771)
     object pnlTool1: TPanel
       AlignWithMargins = True
@@ -9234,20 +9207,71 @@ object Main: TMain
         Brush.Color = clTomato
       end
     end
-    object pnlSCM: TPanel
+    object pnlGrids: TPanel
       AlignWithMargins = True
       Left = 153
       Top = 3
-      Width = 525
+      Width = 1152
       Height = 765
       BevelOuter = bvNone
-      Color = 5988209
       ParentBackground = False
       TabOrder = 1
+      object dbtxtDTFileName: TDBText
+        Left = 544
+        Top = 17
+        Width = 598
+        Height = 31
+        Alignment = taCenter
+        DataField = 'FileName'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -16
+        Font.Name = 'Segoe UI'
+        Font.Style = []
+        ParentFont = False
+      end
+      object lblEventDetailsTD: TLabel
+        Left = 544
+        Top = 40
+        Width = 597
+        Height = 27
+        Hint = 
+          'Dolphin Timing Filename. (DO3, DO4)'#13#10'2nd line - Session : Event ' +
+          ':: Heat.'
+        Alignment = taCenter
+        AutoSize = False
+        Caption = 'Session - Event - Heat'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -17
+        Font.Name = 'Segoe UI'
+        Font.Style = []
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        Layout = tlCenter
+      end
+      object lblKeyBoardInfo: TLabel
+        Left = 544
+        Top = 73
+        Width = 597
+        Height = 17
+        Alignment = taCenter
+        AutoSize = False
+        Caption = 
+          'CTRL+LMB select single     SHIFT+LMB select range     ALT-LMB mo' +
+          'dify cell.'
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Segoe UI'
+        Font.Style = []
+        ParentFont = False
+      end
       object lblEventDetails: TLabel
         Left = 0
-        Top = 28
-        Width = 497
+        Top = 27
+        Width = 498
         Height = 64
         Hint = 
           'Session : Event : Distance+Stroke : Heat.'#13#10'2nd line - Event Desc' +
@@ -9257,8 +9281,8 @@ object Main: TMain
         Caption = 'EVENT 1 : 50M Freestyle'#13#10'Boys under 10y'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
-        Font.Height = -19
-        Font.Name = 'Segoe UI Semibold'
+        Font.Height = -17
+        Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
         ParentShowHint = False
@@ -9268,45 +9292,17 @@ object Main: TMain
       end
       object lblSwimClubName: TLabel
         Left = 0
-        Top = 0
-        Width = 497
+        Top = 6
+        Width = 498
         Height = 28
         Alignment = taCenter
         AutoSize = False
         Caption = 'Swimming Club'
         Layout = tlCenter
       end
-      object btnNextEvent: TButton
-        Left = 0
-        Top = 683
-        Width = 498
-        Height = 50
-        Hint = 
-          'LMB Move to next record (heat, event, session)'#13#10'CNTRL+LMB Move t' +
-          'o next EVENT.'#13#10'Use File menu to load SESSION.'
-        Caption = 'NEXT'
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 0
-        OnClick = btnNextEventClick
-      end
-      object btnPrevEvent: TButton
-        Left = 0
-        Top = 98
-        Width = 434
-        Height = 50
-        Hint = 
-          'LMB Move to previous record (heat, event, session)'#13#10'CNTRL+LMB Mo' +
-          've to previous EVENT.'#13#10'Use File menu to load SESSION.'
-        Caption = 'PREVIOUS'
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 1
-        OnClick = btnPrevEventClick
-      end
       object scmGrid: TDBAdvGrid
-        Left = 0
-        Top = 154
+        Left = 2
+        Top = 152
         Width = 498
         Height = 523
         Cursor = crDefault
@@ -9331,7 +9327,7 @@ object Main: TMain
         ParentCtl3D = False
         ParentFont = False
         ScrollBars = ssVertical
-        TabOrder = 2
+        TabOrder = 7
         StyleElements = [seFont, seBorder]
         HoverRowCells = [hcNormal, hcSelected]
         OnGetDisplText = scmGridGetDisplText
@@ -9817,89 +9813,10 @@ object Main: TMain
           StyleElements = [seClient, seBorder]
         end
       end
-      object btnPickSCMTreeView: TButton
-        Left = 440
-        Top = 98
-        Width = 58
-        Height = 50
-        Hint = 
-          'Tree-View. Quick access and browse for event and heat.'#13#10'Also dis' +
-          'plays event and heat status. (Open, raced, closed.)'
-        DisabledImages = IMG.vimglistDTEvent
-        ImageIndex = 10
-        ImageName = 'TreeView_W'
-        Images = IMG.vimglistDTEvent
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 3
-        OnClick = btnPickSCMTreeViewClick
-      end
-    end
-    object pnlTDS: TPanel
-      AlignWithMargins = True
-      Left = 684
-      Top = 3
-      Width = 613
-      Height = 765
-      BevelOuter = bvNone
-      ParentBackground = False
-      TabOrder = 2
-      object dbtxtDTFileName: TDBText
-        Left = 16
-        Top = 19
-        Width = 553
-        Height = 31
-        Alignment = taCenter
-        DataField = 'FileName'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -19
-        Font.Name = 'Segoe UI Semibold'
-        Font.Style = []
-        ParentFont = False
-      end
-      object lblEventDetailsTD: TLabel
-        Left = 16
-        Top = 42
-        Width = 597
-        Height = 36
-        Hint = 
-          'Dolphin Timing Filename. (DO3, DO4)'#13#10'2nd line - Session : Event ' +
-          ':: Heat.'
-        Alignment = taCenter
-        AutoSize = False
-        Caption = 'Session - Event - Heat'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -19
-        Font.Name = 'Segoe UI'
-        Font.Style = []
-        ParentFont = False
-        ParentShowHint = False
-        ShowHint = True
-        Layout = tlCenter
-      end
-      object lblKeyBoardInfo: TLabel
-        Left = 16
-        Top = 72
-        Width = 597
-        Height = 17
-        Alignment = taCenter
-        AutoSize = False
-        Caption = 
-          'CTRL+LMB select single     SHIFT+LMB select range     ALT-LMB mo' +
-          'dify cell.'
-        Font.Charset = DEFAULT_CHARSET
-        Font.Color = clWindowText
-        Font.Height = -13
-        Font.Name = 'Segoe UI'
-        Font.Style = []
-        ParentFont = False
-      end
       object btnPrevDTFile: TButton
-        Left = 15
+        Left = 546
         Top = 99
-        Width = 534
+        Width = 531
         Height = 49
         Hint = 
           'LMB Move to previous record (heat, event, session)'#13#10'CNTRL+LMB Mo' +
@@ -9911,8 +9828,8 @@ object Main: TMain
         OnClick = btnPrevDTFileClick
       end
       object btnNextDTFile: TButton
-        Left = 16
-        Top = 683
+        Left = 544
+        Top = 679
         Width = 597
         Height = 50
         Hint = 
@@ -9925,8 +9842,8 @@ object Main: TMain
         OnClick = btnNextDTFileClick
       end
       object tdsGrid: TDBAdvGrid
-        Left = 16
-        Top = 154
+        Left = 544
+        Top = 152
         Width = 597
         Height = 523
         Cursor = crDefault
@@ -10472,22 +10389,9 @@ object Main: TMain
           ExplicitWidth = 494
         end
       end
-      object pBar: TProgressBar
-        Left = 15
-        Top = 739
-        Width = 598
-        Height = 9
-        Position = 50
-        BarColor = clChartreuse
-        BackgroundColor = clBtnText
-        Step = 2
-        TabOrder = 3
-        Visible = False
-        StyleElements = []
-      end
       object btnPickDTTreeView: TButton
-        Left = 555
-        Top = 98
+        Left = 1083
+        Top = 96
         Width = 58
         Height = 50
         Hint = 'Tree-View. Quick access and browse for session, event and heat.'
@@ -10497,13 +10401,97 @@ object Main: TMain
         Images = IMG.vimglistDTEvent
         ParentShowHint = False
         ShowHint = True
-        TabOrder = 4
+        TabOrder = 3
         OnClick = btnPickDTTreeViewClick
+      end
+      object btnNextEvent: TButton
+        Left = 0
+        Top = 681
+        Width = 498
+        Height = 50
+        Hint = 
+          'LMB Move to next record (heat, event, session)'#13#10'CNTRL+LMB Move t' +
+          'o next EVENT.'#13#10'Use File menu to load SESSION.'
+        Caption = 'NEXT'
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 4
+        OnClick = btnNextEventClick
+      end
+      object btnPickSCMTreeView: TButton
+        Left = 442
+        Top = 96
+        Width = 58
+        Height = 50
+        Hint = 
+          'Tree-View. Quick access and browse for event and heat.'#13#10'Also dis' +
+          'plays event and heat status. (Open, raced, closed.)'
+        DisabledImages = IMG.vimglistDTEvent
+        ImageIndex = 10
+        ImageName = 'TreeView_W'
+        Images = IMG.vimglistDTEvent
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 5
+        OnClick = btnPickSCMTreeViewClick
+      end
+      object btnPrevEvent: TButton
+        Left = 2
+        Top = 96
+        Width = 434
+        Height = 50
+        Hint = 
+          'LMB Move to previous record (heat, event, session)'#13#10'CNTRL+LMB Mo' +
+          've to previous EVENT.'#13#10'Use File menu to load SESSION.'
+        Caption = 'PREVIOUS'
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 6
+        OnClick = btnPrevEventClick
+      end
+      object TransparentPanel1: TTransparentPanel
+        Left = 456
+        Top = 152
+        Width = 145
+        Height = 523
+        ParentCustomHint = False
+        BevelOuter = bvNone
+        Ctl3D = True
+        DoubleBuffered = False
+        Font.Charset = DEFAULT_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -16
+        Font.Name = 'Segoe UI'
+        Font.Style = []
+        ParentBackground = False
+        ParentCtl3D = False
+        ParentDoubleBuffered = False
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = False
+        TabOrder = 8
+        StyleElements = []
+        DesignSize = (
+          145
+          523)
+        object PaintBoxNoodles: TPaintBox
+          Left = 1
+          Top = 28
+          Width = 137
+          Height = 493
+          Anchors = []
+          Color = clBtnFace
+          ParentColor = False
+          OnMouseDown = PaintBoxNoodlesMouseDown
+          OnMouseMove = PaintBoxNoodlesMouseMove
+          OnMouseUp = PaintBoxNoodlesMouseUp
+          OnPaint = PaintBoxNoodlesPaint
+        end
       end
     end
     object pnlTool2: TPanel
       AlignWithMargins = True
-      Left = 1303
+      Left = 1311
       Top = 3
       Width = 144
       Height = 765
@@ -10511,7 +10499,7 @@ object Main: TMain
       BevelOuter = bvNone
       Color = clDimgray
       ParentBackground = False
-      TabOrder = 3
+      TabOrder = 2
       object stackpnlTool2: TStackPanel
         Left = 0
         Top = 84
@@ -10609,7 +10597,7 @@ object Main: TMain
   object StatBar: TStatusBar
     Left = 0
     Top = 798
-    Width = 1444
+    Width = 1488
     Height = 35
     Hint = 'Check here for information, messages and warnings.'
     Panels = <>
