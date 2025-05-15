@@ -36,7 +36,8 @@ uses
   dlgScanOptions in 'dlgScanOptions.pas' {ScanOptions},
   rptReportsSCM in 'rptReportsSCM.pas' {ReportsSCM: TDataModule},
   uNoodleLink in 'uNoodleLink.pas',
-  TransparentPanel in 'TransparentPanel.pas';
+  TransparentPanel in 'TransparentPanel.pas',
+  uNoodleFrame in 'uNoodleFrame.pas' {NoodleFrame: TFrame};
 
 {$R *.res}
 
