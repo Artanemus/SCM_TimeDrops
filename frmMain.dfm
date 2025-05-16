@@ -8995,7 +8995,6 @@ object Main: TMain
     Font.Name = 'Segoe UI'
     Font.Style = []
     Spacing = 0
-    ExplicitWidth = 1668
   end
   object rpnlBody: TRelativePanel
     Left = 0
@@ -9034,7 +9033,6 @@ object Main: TMain
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 1668
     DesignSize = (
       1535
       771)
@@ -9795,7 +9793,6 @@ object Main: TMain
         Align = alRight
         BevelOuter = bvNone
         TabOrder = 1
-        ExplicitLeft = 612
         object dbtxtDTFileName: TDBText
           Left = 0
           Top = 17
@@ -10558,7 +10555,6 @@ object Main: TMain
     SimplePanel = True
     SimpleText = 'Check here for information and messages.'
     StyleElements = [seClient, seBorder]
-    ExplicitWidth = 1668
   end
   object TDPushResultFile: TFileOpenDialog
     DefaultExtension = '.JSON'

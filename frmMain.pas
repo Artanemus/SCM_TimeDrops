@@ -1689,7 +1689,7 @@ end;
 
 procedure TMain.MSG_UpdateUINOODLES(var Msg: TMessage);
 begin
-  PaintBoxNoodles.BringToFront;
+//  PaintBoxNoodles.BringToFront;
 //  UpdatePaintBoxBounds; // Initial positioning
 end;
 
