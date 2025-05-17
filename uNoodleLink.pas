@@ -7,10 +7,10 @@ uses
   System.Math, Vcl.Graphics, Vcl.Forms;
 
 type
-  TLinkPointType = (lptA, lptB);
+  TLinkPointType = (lptA, lptB, lptNone);
 
   // Record to hold info about a potential connection point
-  TNoodleConnectionPoint = record
+  TNoodleHandle = record
     PointType: TLinkPointType;
     ARectF: TRectF;
     IsValid: Boolean;
@@ -20,27 +20,28 @@ type
 type
   TNoodleLink = class
   private
-
-    FHandles: Array[0..1] of TNoodleConnectionPoint; // 0 = A, 1 = B
-    
+    FNoodleHandles: array[0..1] of TNoodleHandle;
     FIsSelected: Boolean;
     FSelectedHandle: TLinkPointType; // Indicates if A or B handle is grabbed.
     FUserData: TObject;
-    FDestRow: Integer;
-    FSourceRow: Integer;
+  function GetCenterPoint(ARect: TRectF): TPointF;
+
   public
-    constructor Create(RectA: TRectF; RectB: TRectF);
+    constructor Create(); overload;
+    constructor Create(RectA: TRectF; RectB: TRectF); overload;
     destructor Destroy; override;
     // Function to check if a point is near this link's line or handles
-    function HitTest(P: TPointF; SagFactor: Single; LineTolerance, HandleRadius: Integer; out HitHandle: TLinkPointType): Boolean;
-    function GetLinkPoint(ALinkPointType: TLinkPointType): TPointF;
-    function GetHandle(ALinkPointType: TLinkPointType): TNoodleConnectionPoint;
+    function HitTest(P: TPointF; SagFactor: Single; LineTolerance, HandleRadius:
+      Integer; out HitHandle: TLinkPointType): Boolean;
+    function GetNoodleHandleCenter(ALinkPointType: TLinkPointType): TPointF;
+    function GetNoodleHandle(ALinkPointType: TLinkPointType): TNoodleHandle;
+    function TestForNoodleHandle(ANoodleHandle: TNoodleHandle; HandleRadius: Integer): boolean;
     property IsSelected: Boolean read FIsSelected write FIsSelected;
-    property SelectedHandle: TLinkPointType read FSelectedHandle write FSelectedHandle; // Use HitTest to set this
+    property SelectedHandle: TLinkPointType read FSelectedHandle write
+      FSelectedHandle; // Use HitTest to set this
     property UserData: TObject read FUserData write FUserData;
   end;
-
-  function GetCenterPoint(ARect: TRectF): TPointF;
+  // Helper function. Return ROUNDED TRect.
   function ConvertTRectFToTRect(const ARectF: TRectF): TRect;
 
 implementation
@@ -106,7 +107,7 @@ begin
 end;
 
 // Gets the center point of given rectF.
-function GetCenterPoint(ARect: TRectF): TPointF;
+function TNoodleLink.GetCenterPoint(ARect: TRectF): TPointF;
 var
   ScreenPos, PaintBoxScreenPos: TPointF;
 begin
@@ -126,22 +127,41 @@ end;
 
 constructor TNoodleLink.Create(RectA: TRectF; RectB: TRectF);
 begin
+
   inherited Create;
 
   // Initialize handle A
-  FHandles[0].PointType := lptA;
-  FHandles[0].ARectF := RectA;
-  FHandles[0].IsValid := not RectA.IsEmpty;
-  FHandles[0].CenterF := GetCenterPoint(RectA);
+  FNoodleHandles[0].PointType := lptA;
+  FNoodleHandles[0].ARectF := RectA;
+  FNoodleHandles[0].IsValid := not RectA.IsEmpty;
+  FNoodleHandles[0].CenterF := GetCenterPoint(RectA);
 
   // Initialize handle B
-  FHandles[1].PointType := lptB;
-  FHandles[1].ARectF := RectB;
-  FHandles[1].IsValid := not RectB.IsEmpty;
-  FHandles[1].CenterF := GetCenterPoint(RectB);
+  FNoodleHandles[1].PointType := lptB;
+  FNoodleHandles[1].ARectF := RectB;
+  FNoodleHandles[1].IsValid := not RectB.IsEmpty;
+  FNoodleHandles[1].CenterF := GetCenterPoint(RectB);
 
   FIsSelected := False;
   FSelectedHandle := lptA; // Default, doesn't mean much until hit tested.
+end;
+
+constructor TNoodleLink.Create;
+begin
+  // Initialize handle A
+  FNoodleHandles[0].PointType := lptNone;
+  FNoodleHandles[0].ARectF := TRectF.Empty;
+  FNoodleHandles[0].IsValid := false;
+  FNoodleHandles[0].CenterF := TPointF.Zero;
+
+  // Initialize handle B
+  FNoodleHandles[1].PointType := lptB;
+  FNoodleHandles[1].ARectF := TRectF.Empty;
+  FNoodleHandles[1].IsValid := false;
+  FNoodleHandles[1].CenterF := TPointF.Zero;
+
+  FIsSelected := False;
+  FSelectedHandle := lptNone; // Default, doesn't mean much until hit tested.
 end;
 
 destructor TNoodleLink.Destroy;
@@ -150,19 +170,21 @@ begin
   inherited Destroy;
 end;
 
-function TNoodleLink.GetHandle(ALinkPointType: TLinkPointType): TNoodleConnectionPoint;
+function TNoodleLink.GetNoodleHandle(ALinkPointType: TLinkPointType):
+    TNoodleHandle;
 begin
-  Result := FHandles[Ord(ALinkPointType)];
+  Result := FNoodleHandles[Ord(ALinkPointType)];
 end;
 
-function TNoodleLink.GetLinkPoint(ALinkPointType: TLinkPointType): TPointF;
+function TNoodleLink.GetNoodleHandleCenter(ALinkPointType: TLinkPointType):
+    TPointF;
 var
   ARect: TRectF;
 begin
   Result := TPointF.Zero;
-  if not FHandles[Ord(ALinkPointType)].IsValid then
+  if not FNoodleHandles[Ord(ALinkPointType)].IsValid then
     Exit;
-  ARect := FHandles[Ord(ALinkPointType)].ARectF;
+  ARect := FNoodleHandles[Ord(ALinkPointType)].ARectF;
   Result := GetCenterPoint(ARect);
 end;
 
@@ -182,8 +204,8 @@ begin
   HitHandle := lptA; // Default
   HandleRadiusSq := HandleRadius * HandleRadius;
 
-  P0 := GetLinkPoint(lptA);
-  P1 := GetLinkPoint(lptB);
+  P0 := GetNoodleHandleCenter(lptA);
+  P1 := GetNoodleHandleCenter(lptB);
 
   // Check if point is near start handle
   DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
@@ -249,4 +271,35 @@ begin
   end;
 end;
 
-end. 
+function TNoodleLink.TestForNoodleHandle(ANoodleHandle: TNoodleHandle; HandleRadius: Integer): boolean;
+var
+  P0, P1, P: TPointF;
+  DistSq, HandleRadiusSq: Double; // Use Int64 for squared distances
+  i: Integer;
+  t: Single;
+  NearestDistSq: Double;
+begin
+  Result := False;
+  HandleRadiusSq := HandleRadius * HandleRadius;
+  P  := ANoodleHandle.CenterF;
+  P0 := FNoodleHandles[0].CenterF;
+  P1 := FNoodleHandles[1].CenterF;
+
+  // Check if point is near start handle
+  DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
+  if DistSq <= HandleRadiusSq then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  // Check if point is near end handle
+  DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
+  if DistSq <= HandleRadiusSq then
+  begin
+    Result := True;
+    Exit;
+  end;
+end;
+
+end.

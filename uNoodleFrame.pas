@@ -28,7 +28,7 @@ type
     FDragCurrentPoint: TPoint; // Current mouse position during drag (PaintBox coords)
     FDraggingHandle: TLinkPointType; // Which handle of FDraggingLink is being dragged
     FDraggingLink: TNoodleLink; // The existing link being dragged (if ndsDraggingExistingHandle)
-    FDragStartConnPoint: TNoodleConnectionPoint; // Info about the dot where drag started
+    FDragStartHandle: TNoodleHandle;
     FDragStartPoint: TPoint; // Point where drag started (PaintBox coords)
     FDragState: TNoodleDragState;
     FHandleColor: TColor;
@@ -36,7 +36,7 @@ type
     FHitTolerance: Integer; // Pixels tolerance for hitting lines/handles
 
     FNoodles: TObjectList<TNoodleLink>; // Noodles
-    FConnectionPoints: Array[0..19] of TNoodleConnectionPoint;
+    FNoodleHandles: Array[0..19] of TNoodleHandle; // 10 lanes ... src->dest.
 
     FRopeColor: TColor;
     FRopeThickness: Integer;
@@ -51,8 +51,12 @@ type
     // Helper methods
     procedure DrawNoodle(ACanvas: TCanvas; P0, P1: TPoint; AColor: TColor; AThickness: Integer; ASelected: Boolean);
     procedure DrawQuadraticBezier(ACanvas: TCanvas; P0, P1, P2: TPoint; NumSegments: Integer); // Adapted for TPoint
-    function FindConnectionPointAt(P: TPoint; out ConnPoint: TNoodleConnectionPoint): Boolean; // Find grid dot under point P
-    function FindLinkAt(P: TPoint; out HitLink: TNoodleLink; out HitHandle: TLinkPointType): Boolean; // Find link/handle under point P
+    function FindNoodleHandleAt(P: TPoint; out ANoodleHandle: TNoodleHandle): Boolean;
+    function FindNoodleLinkAt(P: TPoint; out HitLink: TNoodleLink; out HitHandle:
+        TLinkPointType): Boolean; overload;
+    function FindNoodleLinkAt(ANoodleHandle: TNoodleHandle; out HitLink:
+        TNoodleLink): Boolean; overload;
+
     procedure SelectLink(ALink: TNoodleLink);
     procedure DeselectAllLinks;
     procedure DrawHandle(ACanvas: TCanvas; P: TPoint; AColor: TColor; ARadius: Integer);
@@ -230,37 +234,55 @@ begin
   end;
 end;
 
-function TNoodleFrame.FindConnectionPointAt(P: TPoint;
-  out ConnPoint: TNoodleConnectionPoint): Boolean;
+function TNoodleFrame.FindNoodleHandleAt(P: TPoint; out ANoodleHandle:
+    TNoodleHandle): Boolean;
 var
   HandleRadiusSq: Int64;
   DistSq: Int64;
   CenterF: TPointF;
   DistSqF: Double;
-  CPoint: TNoodleConnectionPoint;
+  CPoint: TNoodleHandle;
 begin
   Result := False;
-  ConnPoint.IsValid := False;
+  ANoodleHandle.IsValid := False;
   HandleRadiusSq := FHandleRadius * FHandleRadius; // margin of acceptance.
-  for CPoint in FConnectionPoints do
+  for CPoint in FNoodleHandles do
   begin
     if not CPoint.IsValid then continue;
     CenterF := CPoint.CenterF;
     DistSqF := (P.X - CenterF.X) * (P.X - CenterF.X) + (P.Y - CenterF.Y) * (P.Y - CenterF.Y);
     if DistSqF <= HandleRadiusSq then
     begin
-      ConnPoint.CenterF := CPoint.CenterF; // Clone ConnectionPoint.
-      ConnPoint.IsValid := True;
-      ConnPoint.PointType := CPoint.PointType;
-      ConnPoint.ARectF := CPoint.ARectF;
+      ANoodleHandle.CenterF := CPoint.CenterF; // Clone ConnectionPoint.
+      ANoodleHandle.IsValid := True;
+      ANoodleHandle.PointType := CPoint.PointType;
+      ANoodleHandle.ARectF := CPoint.ARectF;
       Result := True;
       Exit; // Found a connection point within margin of acceptance.
     end;
   end;
 end;
 
-function TNoodleFrame.FindLinkAt(P: TPoint; out HitLink: TNoodleLink;
-  out HitHandle: TLinkPointType): Boolean;
+function TNoodleFrame.FindNoodleLinkAt(ANoodleHandle: TNoodleHandle; out
+    HitLink: TNoodleLink): Boolean;
+var
+  ANoodleLink: TNoodleLink;
+  TempHandle: TLinkPointType;
+  i: Integer;
+begin
+  Result := False;
+  for ANoodleLink in FNoodles do
+  begin
+    if ANoodleLink.TestForNoodleHandle(ANoodleHandle, FHandleRadius) then
+    begin
+      Result := True;
+      Exit; // Exit as soon as a match is found.
+    end;
+  end;
+end;
+
+function TNoodleFrame.FindNoodleLinkAt(P: TPoint; out HitLink: TNoodleLink; out
+    HitHandle: TLinkPointType): Boolean;
 var
   Link: TNoodleLink;
   TempHandle: TLinkPointType;
@@ -291,7 +313,7 @@ var
   ClickedPoint: TPoint;
   HitLink: TNoodleLink;
   HitHandle: TLinkPointType;
-  HitConnPoint: TNoodleConnectionPoint;
+  HitConnPoint: TNoodleHandle;
 begin
   if Button <> mbLeft then Exit;
 
@@ -299,12 +321,12 @@ begin
   DeselectAllLinks; // Deselect previous link first
 
   // 1. Check if clicking on an existing link's HANDLE
-  if FindLinkAt(ClickedPoint, HitLink, HitHandle) and (HitHandle <> lptA) then
+  if FindNoodleLinkAt(ClickedPoint, HitLink, HitHandle) and (HitHandle <> lptA) then
   // HitTest returns lepSource for line hit, lepDestination or lepSource for specific handle
   begin
      // Check the exact position again to confirm it's a handle
-     if System.Math.Hypot(ClickedPoint.X - HitLink.GetLinkPoint(HitHandle).X,
-                          ClickedPoint.Y - HitLink.GetLinkPoint(HitHandle).Y) <= FHandleRadius then
+     if System.Math.Hypot(ClickedPoint.X - HitLink.GetNoodleHandleCenter(HitHandle).X,
+                          ClickedPoint.Y - HitLink.GetNoodleHandleCenter(HitHandle).Y) <= FHandleRadius then
      begin
         FDragState := ndsDraggingExistingHandle;
         FDraggingLink := HitLink; // Store the link being dragged
@@ -319,7 +341,7 @@ begin
 
 
   // 2. Check if clicking on an existing link's LINE (not handles)
-  if FindLinkAt(ClickedPoint, HitLink, HitHandle) then // HitHandle will be default if line is hit
+  if FindNoodleLinkAt(ClickedPoint, HitLink, HitHandle) then // HitHandle will be default if line is hit
   begin
     SelectLink(HitLink);
     pbNoodles.Invalidate;
@@ -328,10 +350,10 @@ begin
   end;
 
   // 3. Check if clicking on a connection point (a dot)
-  if FindConnectionPointAt(ClickedPoint, HitConnPoint) then
+  if FindNoodleHandleAt(ClickedPoint, HitConnPoint) then
   begin
     FDragState := ndsDraggingNew;
-    FDragStartConnPoint := HitConnPoint; // Store grid/row/position of start
+    FDragStartHandle := HitConnPoint; // Store grid/row/position of start
     FDragStartPoint := ClickedPoint;
     FDragCurrentPoint := ClickedPoint;
     pbNoodles.Invalidate; // Show drag preview
@@ -353,34 +375,43 @@ begin
     FDragCurrentPoint := Point(X, Y);
     pbNoodles.Invalidate; // Redraw preview line
   end;
-  // Add hover effects here if desired (check FindLinkAt/FindConnectionPointAt)
+  // Add hover effects here if desired (check FindNoodleLinkAt/FindNoodleHandleAt)
 end;
 
 procedure TNoodleFrame.pbNoodlesMouseUp(Sender: TObject; Button: TMouseButton;
     Shift: TShiftState; X, Y: Integer);
 var
   EndPoint: TPoint;
-  EndConnPoint: TNoodleConnectionPoint;
-  NewLink: TNoodleLink;
+  EndHandle: TNoodleHandle;
+  NewLink, PrevLink, NextLink: TNoodleLink;
   ExistingLink: TNoodleLink;
 begin
   if Button <> mbLeft then Exit;
 
   EndPoint := Point(X, Y);
 
+
+
   if FDragState = ndsDraggingNew then
   begin
+    FindNoodleLinkAt(FDragStartHandle, PrevLink);
+    if FindNoodleHandleAt(EndPoint, EndHandle) then
+      FindNoodleLinkAt(EndHandle, NextLink);
+
   { // Check if dropped on a valid connection point }
-    if FindConnectionPointAt(EndPoint, EndConnPoint) then
+    if FindNoodleHandleAt(EndPoint, EndHandle) then
     begin
       // --- Validation: Prevent linking dot to itself or same grid row ---
-      if (EndConnPoint.CenterF = FDragStartConnPoint.CenterF) then
+      if (EndHandle.CenterF = FDragStartHandle.CenterF) then
       begin
          // Dropped on same start point, cancel
       end
+
+
+
       // --- Add more validation if needed
       // (e.g., prevent linking lptA to lptA) ---
-      else if EndConnPoint.PointType = FDragStartConnPoint.PointType then
+      else if EndHandle.PointType = FDragStartHandle.PointType then
       begin
         // Linking identical point types if not allowed.
       end
@@ -391,10 +422,10 @@ begin
         for ExistingLink in FNoodles do
         begin
             // Check both directions
-            if ((ExistingLink[0].CenterF = FDragStartConnPoint.CenterF) and
-                (ExistingLink[1].CenterF = EndConnPoint.CenterF)) or
-               ((ExistingLink[0].CenterF = EndConnPoint.CenterF)  and
-                (ExistingLink[1].CenterF = FDragStartConnPoint.CenterF)) then
+            if ((ExistingLink[0].CenterF = FDragStartHandle.CenterF) and
+                (ExistingLink[1].CenterF = EndHandle.CenterF)) or
+               ((ExistingLink[0].CenterF = EndHandle.CenterF)  and
+                (ExistingLink[1].CenterF = FDragStartHandle.CenterF)) then
             begin
                 IsDuplicate := True;
                 Break;
@@ -404,7 +435,7 @@ begin
         if not IsDuplicate then
         begin
             // Create the new link
-            NewLink := TNoodleLink.Create(FDragStartConnPoint.ARectF, EndConnPoint.ARectF);
+            NewLink := TNoodleLink.Create(FDragStartHandle.ARectF, EndHandle.ARectF);
             FNoodles.Add(NewLink);
             SelectLink(NewLink); // Select the newly created link
             // Optional: Trigger an OnLinkCreated event here
@@ -426,32 +457,32 @@ begin
   else if FDragState = ndsDraggingExistingHandle then
   begin
       // Check if dropped on a valid connection point
-      if FindConnectionPointAt(EndPoint, EndConnPoint) then
+      if FindNoodleHandleAt(EndPoint, EndHandle) then
       begin
           // Validation: Prevent linking to self, etc.
           var IsValidTarget := True;
-          var OriginalHandleA, OriginalHandleB: TNoodleConnectionPoint;
+          var OriginalHandleA, OriginalHandleB: TNoodleHandle;
 
-          OriginalHandleA := FDraggingLink.GetHandle(lptA);
-          OriginalHandleB := FDraggingLink.GetHandle(lptB);
+          OriginalHandleA := FDraggingLink.GetNoodleHandle(lptA);
+          OriginalHandleB := FDraggingLink.GetNoodleHandle(lptB);
 
 
           if FDraggingHandle = lptA then // We are changing the Source endpoint
           begin
               // Check if new source is same as original destination
-              if (EndConnPoint.CenterF = OriginalHandleB.CenterF) then
+              if (EndHandle.CenterF = OriginalHandleB.CenterF) then
                  IsValidTarget := False;
               // Add other checks (e.g., prevent same grid connection if needed)
-              // if EndConnPoint.Grid = OriginalHandleB then IsValidTarget := False;
+              // if EndHandle.Grid = OriginalHandleB then IsValidTarget := False;
 
               // Check for duplicate link with the new source
                for ExistingLink in FNoodles do
                begin
                    if ExistingLink = FDraggingLink then Continue; // Skip self
-                   if ((ExistingLink.FHandles[0].CenterF = EndConnPoint.CenterF)  and
-                       (ExistingLink.FHandles[1].CenterF = OriginalHandleA.CenterF) ) or
-                      ((ExistingLink.FHandles[0] = OriginalHandleB.CenterF) ) and
-                       (ExistingLink.FHandles[1] = EndConnPoint.CenterF) )) then
+                   if ((ExistingLink.GetNoodleHandleCenter(lptA) = EndHandle.CenterF)  and
+                       (ExistingLink.GetNoodleHandleCenter(lptB) = OriginalHandleA.CenterF) ) or
+                      ((ExistingLink.GetNoodleHandleCenter(lptA) = OriginalHandleB.CenterF)  and
+                       (ExistingLink.GetNoodleHandleCenter(lptB) = EndHandle.CenterF) ) then
                    begin
                        IsValidTarget := False;
                        ShowMessage('This modification would create a duplicate link.');
@@ -461,26 +492,25 @@ begin
 
               if IsValidTarget then
               begin
-                  FDraggingLink.SourceGrid := EndConnPoint.Grid;
-                  FDraggingLink.SourceRow := EndConnPoint.Row;
+                  FDraggingLink := FindNoodLinkAt(EndHandle);
                   // Optional: Trigger OnLinkChanged event
               end;
           end
           else // We are changing the Destination endpoint (FDraggingHandle = lepDestination)
           begin
               // Check if new destination is same as original source
-              if (EndConnPoint.Grid = OriginalHandleA) and (EndConnPoint.Row = OriginalSourceRow) then
+              if (EndHandle.CenterF = OriginalHandleA.CenterF) then
                  IsValidTarget := False;
               // Add other checks
-              // if EndConnPoint.Grid = OriginalHandleA then IsValidTarget := False;
+              // if EndHandle.Grid = OriginalHandleA then IsValidTarget := False;
 
                // Check for duplicate link with the new destination
                for ExistingLink in FNoodles do
                begin
                    if ExistingLink = FDraggingLink then Continue; // Skip self
                    if ((ExistingLink.SourceGrid = OriginalHandleA) and (ExistingLink.SourceRow = OriginalSourceRow) and
-                       (ExistingLink.DestGrid = EndConnPoint.Grid) and (ExistingLink.DestRow = EndConnPoint.Row)) or
-                      ((ExistingLink.SourceGrid = EndConnPoint.Grid) and (ExistingLink.SourceRow = EndConnPoint.Row) and
+                       (ExistingLink.DestGrid = EndHandle.Grid) and (ExistingLink.DestRow = EndHandle.Row)) or
+                      ((ExistingLink.SourceGrid = EndHandle.Grid) and (ExistingLink.SourceRow = EndHandle.Row) and
                        (ExistingLink.DestGrid = OriginalHandleA) and (ExistingLink.DestRow = OriginalSourceRow)) then
                    begin
                        IsValidTarget := False;
@@ -492,8 +522,7 @@ begin
 
               if IsValidTarget then
               begin
-                  FDraggingLink.DestGrid := EndConnPoint.Grid;
-                  FDraggingLink.DestRow := EndConnPoint.Row;
+                  FDraggingLink := FindNoodLinkAt(EndHandle);
                   // Optional: Trigger OnLinkChanged event
               end;
           end;
@@ -535,7 +564,7 @@ begin
   if FDragState = ndsDraggingNew then
   begin
     // Draw from start dot to current mouse pos
-    DrawNoodle(Canvas, FDragStartConnPoint.Position, FDragCurrentPoint, clLime, FRopeThickness, False);
+    DrawNoodle(Canvas, FDragStartHandle.Position, FDragCurrentPoint, clLime, FRopeThickness, False);
   end
   else if FDragState = ndsDraggingExistingHandle then
   begin
