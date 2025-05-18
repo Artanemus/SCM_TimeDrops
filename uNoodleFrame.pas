@@ -6,7 +6,6 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls,
   System.Generics.Collections, Vcl.VirtualImage, System.Math,
-//  BaseGrid, AdvGrid, DBAdvGrid,
   dmIMG, uNoodleLink, System.Types;
 
 type
@@ -26,42 +25,35 @@ type
   private
     { Private declarations }
     FDragCurrentPoint: TPoint; // Current mouse position during drag (PaintBox coords)
-    FDraggingHandle: TLinkPointType; // Which handle of FDraggingLink is being dragged
+    FDraggingHandle: TNoodleHandle; // Which handle of FDraggingLink is being dragged.
     FDraggingLink: TNoodleLink; // The existing link being dragged (if ndsDraggingExistingHandle)
     FDragStartHandle: TNoodleHandle;
     FDragStartPoint: TPoint; // Point where drag started (PaintBox coords)
     FDragState: TNoodleDragState;
     FHandleColor: TColor;
-    FHandleRadius: Integer;
-    FHitTolerance: Integer; // Pixels tolerance for hitting lines/handles
-
     FNoodles: TObjectList<TNoodleLink>; // Noodles
     FNoodleHandles: Array[0..19] of TNoodleHandle; // 10 lanes ... src->dest.
-
     FRopeColor: TColor;
     FRopeThickness: Integer;
     // Configuration
-    FSagFactor: Single;
     FSelectedLink: TNoodleLink;
     FSelectedRopeColor: TColor;
-
     FSourceDotColumn: Integer;
     FDestDotColumn: Integer;
 
     // Helper methods
-    procedure DrawNoodle(ACanvas: TCanvas; P0, P1: TPoint; AColor: TColor; AThickness: Integer; ASelected: Boolean);
+    procedure DrawNoodle(ACanvas: TCanvas; P0, P1: TPointF; AColor: TColor; AThickness: Integer; ASelected: Boolean);
     procedure DrawQuadraticBezier(ACanvas: TCanvas; P0, P1, P2: TPoint; NumSegments: Integer); // Adapted for TPoint
     function FindNoodleHandleAt(P: TPoint; out ANoodleHandle: TNoodleHandle): Boolean;
-    function FindNoodleLinkAt(P: TPoint; out HitLink: TNoodleLink; out HitHandle:
-        TLinkPointType): Boolean; overload;
-    function FindNoodleLinkAt(ANoodleHandle: TNoodleHandle; out HitLink:
-        TNoodleLink): Boolean; overload;
+    function HitTest(P: TPoint; out HitLink: TNoodleLink; out HitHandle:
+        TNoodleHandle): Boolean; overload;
+
+//    function HitTest(ANoodleHandle: TNoodleHandle; out HitLink:
+//        TNoodleLink): Boolean; overload;
 
     procedure SelectLink(ALink: TNoodleLink);
     procedure DeselectAllLinks;
     procedure DrawHandle(ACanvas: TCanvas; P: TPoint; AColor: TColor; ARadius: Integer);
-
-
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
@@ -75,8 +67,6 @@ type
     // *** Define your dot columns here (make consistent with NoodleLinkUnit) ***
     property SourceDotColumn: Integer read FSourceDotColumn write FSourceDotColumn default 1;
     property SelectedLink: TNoodleLink read fSelectedLink;
-
-
   end;
 
 var
@@ -105,8 +95,8 @@ begin
   FSelectedRopeColor := clHighlight;
   FRopeThickness := 2;
   FHandleColor := clRed;
-  FHandleRadius := 4; // Size of the selection handles
-  FHitTolerance := 5; // Click within 5 pixels to hit
+//  FHandleRadius := 4; // Size of the selection handles
+//  FHitTolerance := 5; // Click within 5 pixels to hit
 
   // Define dot columns
   FSourceDotColumn := 6; // Example: Column index for dots in AdvDBGrid1
@@ -181,10 +171,10 @@ begin
   ACanvas.Brush.Style := bsClear; // Reset brush
 end;
 
-procedure TNoodleFrame.DrawNoodle(ACanvas: TCanvas; P0, P1: TPoint; AColor: TColor;
+procedure TNoodleFrame.DrawNoodle(ACanvas: TCanvas; P0, P1: TPointF; AColor: TColor;
   AThickness: Integer; ASelected: Boolean);
 var
-  P_Control: TPoint;
+  P_Control, A, B: TPoint;
   MidPointX, MidPointY, Distance, ActualSag: Double;
 begin
   // Calculate control point for Bezier
@@ -203,14 +193,19 @@ begin
   ACanvas.Pen.Width := AThickness;
   ACanvas.Pen.Style := psSolid;
 
+  A.X := ROUND(P0.X);
+  A.Y := ROUND(P0.Y);
+  B.X := ROUND(P0.X);
+  B.Y := ROUND(P0.Y);
+
   // Draw the Bezier curve
-  DrawQuadraticBezier(ACanvas, P0, P_Control, P1, 30); // 30 segments
+  DrawQuadraticBezier(ACanvas, A, P_Control, B, 30); // 30 segments
 
   // Draw handles if selected
   if ASelected then
   begin
-    DrawHandle(ACanvas, P0, FHandleColor, FHandleRadius);
-    DrawHandle(ACanvas, P1, FHandleColor, FHandleRadius);
+    DrawHandle(ACanvas, A, FHandleColor, FHandleRadius);
+    DrawHandle(ACanvas, B, FHandleColor, FHandleRadius);
   end;
 end;
 
@@ -263,44 +258,56 @@ begin
   end;
 end;
 
-function TNoodleFrame.FindNoodleLinkAt(ANoodleHandle: TNoodleHandle; out
-    HitLink: TNoodleLink): Boolean;
-var
-  ANoodleLink: TNoodleLink;
-  TempHandle: TLinkPointType;
-  i: Integer;
-begin
-  Result := False;
-  for ANoodleLink in FNoodles do
+(*
+  function TNoodleFrame.HitTest(ANoodleHandle: TNoodleHandle; out
+      HitLink: TNoodleLink): Boolean;
+  var
+    ANoodleLink: TNoodleLink;
+    TempHandle: TLinkPointType;
+    i: Integer;
   begin
-    if ANoodleLink.TestForNoodleHandle(ANoodleHandle, FHandleRadius) then
+    Result := False;
+    HitLink := nil;
+    for ANoodleLink in FNoodles do
     begin
-      Result := True;
-      Exit; // Exit as soon as a match is found.
+      if ANoodleLink.TestForNoodleHandle(ANoodleHandle) then
+      begin
+        Result := True;
+        HitLink := ANoodleLink;
+        Exit; // Exit as soon as a match is found.
+      end;
     end;
   end;
-end;
+*)
 
-function TNoodleFrame.FindNoodleLinkAt(P: TPoint; out HitLink: TNoodleLink; out
-    HitHandle: TLinkPointType): Boolean;
+function TNoodleFrame.HitTest(P: TPoint; out HitLink: TNoodleLink; out
+    HitHandle: TNoodleHandle): Boolean;
 var
   Link: TNoodleLink;
-  TempHandle: TLinkPointType;
+  ANoodleHandle: TNoodleHandle;
   i: Integer;
 begin
   Result := False;
   HitLink := nil;
-  HitHandle := lptA; // Default
+
+  // Assign an empty HitHandle...
+  HitHandle.PointType := lptNone;
+  HitHandle.ARectF := TRectF.Empty;
+  HitHandle.IsValid := false; // Assign as empty...
+  HitHandle.CenterF := TPointf.Zero;
 
   // Iterate backwards through the TObjectList
   for i := FNoodles.Count - 1 downto 0 do
   begin
     Link := FNoodles[i]; // Get the link at the current index
-    if Link.HitTest(P, FSagFactor, FHitTolerance, FHandleRadius, TempHandle) then
+    if Link.HitTest(P, ANoodleHandle) then
     begin
       Result := True;
       HitLink := Link;
-      HitHandle := TempHandle;
+      // point must be located on a noddle handle for assignment.
+      // else point is located on link's connection line.
+      if ANoodleHandle.IsValid then
+        HitHandle := ANoodleHandle;
       Exit; // Exit as soon as a match is found
     end;
   end;
@@ -312,7 +319,7 @@ procedure TNoodleFrame.pbNoodlesMouseDown(Sender: TObject; Button: TMouseButton;
 var
   ClickedPoint: TPoint;
   HitLink: TNoodleLink;
-  HitHandle: TLinkPointType;
+  HitHandle: TNoodleHandle;
   HitConnPoint: TNoodleHandle;
 begin
   if Button <> mbLeft then Exit;
@@ -320,28 +327,31 @@ begin
   ClickedPoint := Point(X, Y);
   DeselectAllLinks; // Deselect previous link first
 
-  // 1. Check if clicking on an existing link's HANDLE
-  if FindNoodleLinkAt(ClickedPoint, HitLink, HitHandle) and (HitHandle <> lptA) then
+  // 1. Check if clicking on an existing link's HANDLE.
+  if HitTest(ClickedPoint, HitLink, HitHandle) then
   // HitTest returns lepSource for line hit, lepDestination or lepSource for specific handle
   begin
-     // Check the exact position again to confirm it's a handle
-     if System.Math.Hypot(ClickedPoint.X - HitLink.GetNoodleHandleCenter(HitHandle).X,
-                          ClickedPoint.Y - HitLink.GetNoodleHandleCenter(HitHandle).Y) <= FHandleRadius then
-     begin
+    if HitHandle.IsValid then
+    begin
+      // Check the exact position again to confirm it's a handle
+      if System.Math.Hypot(ClickedPoint.X - HitHandle.CenterF.X,
+                          ClickedPoint.Y - HitHandle.CenterF.Y) <= FHandleRadius then
+      begin
         FDragState := ndsDraggingExistingHandle;
-        FDraggingLink := HitLink; // Store the link being dragged
-        FDraggingHandle := HitHandle; // Store which handle is grabbed
+        FDraggingLink := HitLink; // Store the link being dragged.
+        FDraggingHandle := HitHandle; // Store which handle is grabbed.
         FDragStartPoint := ClickedPoint;
         FDragCurrentPoint := ClickedPoint;
         SelectLink(HitLink); // Select the link visually
         pbNoodles.Invalidate;
         Exit; // Don't check for other things
-     end;
+      end;
+    end;
   end;
 
 
   // 2. Check if clicking on an existing link's LINE (not handles)
-  if FindNoodleLinkAt(ClickedPoint, HitLink, HitHandle) then // HitHandle will be default if line is hit
+  if HitTest(ClickedPoint, HitLink, HitHandle) then // HitHandle will be default if line is hit
   begin
     SelectLink(HitLink);
     pbNoodles.Invalidate;
@@ -375,15 +385,95 @@ begin
     FDragCurrentPoint := Point(X, Y);
     pbNoodles.Invalidate; // Redraw preview line
   end;
-  // Add hover effects here if desired (check FindNoodleLinkAt/FindNoodleHandleAt)
+  // Add hover effects here if desired (check HitTest/FindNoodleHandleAt)
+end;
+
+procedure TNoodleFrame.pbNoodlesPaint(Sender: TObject);
+var
+  Link: TNoodleLink;
+  P0, P1: TPointF;
+  Canvas: TCanvas;
+  AColor: TColor;
+begin
+  Canvas := (Sender as TPaintBox).Canvas;
+  Canvas.Brush.Style := bsClear; // Make background transparent (won't erase grids)
+
+  // 1. Draw all existing noodles
+  for Link in FNoodles do
+  begin
+    P0 := Link.NoodleHandleStart.CenterF;
+    P1 := Link.NoodleHandleEnd.CenterF;;
+
+    // Only draw if both endpoints are valid (visible/exist)
+    if (P0.X <> -1) and (P1.X <> -1) then
+    begin
+      if Link.IsSelected then
+        AColor := FSelectedRopeColor else  AColor := FRopeColor;
+      DrawNoodle(Canvas, P0, P1,AColor, FRopeThickness, Link.IsSelected);
+    end;
+  end;
+
+  // 2. Draw dragging preview line (if any)
+  if FDragState = ndsDraggingNew then
+  begin
+    // Draw from start dot to current mouse pos
+    DrawNoodle(Canvas, FDragStartHandle.CenterF, FDragCurrentPoint, clLime, FRopeThickness, False);
+  end
+  else if FDragState = ndsDraggingExistingHandle then
+  begin
+    // Draw from fixed end to current mouse pos
+    var FixedEndPos: TPoint;
+    if FDraggingHandle.PointType = lptA then // Dragging source handle
+      FixedEndPos := ConvertTPointFToTPoint(FDraggingLink.NoodleHandleStart.CenterF)
+    else // Dragging destination handle
+      FixedEndPos := ConvertTPointFToTPoint(FDraggingLink.NoodleHandleEnd.CenterF);
+
+    DrawNoodle(Canvas, FixedEndPos, FDragCurrentPoint, clLime, FRopeThickness, False);
+  end;
+end;
+
+
+procedure TNoodleFrame.UpdatePaintBoxBounds(gridSource, gridDest: TRect);
+var
+  Rect1, Rect2, UnionRect: TRect;
+  P1, P2, P3, P4: TPoint;
+begin
+  // Get screen coordinates of the top-left/bottom-right of the dot columns
+  P1 := GetGridDotPosition(scmGrid, scmGrid.FixedRows, FSourceDotColumn, pbNoodles); // Top-left of grid1 col
+  P2 := GetGridDotPosition(scmGrid, scmGrid.RowCount - 1, FSourceDotColumn, pbNoodles); // Bottom-left of grid1 col
+  P3 := GetGridDotPosition(TDSGrid, TDSGrid.FixedRows, FDestDotColumn, pbNoodles); // Top-right of grid2 col
+  P4 := GetGridDotPosition(TDSGrid, TDSGrid.RowCount - 1, FDestDotColumn, pbNoodles); // Bottom-right of grid2 col
+
+  if (P1.X = -1) or (P2.X = -1) or (P3.X = -1) or (P4.X = -1) then
+  begin
+     // Fallback if grids are empty or something is wrong - cover grids roughly
+     Rect1 := scmGrid.BoundsRect;
+     Rect2 := TDSGrid.BoundsRect;
+     UnionRect := Rect(Min(Rect1.Left, Rect2.Left), Min(Rect1.Top, Rect2.Top),
+                       Max(Rect1.Right, Rect2.Right), Max(Rect1.Bottom, Rect2.Bottom));
+  end else
+  begin
+     // Create a bounding box around the dot columns relative to the Form
+     UnionRect.Left := Min(P1.X, P3.X) - FHandleRadius - 10; // Add some padding
+     UnionRect.Top := Min(P1.Y, P3.Y) - FHandleRadius - 10;
+     UnionRect.Right := Max(P2.X, P4.X) + FHandleRadius + 10;
+     UnionRect.Bottom := Max(P2.Y, P4.Y) + FHandleRadius + 10;
+  end;
+
+
+  // Set PaintBox bounds (relative to its parent, the Form)
+  pbNoodles.SetBounds(UnionRect.Left, UnionRect.Top,
+                           UnionRect.Right - UnionRect.Left,
+                           UnionRect.Bottom - UnionRect.Top);
+  pbNoodles.Invalidate; // Redraw after moving/resizing
 end;
 
 procedure TNoodleFrame.pbNoodlesMouseUp(Sender: TObject; Button: TMouseButton;
     Shift: TShiftState; X, Y: Integer);
 var
   EndPoint: TPoint;
-  EndHandle: TNoodleHandle;
-  NewLink, PrevLink, NextLink: TNoodleLink;
+  EndHandle, HitHandle: TNoodleHandle;
+  NewLink, NoodleLink: TNoodleLink;
   ExistingLink: TNoodleLink;
 begin
   if Button <> mbLeft then Exit;
@@ -391,14 +481,61 @@ begin
   EndPoint := Point(X, Y);
 
 
-
   if FDragState = ndsDraggingNew then
   begin
-    FindNoodleLinkAt(FDragStartHandle, PrevLink);
-    if FindNoodleHandleAt(EndPoint, EndHandle) then
-      FindNoodleLinkAt(EndHandle, NextLink);
 
-  { // Check if dropped on a valid connection point }
+    for NoodleLink in FNoodles do
+    begin
+      { // Check if dropped on a valid connection point }
+      if NoodleLink.HitTestNoodle(EndPoint, HitHandle) then
+      begin
+        // --- Validation: Prevent linking same handle ---
+        if (FDragStartHandle = HitHandle) then
+        begin
+           // Dropped on same starting handle ...
+        end
+        // --- Validation: prevent linking TDS to TDS or SCM to SCM) ---
+        else if FDragStartHandle.PointType = HitHandle.PointType  then
+        begin
+          // Linking identical point types if not allowed.
+        end
+        else
+        begin
+          // --- Check for duplicate link ---
+          var IsDuplicate := False;
+          for ExistingLink in FNoodles do
+          begin
+
+              // Check both directions
+              if (ExistingLink.FNoodleHandles[0] = HitHandle) or  (ExistingLink.FNoodleHandles[1] = HitHandle) then
+              begin
+                  IsDuplicate := True;
+                  Break;
+              end;
+          end;
+
+          if not IsDuplicate then
+          begin
+              // Create the new link
+              NewLink := TNoodleLink.Create(FDragStartHandle.ARectF, EndHandle.ARectF);
+              FNoodles.Add(NewLink);
+              SelectLink(NewLink); // Select the newly created link
+              // Optional: Trigger an OnLinkCreated event here
+              // if Assigned(FOnLinkCreated) then FOnLinkCreated(Self, NewLink);
+          end
+          else
+          begin
+              // Handle duplicate link (e.g., show message)
+              ShowMessage('This link already exists.');
+          end;
+
+        end;
+
+      end;
+    end;
+
+
+
     if FindNoodleHandleAt(EndPoint, EndHandle) then
     begin
       // --- Validation: Prevent linking dot to itself or same grid row ---
@@ -406,8 +543,6 @@ begin
       begin
          // Dropped on same start point, cancel
       end
-
-
 
       // --- Add more validation if needed
       // (e.g., prevent linking lptA to lptA) ---
@@ -533,86 +668,6 @@ begin
       pbNoodles.Invalidate; // Redraw final state
   end;
 
-end;
-
-procedure TNoodleFrame.pbNoodlesPaint(Sender: TObject);
-var
-  Link: TNoodleLink;
-  P0, P1: TPoint;
-  Canvas: TCanvas;
-  AColor: TColor;
-begin
-  Canvas := (Sender as TPaintBox).Canvas;
-  Canvas.Brush.Style := bsClear; // Make background transparent (won't erase grids)
-
-  // 1. Draw all existing noodles
-  for Link in FNoodles do
-  begin
-    P0 := Link.GetEndPointPosition(lepSource, pbNoodles);
-    P1 := Link.GetEndPointPosition(lepDestination, pbNoodles);
-
-    // Only draw if both endpoints are valid (visible/exist)
-    if (P0.X <> -1) and (P1.X <> -1) then
-    begin
-      if Link.IsSelected then
-        AColor := FSelectedRopeColor else  AColor := FRopeColor;
-      DrawNoodle(Canvas, P0, P1,AColor, FRopeThickness, Link.IsSelected);
-    end;
-  end;
-
-  // 2. Draw dragging preview line (if any)
-  if FDragState = ndsDraggingNew then
-  begin
-    // Draw from start dot to current mouse pos
-    DrawNoodle(Canvas, FDragStartHandle.Position, FDragCurrentPoint, clLime, FRopeThickness, False);
-  end
-  else if FDragState = ndsDraggingExistingHandle then
-  begin
-    // Draw from fixed end to current mouse pos
-    var FixedEndPos: TPoint;
-    if FDraggingHandle = lepSource then // Dragging source handle
-      FixedEndPos := FDraggingLink.GetEndPointPosition(lepDestination, pbNoodles)
-    else // Dragging destination handle
-      FixedEndPos := FDraggingLink.GetEndPointPosition(lepSource, pbNoodles);
-
-    DrawNoodle(Canvas, FixedEndPos, FDragCurrentPoint, clLime, FRopeThickness, False);
-  end;
-end;
-
-
-procedure TNoodleFrame.UpdatePaintBoxBounds(gridSource, gridDest: TRect);
-var
-  Rect1, Rect2, UnionRect: TRect;
-  P1, P2, P3, P4: TPoint;
-begin
-  // Get screen coordinates of the top-left/bottom-right of the dot columns
-  P1 := GetGridDotPosition(scmGrid, scmGrid.FixedRows, FSourceDotColumn, pbNoodles); // Top-left of grid1 col
-  P2 := GetGridDotPosition(scmGrid, scmGrid.RowCount - 1, FSourceDotColumn, pbNoodles); // Bottom-left of grid1 col
-  P3 := GetGridDotPosition(TDSGrid, TDSGrid.FixedRows, FDestDotColumn, pbNoodles); // Top-right of grid2 col
-  P4 := GetGridDotPosition(TDSGrid, TDSGrid.RowCount - 1, FDestDotColumn, pbNoodles); // Bottom-right of grid2 col
-
-  if (P1.X = -1) or (P2.X = -1) or (P3.X = -1) or (P4.X = -1) then
-  begin
-     // Fallback if grids are empty or something is wrong - cover grids roughly
-     Rect1 := scmGrid.BoundsRect;
-     Rect2 := TDSGrid.BoundsRect;
-     UnionRect := Rect(Min(Rect1.Left, Rect2.Left), Min(Rect1.Top, Rect2.Top),
-                       Max(Rect1.Right, Rect2.Right), Max(Rect1.Bottom, Rect2.Bottom));
-  end else
-  begin
-     // Create a bounding box around the dot columns relative to the Form
-     UnionRect.Left := Min(P1.X, P3.X) - FHandleRadius - 10; // Add some padding
-     UnionRect.Top := Min(P1.Y, P3.Y) - FHandleRadius - 10;
-     UnionRect.Right := Max(P2.X, P4.X) + FHandleRadius + 10;
-     UnionRect.Bottom := Max(P2.Y, P4.Y) + FHandleRadius + 10;
-  end;
-
-
-  // Set PaintBox bounds (relative to its parent, the Form)
-  pbNoodles.SetBounds(UnionRect.Left, UnionRect.Top,
-                           UnionRect.Right - UnionRect.Left,
-                           UnionRect.Bottom - UnionRect.Top);
-  pbNoodles.Invalidate; // Redraw after moving/resizing
 end;
 
 

@@ -6,15 +6,18 @@ uses
   System.Classes, Vcl.Controls, System.Types, System.SysUtils,
   System.Math, Vcl.Graphics, Vcl.Forms;
 
+
 type
   TLinkPointType = (lptA, lptB, lptNone);
 
+type
   // Record to hold info about a potential connection point
   TNoodleHandle = record
     PointType: TLinkPointType;
     ARectF: TRectF;
     IsValid: Boolean;
     CenterF: TPointF;
+    class operator Equal(a, b: TNoodleHandle): Boolean;
   end;
 
 type
@@ -31,20 +34,63 @@ type
     constructor Create(RectA: TRectF; RectB: TRectF); overload;
     destructor Destroy; override;
     // Function to check if a point is near this link's line or handles
-    function HitTest(P: TPointF; SagFactor: Single; LineTolerance, HandleRadius:
-      Integer; out HitHandle: TLinkPointType): Boolean;
+    function HitTest(P: TPointF; out HitHandle: TNoodleHandle): Boolean;
+    function HitTestNoodle(P: TPointF; out HitHandle: TNoodleHandle): Boolean;
+    // Get details for a specific end of the noodle.
     function GetNoodleHandleCenter(ALinkPointType: TLinkPointType): TPointF;
     function GetNoodleHandle(ALinkPointType: TLinkPointType): TNoodleHandle;
-    function TestForNoodleHandle(ANoodleHandle: TNoodleHandle; HandleRadius: Integer): boolean;
+
+
+    // Does the noodle have this handle.
+//    function TestForNoodleHandle(ANoodleHandle: TNoodleHandle): boolean;
+
+    procedure EmptyHandle(out ANoodleHandle: TNoodleHandle);
+
     property IsSelected: Boolean read FIsSelected write FIsSelected;
     property SelectedHandle: TLinkPointType read FSelectedHandle write
       FSelectedHandle; // Use HitTest to set this
+    property NoodleHandleStart: TNoodleHandle read FNoodleHandles[0];
+    property NoodleHandleEnd: TNoodleHandle read FNoodleHandles[1];
     property UserData: TObject read FUserData write FUserData;
   end;
+
   // Helper function. Return ROUNDED TRect.
   function ConvertTRectFToTRect(const ARectF: TRectF): TRect;
+  function ConvertTPointFToTPoint(const APointF: TPointF): TPoint;
+
+var
+  FHitTolerance: Integer = 5; // Pixels tolerance for hitting handles.
+  FLineTolerance: Integer = 5; // Pixels tolerance for hitting lines.
+  FHandleRadius: Integer = 4; //
+  FSagFactor: Single = 0.5;
 
 implementation
+
+function IsValidPointF(const P: TPointF): Boolean;
+begin
+  Result := not ((P.X = 0) and (P.Y = 0));
+end;
+
+class operator TNoodleHandle.Equal(a, b: TNoodleHandle): Boolean;
+var
+  dist: Single;
+begin
+// IMPORTANT : CenterF must be assigned when ARectF is assigned.
+// Calculate the distance between the centers of the two handles
+  dist := a.CenterF.Distance(b.CenterF);
+// Consider them equal if the distance is within the global FHandleRadius tolerance
+  Result := dist <= FHitTolerance;
+end;
+
+function ConvertTPointFToTPoint(const APointF: TPointF): TPoint;
+begin
+  Result := TPoint.Create(
+    Round(APointF.X),
+    Round(APointF.Y))
+  );
+
+end;
+
 
 function ConvertTRectFToTRect(const ARectF: TRectF): TRect;
 begin
@@ -127,27 +173,28 @@ end;
 
 constructor TNoodleLink.Create(RectA: TRectF; RectB: TRectF);
 begin
-
   inherited Create;
-
   // Initialize handle A
   FNoodleHandles[0].PointType := lptA;
-  FNoodleHandles[0].ARectF := RectA;
   FNoodleHandles[0].IsValid := not RectA.IsEmpty;
-  FNoodleHandles[0].CenterF := GetCenterPoint(RectA);
-
+  if not RectA.IsEmpty then
+  begin
+    FNoodleHandles[0].ARectF := RectA;
+    FNoodleHandles[0].CenterF := GetCenterPoint(RectA);
+  end;
   // Initialize handle B
   FNoodleHandles[1].PointType := lptB;
-  FNoodleHandles[1].ARectF := RectB;
   FNoodleHandles[1].IsValid := not RectB.IsEmpty;
-  FNoodleHandles[1].CenterF := GetCenterPoint(RectB);
-
-  FIsSelected := False;
-  FSelectedHandle := lptA; // Default, doesn't mean much until hit tested.
+  if not RectB.IsEmpty then
+  begin
+    FNoodleHandles[1].ARectF := RectB;
+    FNoodleHandles[1].CenterF := GetCenterPoint(RectB);
+  end;
 end;
 
 constructor TNoodleLink.Create;
 begin
+  inherited Create;
   // Initialize handle A
   FNoodleHandles[0].PointType := lptNone;
   FNoodleHandles[0].ARectF := TRectF.Empty;
@@ -170,6 +217,15 @@ begin
   inherited Destroy;
 end;
 
+procedure TNoodleLink.EmptyHandle(out ANoodleHandle: TNoodleHandle);
+begin
+  // Assign an empty HitHandle...
+  ANoodleHandle.PointType := lptNone;
+  ANoodleHandle.ARectF := TRectF.Empty;
+  ANoodleHandle.IsValid := false; // Assign as empty...
+  ANoodleHandle.CenterF := TPointf.Zero;
+end;
+
 function TNoodleLink.GetNoodleHandle(ALinkPointType: TLinkPointType):
     TNoodleHandle;
 begin
@@ -188,9 +244,9 @@ begin
   Result := GetCenterPoint(ARect);
 end;
 
-function TNoodleLink.HitTest(P: TPointF; SagFactor: Single; LineTolerance,
-  HandleRadius: Integer; out HitHandle: TLinkPointType): Boolean;
+function TNoodleLink.HitTest(P: TPointF; out HitHandle: TNoodleHandle): Boolean;
 var
+  //  FLineTolerance, FHandleRadius: Integer;
   P0, P1, PControl, pt: TPointF;
   DistSq, HandleRadiusSq: Double; // Use Int64 for squared distances
   i: Integer;
@@ -201,105 +257,125 @@ const
   NumSegments = 20; // Fewer segments for faster hit testing needed? Adjust.
 begin
   Result := False;
-  HitHandle := lptA; // Default
-  HandleRadiusSq := HandleRadius * HandleRadius;
+  // Assign an empty HitHandle...
+  EmptyHandle(HitHandle);
+  P0 :=  TPointF.Zero;
+  P1 :=  TPointF.Zero;
+  HandleRadiusSq := FHandleRadius * FHandleRadius;
+  NearestDistSq := System.Math.MaxDouble; // Find minimum distance squared.
 
-  P0 := GetNoodleHandleCenter(lptA);
-  P1 := GetNoodleHandleCenter(lptB);
-
-  // Check if point is near start handle
-  DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
-  if DistSq <= HandleRadiusSq then
+  // Check if point is near [0] handle
+  if FNoodleHandles[0].IsValid then
   begin
-    Result := True;
-    HitHandle := lptA;
-    Exit;
+    P0 := FNoodleHandles[0].CenterF;
+    DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
+    if DistSq <= HandleRadiusSq then
+    begin
+      Result := True;
+      HitHandle := FNoodleHandles[0];
+      Exit;
+    end;
   end;
 
-  // Check if point is near end handle
-  DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
-  if DistSq <= HandleRadiusSq then
+  // Check if point is near [1] handle
+  if FNoodleHandles[1].IsValid then
   begin
-    Result := True;
-    HitHandle := lptB;
-    Exit;
+    P1 := FNoodleHandles[1].CenterF;
+    DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
+    if DistSq <= HandleRadiusSq then
+    begin
+      Result := True;
+      HitHandle := FNoodleHandles[1];
+      Exit;
+    end;
   end;
+
+  if not (FNoodleHandles[0].IsValid and FNoodleHandles[1].IsValid) then
+    Exit(False);
 
   // --- More complex: Check if point is near the Bezier curve ---
   // Approximate the curve with line segments and check distance to segments.
   // This is simpler than precise Bezier distance calculation.
-
-  // Calculate control point (simplified version from your code)
-  var MidPointX := (P0.X + P1.X) / 2;
-  var MidPointY := (P0.Y + P1.Y) / 2;
-  var Distance := System.Math.Hypot(P1.X - P0.X, P1.Y - P0.Y);
-  var ActualSag := 0.0;
-  if Distance > 10 then
-    ActualSag := Distance * SagFactor;
-
-  PControl.X := Round(MidPointX);
-  PControl.Y := Round(MidPointY + ActualSag); // Simple vertical sag
-
-  // Iterate through Bezier segments
-  NearestDistSq := System.Math.MaxDouble; // Find minimum distance squared
-  var ptPrev := P0;
-
-  for i := 1 to NumSegments do
+  if IsValidPointF(P0) and IsValidPointF(P1) then
   begin
-    t := i / NumSegments;
-    // Quadratic Bezier formula
-    pt.X := Round(Power(1 - t, 2) * P0.X + 2 * (1 - t) * t * PControl.X +
-      Power(t, 2) * P1.X);
-    pt.Y := Round(Power(1 - t, 2) * P0.Y + 2 * (1 - t) * t * PControl.Y +
-      Power(t, 2) * P1.Y);
+    // Calculate control point (simplified version from your code)
+    var MidPointX := (P0.X + P1.X) / 2;
+    var MidPointY := (P0.Y + P1.Y) / 2;
+    var Distance := System.Math.Hypot(P1.X - P0.X, P1.Y - P0.Y);
+    var ActualSag := 0.0;
+    if Distance > 10 then
+      ActualSag := Distance * FSagFactor;
 
-    // Calculate squared distance from point P to the line segment ptPrev -> pt
-    // (Using DistancePointSegmentSq function - implementation below)
-    var SegDistSq := DistancePointSegmentSq(P, ptPrev, pt);
-    if SegDistSq < NearestDistSq then
+    PControl.X := Round(MidPointX);
+    PControl.Y := Round(MidPointY + ActualSag); // Simple vertical sag
+
+    // Iterate through Bezier segments
+    var ptPrev := P0;
+    for i := 1 to NumSegments do
     begin
-      NearestDistSq := SegDistSq;
-    end;
+      t := i / NumSegments;
+      // Quadratic Bezier formula
+      pt.X := Round(Power(1 - t, 2) * P0.X + 2 * (1 - t) * t * PControl.X +
+        Power(t, 2) * P1.X);
+      pt.Y := Round(Power(1 - t, 2) * P0.Y + 2 * (1 - t) * t * PControl.Y +
+        Power(t, 2) * P1.Y);
 
-    ptPrev := pt;
+      // Calculate squared distance from point P to the line segment ptPrev -> pt
+      // (Using DistancePointSegmentSq function - implementation below)
+      var SegDistSq := DistancePointSegmentSq(P, ptPrev, pt);
+      if SegDistSq < NearestDistSq then
+      begin
+        NearestDistSq := SegDistSq;
+      end;
+      ptPrev := pt;
+    end;
   end;
 
-  if NearestDistSq <= (LineTolerance * LineTolerance) then
+  if NearestDistSq <= (FLineTolerance * FLineTolerance) then
   begin
     Result := True;
-    // HitHandle remains the default (lptA), signifies hitting the line not a specific handle
   end;
+
 end;
 
-function TNoodleLink.TestForNoodleHandle(ANoodleHandle: TNoodleHandle; HandleRadius: Integer): boolean;
+function TNoodleLink.HitTestNoodle(P: TPointF;
+  out HitHandle: TNoodleHandle): Boolean;
 var
-  P0, P1, P: TPointF;
-  DistSq, HandleRadiusSq: Double; // Use Int64 for squared distances
-  i: Integer;
-  t: Single;
-  NearestDistSq: Double;
+  P0, P1: TPointF;
+  DistSq, HandleRadiusSq: Double;
 begin
   Result := False;
-  HandleRadiusSq := HandleRadius * HandleRadius;
-  P  := ANoodleHandle.CenterF;
-  P0 := FNoodleHandles[0].CenterF;
-  P1 := FNoodleHandles[1].CenterF;
+  // Assign an empty HitHandle...
+  EmptyHandle(HitHandle);
+  HandleRadiusSq := FHandleRadius * FHandleRadius;
 
-  // Check if point is near start handle
-  DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
-  if DistSq <= HandleRadiusSq then
+  // Check if point is near [0] handle
+  if FNoodleHandles[0].IsValid then
   begin
-    Result := True;
-    Exit;
+    P0 := FNoodleHandles[0].CenterF;
+    DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
+    if DistSq <= HandleRadiusSq then
+    begin
+      Result := True;
+      HitHandle := FNoodleHandles[0];
+      Exit;
+    end;
+  end;
+  // Check if point is near [1] handle
+  if FNoodleHandles[1].IsValid then
+  begin
+    P1 := FNoodleHandles[1].CenterF;
+    DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
+    if DistSq <= HandleRadiusSq then
+    begin
+      Result := True;
+      HitHandle := FNoodleHandles[1];
+      Exit;
+    end;
   end;
 
-  // Check if point is near end handle
-  DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
-  if DistSq <= HandleRadiusSq then
-  begin
-    Result := True;
-    Exit;
-  end;
 end;
+
+
 
 end.
