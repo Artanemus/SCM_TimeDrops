@@ -4,26 +4,24 @@ object NoodleFrame: TNoodleFrame
   Width = 185
   Height = 648
   TabOrder = 0
-  DesignSize = (
-    185
-    648)
   object pbNoodles: TPaintBox
-    Left = 10
-    Top = 17
-    Width = 144
-    Height = 581
-    Anchors = []
+    Left = 0
+    Top = 0
+    Width = 185
+    Height = 648
+    Align = alClient
     Color = clBtnFace
     ParentColor = False
     OnMouseDown = pbNoodlesMouseDown
     OnMouseMove = pbNoodlesMouseMove
     OnMouseUp = pbNoodlesMouseUp
     OnPaint = pbNoodlesPaint
-    ExplicitLeft = 22
+    ExplicitWidth = 144
+    ExplicitHeight = 581
   end
   object vimgDL1: TVirtualImage
-    Left = 22
-    Top = 604
+    Left = 70
+    Top = 564
     Width = 30
     Height = 30
     ImageCollection = IMG.imgcolDT

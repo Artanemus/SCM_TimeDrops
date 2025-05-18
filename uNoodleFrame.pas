@@ -32,7 +32,7 @@ type
     FDragState: TNoodleDragState;
     FHandleColor: TColor;
     FNoodles: TObjectList<TNoodleLink>; // Noodles
-    FNoodleHandles: Array[0..19] of TNoodleHandle; // 10 lanes ... src->dest.
+    FHotSpots: Array of TRect;
     FRopeColor: TColor;
     FRopeThickness: Integer;
     // Configuration
@@ -41,25 +41,33 @@ type
     FSourceDotColumn: Integer;
     FDestDotColumn: Integer;
 
+    FixedRowHeight: integer;   // identical to SCM TMS TAdvDBGrid.
+    DefaultRowHeight: integer; // identical to SCM TMS TAdvDBGrid.
+    NumberOfLanes: integer;
+
+
     // Helper methods
     procedure DrawNoodle(ACanvas: TCanvas; P0, P1: TPointF; AColor: TColor; AThickness: Integer; ASelected: Boolean);
     procedure DrawQuadraticBezier(ACanvas: TCanvas; P0, P1, P2: TPoint; NumSegments: Integer); // Adapted for TPoint
-    function FindNoodleHandleAt(P: TPoint; out ANoodleHandle: TNoodleHandle): Boolean;
+    function FindNoodleHandleAtHotSpot(P: TPoint; out ANoodleHandle:
+        TNoodleHandle): Boolean;
     function HitTest(P: TPoint; out HitLink: TNoodleLink; out HitHandle:
         TNoodleHandle): Boolean; overload;
 
 //    function HitTest(ANoodleHandle: TNoodleHandle; out HitLink:
 //        TNoodleLink): Boolean; overload;
+    procedure  CreateHotSpots;
 
     procedure SelectLink(ALink: TNoodleLink);
     procedure DeselectAllLinks;
     procedure DrawHandle(ACanvas: TCanvas; P: TPoint; AColor: TColor; ARadius: Integer);
+
+
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
 
-    procedure UpdatePaintBoxBounds(gridSource, gridDest: TRect);
     procedure DeleteSelectedLink;
 
     { Public declarations }
@@ -76,11 +84,37 @@ implementation
 
 {$R *.dfm}
 
-uses frmMain;
+//uses frmMain;
+
+procedure  TNoodleFrame.CreateHotSpots;
+var
+I, J: integer;
+ARect: TRect;
+begin
+  SetLength(FHotSpots, (NumberOfLanes*2));
+  for i:=0 to NumberOfLanes-1 do
+  begin
+    ARect.Top := FixedRowHeight + (i*DefaultRowHeight);
+    Arect.Left := 0;
+    ARect.Height := FixedRowHeight + ((i+1)*DefaultRowHeight);
+    ARect.Width := DefaultRowHeight;
+    FHotSpots[i] := ARect;
+  end;
+  Inc(i);
+  for J:=0 to NumberOfLanes-1 do
+  begin
+    ARect.Top := FixedRowHeight + (i*DefaultRowHeight);
+    Arect.Left := Left - Width;
+    ARect.Height := FixedRowHeight + ((J+1)*DefaultRowHeight);
+    ARect.Width := DefaultRowHeight;
+    FHotSpots[i+J] := ARect;
+  end;
+end;
 
 constructor TNoodleFrame.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner); // Call the inherited constructor
+
   // Custom initialization code here
   // ---------------------------------------------------------------------
   // NOODLE INITIALISATION. BEGIN ...
@@ -95,25 +129,21 @@ begin
   FSelectedRopeColor := clHighlight;
   FRopeThickness := 2;
   FHandleColor := clRed;
-//  FHandleRadius := 4; // Size of the selection handles
-//  FHitTolerance := 5; // Click within 5 pixels to hit
-
-  // Define dot columns
-  FSourceDotColumn := 6; // Example: Column index for dots in AdvDBGrid1
-  FDestDotColumn := 1;   // Example: Column index for dots in AdvDBGrid2
-
   // Ensure PaintBox is on top and covers the grid areas
   pbNoodles.BringToFront;
 
-//  UpdatePaintBoxBounds; // Initial positioning
-
-  // Hook grid scroll events to repaint noodles
-//  scmGrid.OnScroll := AdvDBGridScroll;
-//  tdsBGrid.OnScroll := AdvDBGridScroll;
-
   // NOODLE INITIALISATION. END.
   // ---------------------------------------------------------------------
+
+    FixedRowHeight:= 34;   // identical to SCM TMS TAdvDBGrid.
+    DefaultRowHeight:= 46; // identical to SCM TMS TAdvDBGrid.
+    NumberOfLanes:= 10;  // dbo.SwimClubMeet.SwimClub.NumOfLanes.
+
+    CreateHotSpots;
+
 end;
+
+
 
 destructor TNoodleFrame.Destroy;
 begin
@@ -229,56 +259,40 @@ begin
   end;
 end;
 
-function TNoodleFrame.FindNoodleHandleAt(P: TPoint; out ANoodleHandle:
+function TNoodleFrame.FindNoodleHandleAtHotSpot(P: TPoint; out ANoodleHandle:
     TNoodleHandle): Boolean;
 var
   HandleRadiusSq: Int64;
   DistSq: Int64;
   CenterF: TPointF;
   DistSqF: Double;
-  CPoint: TNoodleHandle;
+  HotSpot: TRect;
+  AHandle: TNoodleHandle;
+  ALink: TNoodleLink;
 begin
   Result := False;
-  ANoodleHandle.IsValid := False;
+  ANoodleHandle.SetEmpty;
   HandleRadiusSq := FHandleRadius * FHandleRadius; // margin of acceptance.
-  for CPoint in FNoodleHandles do
+  for HotSpot in FHotSpots do
   begin
-    if not CPoint.IsValid then continue;
-    CenterF := CPoint.CenterF;
+    if HotSpot.IsEmpty then continue;
+    CenterF := HotSpot.CenterPoint;
     DistSqF := (P.X - CenterF.X) * (P.X - CenterF.X) + (P.Y - CenterF.Y) * (P.Y - CenterF.Y);
     if DistSqF <= HandleRadiusSq then
     begin
-      ANoodleHandle.CenterF := CPoint.CenterF; // Clone ConnectionPoint.
-      ANoodleHandle.IsValid := True;
-      ANoodleHandle.PointType := CPoint.PointType;
-      ANoodleHandle.ARectF := CPoint.ARectF;
-      Result := True;
-      Exit; // Found a connection point within margin of acceptance.
+      if HitTest(HotSpot.CenterPoint, ALink, AHandle) then
+      begin
+        if AHandle.IsValid then
+        begin
+          ANoodleHandle := AHandle;
+          Result := True;
+          Exit; // Found a noodle handle within margin of acceptance.
+        end;
+      end;
     end;
   end;
 end;
 
-(*
-  function TNoodleFrame.HitTest(ANoodleHandle: TNoodleHandle; out
-      HitLink: TNoodleLink): Boolean;
-  var
-    ANoodleLink: TNoodleLink;
-    TempHandle: TLinkPointType;
-    i: Integer;
-  begin
-    Result := False;
-    HitLink := nil;
-    for ANoodleLink in FNoodles do
-    begin
-      if ANoodleLink.TestForNoodleHandle(ANoodleHandle) then
-      begin
-        Result := True;
-        HitLink := ANoodleLink;
-        Exit; // Exit as soon as a match is found.
-      end;
-    end;
-  end;
-*)
 
 function TNoodleFrame.HitTest(P: TPoint; out HitLink: TNoodleLink; out
     HitHandle: TNoodleHandle): Boolean;
@@ -289,15 +303,10 @@ var
 begin
   Result := False;
   HitLink := nil;
+  HitHandle.SetEmpty; // Assign an empty HitHandle...
 
-  // Assign an empty HitHandle...
-  HitHandle.PointType := lptNone;
-  HitHandle.ARectF := TRectF.Empty;
-  HitHandle.IsValid := false; // Assign as empty...
-  HitHandle.CenterF := TPointf.Zero;
-
-  // Iterate backwards through the TObjectList
-  for i := FNoodles.Count - 1 downto 0 do
+  // Iterate through the Noodles
+  for i := 0 to FNoodles.Count - 1 do
   begin
     Link := FNoodles[i]; // Get the link at the current index
     if Link.HitTest(P, ANoodleHandle) then
@@ -311,6 +320,7 @@ begin
       Exit; // Exit as soon as a match is found
     end;
   end;
+
 end;
 
 
@@ -360,7 +370,7 @@ begin
   end;
 
   // 3. Check if clicking on a connection point (a dot)
-  if FindNoodleHandleAt(ClickedPoint, HitConnPoint) then
+  if FindNoodleHandleAtHotSpot(ClickedPoint, HitConnPoint) then
   begin
     FDragState := ndsDraggingNew;
     FDragStartHandle := HitConnPoint; // Store grid/row/position of start
@@ -385,22 +395,32 @@ begin
     FDragCurrentPoint := Point(X, Y);
     pbNoodles.Invalidate; // Redraw preview line
   end;
-  // Add hover effects here if desired (check HitTest/FindNoodleHandleAt)
+  // Add hover effects here if desired (check HitTest/FindNoodleHandleAtHotSpot)
 end;
 
 procedure TNoodleFrame.pbNoodlesPaint(Sender: TObject);
 var
   Link: TNoodleLink;
   P0, P1: TPointF;
+  HotSpot: TRect;
   Canvas: TCanvas;
   AColor: TColor;
 begin
   Canvas := (Sender as TPaintBox).Canvas;
   Canvas.Brush.Style := bsClear; // Make background transparent (won't erase grids)
 
+  // draw the under lining HotSpots
+  for HotSpot in FHotSpots do
+  begin
+      Canvas.StretchDraw(HotSpot, IMG.ImgcolDT.GetBitmap('EvBlue', 50, 50));
+  end;
+
+
   // 1. Draw all existing noodles
   for Link in FNoodles do
   begin
+    if (not Link.NoodleHandleStart.IsValid) or (not Link.NoodleHandleEnd.IsValid) then continue;
+
     P0 := Link.NoodleHandleStart.CenterF;
     P1 := Link.NoodleHandleEnd.CenterF;;
 
@@ -432,42 +452,6 @@ begin
   end;
 end;
 
-
-procedure TNoodleFrame.UpdatePaintBoxBounds(gridSource, gridDest: TRect);
-var
-  Rect1, Rect2, UnionRect: TRect;
-  P1, P2, P3, P4: TPoint;
-begin
-  // Get screen coordinates of the top-left/bottom-right of the dot columns
-  P1 := GetGridDotPosition(scmGrid, scmGrid.FixedRows, FSourceDotColumn, pbNoodles); // Top-left of grid1 col
-  P2 := GetGridDotPosition(scmGrid, scmGrid.RowCount - 1, FSourceDotColumn, pbNoodles); // Bottom-left of grid1 col
-  P3 := GetGridDotPosition(TDSGrid, TDSGrid.FixedRows, FDestDotColumn, pbNoodles); // Top-right of grid2 col
-  P4 := GetGridDotPosition(TDSGrid, TDSGrid.RowCount - 1, FDestDotColumn, pbNoodles); // Bottom-right of grid2 col
-
-  if (P1.X = -1) or (P2.X = -1) or (P3.X = -1) or (P4.X = -1) then
-  begin
-     // Fallback if grids are empty or something is wrong - cover grids roughly
-     Rect1 := scmGrid.BoundsRect;
-     Rect2 := TDSGrid.BoundsRect;
-     UnionRect := Rect(Min(Rect1.Left, Rect2.Left), Min(Rect1.Top, Rect2.Top),
-                       Max(Rect1.Right, Rect2.Right), Max(Rect1.Bottom, Rect2.Bottom));
-  end else
-  begin
-     // Create a bounding box around the dot columns relative to the Form
-     UnionRect.Left := Min(P1.X, P3.X) - FHandleRadius - 10; // Add some padding
-     UnionRect.Top := Min(P1.Y, P3.Y) - FHandleRadius - 10;
-     UnionRect.Right := Max(P2.X, P4.X) + FHandleRadius + 10;
-     UnionRect.Bottom := Max(P2.Y, P4.Y) + FHandleRadius + 10;
-  end;
-
-
-  // Set PaintBox bounds (relative to its parent, the Form)
-  pbNoodles.SetBounds(UnionRect.Left, UnionRect.Top,
-                           UnionRect.Right - UnionRect.Left,
-                           UnionRect.Bottom - UnionRect.Top);
-  pbNoodles.Invalidate; // Redraw after moving/resizing
-end;
-
 procedure TNoodleFrame.pbNoodlesMouseUp(Sender: TObject; Button: TMouseButton;
     Shift: TShiftState; X, Y: Integer);
 var
@@ -479,7 +463,6 @@ begin
   if Button <> mbLeft then Exit;
 
   EndPoint := Point(X, Y);
-
 
   if FDragState = ndsDraggingNew then
   begin
@@ -505,9 +488,8 @@ begin
           var IsDuplicate := False;
           for ExistingLink in FNoodles do
           begin
-
               // Check both directions
-              if (ExistingLink.FNoodleHandles[0] = HitHandle) or  (ExistingLink.FNoodleHandles[1] = HitHandle) then
+              if (ExistingLink.NoodleHandleStart = HitHandle) or  (ExistingLink.NoodleHandleEnd = HitHandle) then
               begin
                   IsDuplicate := True;
                   Break;
@@ -534,9 +516,7 @@ begin
       end;
     end;
 
-
-
-    if FindNoodleHandleAt(EndPoint, EndHandle) then
+    if FindNoodleHandleAtHotSpot(EndPoint, EndHandle) then
     begin
       // --- Validation: Prevent linking dot to itself or same grid row ---
       if (EndHandle.CenterF = FDragStartHandle.CenterF) then
@@ -557,10 +537,10 @@ begin
         for ExistingLink in FNoodles do
         begin
             // Check both directions
-            if ((ExistingLink[0].CenterF = FDragStartHandle.CenterF) and
-                (ExistingLink[1].CenterF = EndHandle.CenterF)) or
-               ((ExistingLink[0].CenterF = EndHandle.CenterF)  and
-                (ExistingLink[1].CenterF = FDragStartHandle.CenterF)) then
+            if ((ExistingLink.NoodleHandleStart.CenterF = FDragStartHandle.CenterF) and
+                (ExistingLink.NoodleHandleEnd.CenterF = EndHandle.CenterF)) or
+               ((ExistingLink.NoodleHandleStart.CenterF = EndHandle.CenterF)  and
+                (ExistingLink.NoodleHandleEnd.CenterF = FDragStartHandle.CenterF)) then
             begin
                 IsDuplicate := True;
                 Break;
@@ -592,17 +572,17 @@ begin
   else if FDragState = ndsDraggingExistingHandle then
   begin
       // Check if dropped on a valid connection point
-      if FindNoodleHandleAt(EndPoint, EndHandle) then
+      if FindNoodleHandleAtHotSpot(EndPoint, EndHandle) then
       begin
           // Validation: Prevent linking to self, etc.
           var IsValidTarget := True;
           var OriginalHandleA, OriginalHandleB: TNoodleHandle;
 
-          OriginalHandleA := FDraggingLink.GetNoodleHandle(lptA);
-          OriginalHandleB := FDraggingLink.GetNoodleHandle(lptB);
+          OriginalHandleA := FDraggingLink.NoodleHandleStart;
+          OriginalHandleB := FDraggingLink.NoodleHandleEnd;
 
 
-          if FDraggingHandle = lptA then // We are changing the Source endpoint
+          if FDraggingHandle.PointType = lptA then // We are changing the Source endpoint
           begin
               // Check if new source is same as original destination
               if (EndHandle.CenterF = OriginalHandleB.CenterF) then
@@ -614,10 +594,10 @@ begin
                for ExistingLink in FNoodles do
                begin
                    if ExistingLink = FDraggingLink then Continue; // Skip self
-                   if ((ExistingLink.GetNoodleHandleCenter(lptA) = EndHandle.CenterF)  and
-                       (ExistingLink.GetNoodleHandleCenter(lptB) = OriginalHandleA.CenterF) ) or
-                      ((ExistingLink.GetNoodleHandleCenter(lptA) = OriginalHandleB.CenterF)  and
-                       (ExistingLink.GetNoodleHandleCenter(lptB) = EndHandle.CenterF) ) then
+                   if ((ExistingLink.NoodleHandleStart.CenterF = EndHandle.CenterF)  and
+                       (ExistingLink.NoodleHandleEnd.CenterF = OriginalHandleA.CenterF) ) or
+                      ((ExistingLink.NoodleHandleStart.CenterF = OriginalHandleB.CenterF)  and
+                       (ExistingLink.NoodleHandleEnd.CenterF = EndHandle.CenterF) ) then
                    begin
                        IsValidTarget := False;
                        ShowMessage('This modification would create a duplicate link.');
@@ -627,7 +607,7 @@ begin
 
               if IsValidTarget then
               begin
-                  FDraggingLink := FindNoodLinkAt(EndHandle);
+//                  FDraggingLink := FindNoodLinkAt(EndHandle);
                   // Optional: Trigger OnLinkChanged event
               end;
           end
@@ -643,10 +623,10 @@ begin
                for ExistingLink in FNoodles do
                begin
                    if ExistingLink = FDraggingLink then Continue; // Skip self
-                   if ((ExistingLink.SourceGrid = OriginalHandleA) and (ExistingLink.SourceRow = OriginalSourceRow) and
-                       (ExistingLink.DestGrid = EndHandle.Grid) and (ExistingLink.DestRow = EndHandle.Row)) or
-                      ((ExistingLink.SourceGrid = EndHandle.Grid) and (ExistingLink.SourceRow = EndHandle.Row) and
-                       (ExistingLink.DestGrid = OriginalHandleA) and (ExistingLink.DestRow = OriginalSourceRow)) then
+//                   if ((ExistingLink.SourceGrid = OriginalHandleA) and (ExistingLink.SourceRow = OriginalSourceRow) and
+//                       (ExistingLink.DestGrid = EndHandle.Grid) and (ExistingLink.DestRow = EndHandle.Row)) or
+//                      ((ExistingLink.SourceGrid = EndHandle.Grid) and (ExistingLink.SourceRow = EndHandle.Row) and
+//                       (ExistingLink.DestGrid = OriginalHandleA) and (ExistingLink.DestRow = OriginalSourceRow)) then
                    begin
                        IsValidTarget := False;
                        ShowMessage('This modification would create a duplicate link.');
@@ -657,7 +637,7 @@ begin
 
               if IsValidTarget then
               begin
-                  FDraggingLink := FindNoodLinkAt(EndHandle);
+//                  FDraggingLink := FindNoodLinkAt(EndHandle);
                   // Optional: Trigger OnLinkChanged event
               end;
           end;

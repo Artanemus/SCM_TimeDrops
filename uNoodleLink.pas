@@ -17,6 +17,7 @@ type
     ARectF: TRectF;
     IsValid: Boolean;
     CenterF: TPointF;
+    procedure SetEmpty();
     class operator Equal(a, b: TNoodleHandle): Boolean;
   end;
 
@@ -44,7 +45,6 @@ type
     // Does the noodle have this handle.
 //    function TestForNoodleHandle(ANoodleHandle: TNoodleHandle): boolean;
 
-    procedure EmptyHandle(out ANoodleHandle: TNoodleHandle);
 
     property IsSelected: Boolean read FIsSelected write FIsSelected;
     property SelectedHandle: TLinkPointType read FSelectedHandle write
@@ -86,9 +86,7 @@ function ConvertTPointFToTPoint(const APointF: TPointF): TPoint;
 begin
   Result := TPoint.Create(
     Round(APointF.X),
-    Round(APointF.Y))
-  );
-
+    Round(APointF.Y));
 end;
 
 
@@ -217,15 +215,6 @@ begin
   inherited Destroy;
 end;
 
-procedure TNoodleLink.EmptyHandle(out ANoodleHandle: TNoodleHandle);
-begin
-  // Assign an empty HitHandle...
-  ANoodleHandle.PointType := lptNone;
-  ANoodleHandle.ARectF := TRectF.Empty;
-  ANoodleHandle.IsValid := false; // Assign as empty...
-  ANoodleHandle.CenterF := TPointf.Zero;
-end;
-
 function TNoodleLink.GetNoodleHandle(ALinkPointType: TLinkPointType):
     TNoodleHandle;
 begin
@@ -257,8 +246,7 @@ const
   NumSegments = 20; // Fewer segments for faster hit testing needed? Adjust.
 begin
   Result := False;
-  // Assign an empty HitHandle...
-  EmptyHandle(HitHandle);
+  HitHandle.SetEmpty(); // Assign an empty HitHandle...
   P0 :=  TPointF.Zero;
   P1 :=  TPointF.Zero;
   HandleRadiusSq := FHandleRadius * FHandleRadius;
@@ -345,8 +333,7 @@ var
   DistSq, HandleRadiusSq: Double;
 begin
   Result := False;
-  // Assign an empty HitHandle...
-  EmptyHandle(HitHandle);
+  HitHandle.SetEmpty(); // Assign an empty HitHandle...
   HandleRadiusSq := FHandleRadius * FHandleRadius;
 
   // Check if point is near [0] handle
@@ -377,5 +364,14 @@ begin
 end;
 
 
+
+procedure TNoodleHandle.SetEmpty;
+begin
+  // Assign an empty HitHandle...
+  PointType := lptNone;
+  ARectF := TRectF.Empty;
+  IsValid := false; // Assign as empty...
+  CenterF := TPointf.Zero;
+end;
 
 end.

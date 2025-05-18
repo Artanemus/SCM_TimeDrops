@@ -9301,7 +9301,7 @@ object Main: TMain
           OnClick = btnPrevEventClick
         end
         object scmGrid: TDBAdvGrid
-          Left = 2
+          Left = 0
           Top = 152
           Width = 463
           Height = 523
