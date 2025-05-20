@@ -15,7 +15,6 @@ type
 type
   TNoodleFrame = class(TFrame)
     pbNoodles: TPaintBox;
-    vimgDL1: TVirtualImage;
     procedure pbNoodlesMouseDown(Sender: TObject; Button: TMouseButton; Shift:
         TShiftState; X, Y: Integer);
     procedure pbNoodlesMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -23,29 +22,32 @@ type
         TShiftState; X, Y: Integer);
     procedure pbNoodlesPaint(Sender: TObject);
   private
+    DefaultRowHeight: integer; // identical to SCM TMS TAdvDBGrid.
+    FDestDotColumn: Integer;
     { Private declarations }
     FDragCurrentPoint: TPoint; // Current mouse position during drag (PaintBox coords)
     FDraggingHandle: TNoodleHandle; // Which handle of FDraggingLink is being dragged.
     FDraggingLink: TNoodleLink; // The existing link being dragged (if ndsDraggingExistingHandle)
     FDragStartHandle: TNoodleHandle;
     FDragStartPoint: TPoint; // Point where drag started (PaintBox coords)
+    FDragStartRect: TRect;
     FDragState: TNoodleDragState;
     FHandleColor: TColor;
-    FNoodles: TObjectList<TNoodleLink>; // Noodles
     FHotSpots: Array of TRect;
+    FixedRowHeight: integer;   // identical to SCM TMS TAdvDBGrid.
+    FNoodles: TObjectList<TNoodleLink>; // Noodles
     FRopeColor: TColor;
     FRopeThickness: Integer;
     // Configuration
     FSelectedLink: TNoodleLink;
     FSelectedRopeColor: TColor;
     FSourceDotColumn: Integer;
-    FDestDotColumn: Integer;
-
-    FixedRowHeight: integer;   // identical to SCM TMS TAdvDBGrid.
-    DefaultRowHeight: integer; // identical to SCM TMS TAdvDBGrid.
     NumberOfLanes: integer;
-
-
+//    function HitTest(ANoodleHandle: TNoodleHandle; out HitLink:
+//        TNoodleLink): Boolean; overload;
+    procedure  CreateHotSpots;
+    procedure DeselectAllLinks;
+    procedure DrawHandle(ACanvas: TCanvas; P: TPoint; AColor: TColor; ARadius: Integer);
     // Helper methods
     procedure DrawNoodle(ACanvas: TCanvas; P0, P1: TPointF; AColor: TColor; AThickness: Integer; ASelected: Boolean);
     procedure DrawQuadraticBezier(ACanvas: TCanvas; P0, P1, P2: TPoint; NumSegments: Integer); // Adapted for TPoint
@@ -53,28 +55,19 @@ type
         TNoodleHandle): Boolean;
     function HitTest(P: TPoint; out HitLink: TNoodleLink; out HitHandle:
         TNoodleHandle): Boolean; overload;
-
-//    function HitTest(ANoodleHandle: TNoodleHandle; out HitLink:
-//        TNoodleLink): Boolean; overload;
-    procedure  CreateHotSpots;
-
+    function HitTestHotSpot(P: TPoint; out ARect: TRect; out index: integer):
+        boolean;
     procedure SelectLink(ALink: TNoodleLink);
-    procedure DeselectAllLinks;
-    procedure DrawHandle(ACanvas: TCanvas; P: TPoint; AColor: TColor; ARadius: Integer);
-
-
   public
     { Public declarations }
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
-
     procedure DeleteSelectedLink;
-
     { Public declarations }
     property DestDotColumn: Integer read FDestDotColumn write FDestDotColumn default 0;
+    property SelectedLink: TNoodleLink read fSelectedLink;
     // *** Define your dot columns here (make consistent with NoodleLinkUnit) ***
     property SourceDotColumn: Integer read FSourceDotColumn write FSourceDotColumn default 1;
-    property SelectedLink: TNoodleLink read fSelectedLink;
   end;
 
 var
@@ -96,16 +89,15 @@ begin
   begin
     ARect.Top := FixedRowHeight + (i*DefaultRowHeight);
     Arect.Left := 0;
-    ARect.Height := FixedRowHeight + ((i+1)*DefaultRowHeight);
+    ARect.Height := DefaultRowHeight;
     ARect.Width := DefaultRowHeight;
     FHotSpots[i] := ARect;
   end;
-  Inc(i);
   for J:=0 to NumberOfLanes-1 do
   begin
-    ARect.Top := FixedRowHeight + (i*DefaultRowHeight);
-    Arect.Left := Left - Width;
-    ARect.Height := FixedRowHeight + ((J+1)*DefaultRowHeight);
+    ARect.Top := FixedRowHeight + (j*DefaultRowHeight);
+    Arect.Left := Width - DefaultRowHeight;
+    ARect.Height := DefaultRowHeight;
     ARect.Width := DefaultRowHeight;
     FHotSpots[i+J] := ARect;
   end;
@@ -142,8 +134,6 @@ begin
     CreateHotSpots;
 
 end;
-
-
 
 destructor TNoodleFrame.Destroy;
 begin
@@ -263,7 +253,7 @@ function TNoodleFrame.FindNoodleHandleAtHotSpot(P: TPoint; out ANoodleHandle:
     TNoodleHandle): Boolean;
 var
   HandleRadiusSq: Int64;
-  DistSq: Int64;
+//  DistSq: Int64;
   CenterF: TPointF;
   DistSqF: Double;
   HotSpot: TRect;
@@ -324,6 +314,24 @@ begin
 end;
 
 
+function TNoodleFrame.HitTestHotSpot(P: TPoint; out ARect: TRect; out index:
+    integer): boolean;
+var
+I: integer;
+begin
+  result := false;
+  for I := Low(FHotSpots)  to High(FHotSpots) do
+  begin
+    if FHotSpots[I].Contains(P) then
+    begin
+      ARect := FHotSpots[I];
+      index := I;
+      result := true;
+      exit;
+    end;
+  end;
+end;
+
 procedure TNoodleFrame.pbNoodlesMouseDown(Sender: TObject; Button: TMouseButton;
     Shift: TShiftState; X, Y: Integer);
 var
@@ -331,13 +339,15 @@ var
   HitLink: TNoodleLink;
   HitHandle: TNoodleHandle;
   HitConnPoint: TNoodleHandle;
+  ARect: TRect;
+  index: integer;
 begin
   if Button <> mbLeft then Exit;
 
   ClickedPoint := Point(X, Y);
   DeselectAllLinks; // Deselect previous link first
 
-  // 1. Check if clicking on an existing link's HANDLE.
+  // 1. Check if clicking on an NoodleHandle
   if HitTest(ClickedPoint, HitLink, HitHandle) then
   // HitTest returns lepSource for line hit, lepDestination or lepSource for specific handle
   begin
@@ -369,12 +379,13 @@ begin
     Exit;
   end;
 
-  // 3. Check if clicking on a connection point (a dot)
-  if FindNoodleHandleAtHotSpot(ClickedPoint, HitConnPoint) then
+  // 3. Check if clicking on a HotSpot
+  if HitTestHotSpot(ClickedPoint, ARect, index) then
   begin
     FDragState := ndsDraggingNew;
-    FDragStartHandle := HitConnPoint; // Store grid/row/position of start
-    FDragStartPoint := ClickedPoint;
+//    FDragStartHandle := HitConnPoint; // Store grid/row/position of start
+    FDragStartPoint := ARect.CenterPoint;
+    FDragStartRect := ARect;
     FDragCurrentPoint := ClickedPoint;
     pbNoodles.Invalidate; // Show drag preview
     Exit;
@@ -405,6 +416,8 @@ var
   HotSpot: TRect;
   Canvas: TCanvas;
   AColor: TColor;
+  BitMap: TBitMap;
+  deflate: integer;
 begin
   Canvas := (Sender as TPaintBox).Canvas;
   Canvas.Brush.Style := bsClear; // Make background transparent (won't erase grids)
@@ -412,9 +425,11 @@ begin
   // draw the under lining HotSpots
   for HotSpot in FHotSpots do
   begin
-      Canvas.StretchDraw(HotSpot, IMG.ImgcolDT.GetBitmap('EvBlue', 50, 50));
+    deflate := ((DefaultRowHeight - IMG.vimglistDTGrid.Height) DIV 2);
+    HotSpot.inflate(-deflate, -deflate);
+//    IMG.ImgcolDT.Draw(Canvas, HotSpot, 'EvBlue', true);
+    IMG.vimglistDTGrid.Draw(Canvas, HotSpot.Left, HotSpot.Top, 'EvBlue', true);
   end;
-
 
   // 1. Draw all existing noodles
   for Link in FNoodles do
@@ -437,7 +452,7 @@ begin
   if FDragState = ndsDraggingNew then
   begin
     // Draw from start dot to current mouse pos
-    DrawNoodle(Canvas, FDragStartHandle.CenterF, FDragCurrentPoint, clLime, FRopeThickness, False);
+    DrawNoodle(Canvas, FDragStartPoint, FDragCurrentPoint, clLime, FRopeThickness, False);
   end
   else if FDragState = ndsDraggingExistingHandle then
   begin

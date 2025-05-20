@@ -102,6 +102,7 @@ type
     vimgStrokeBug: TVirtualImage;
     pnlSCMGrid: TPanel;
     pnlTDSGrid: TPanel;
+    Noodles: TNoodleFrame;
     procedure actBuildTDTablesExecute(Sender: TObject);
     procedure actBuildTDTablesUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);

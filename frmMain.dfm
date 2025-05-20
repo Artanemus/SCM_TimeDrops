@@ -10437,6 +10437,21 @@ object Main: TMain
           end
         end
       end
+      inline Noodles: TNoodleFrame
+        Left = 466
+        Top = 152
+        Width = 150
+        Height = 521
+        TabOrder = 2
+        ExplicitLeft = 466
+        ExplicitTop = 152
+        inherited pbNoodles: TPaintBox
+          ExplicitLeft = -56
+          ExplicitTop = 35
+          ExplicitWidth = 185
+          ExplicitHeight = 648
+        end
+      end
     end
     object pnlTool2: TPanel
       AlignWithMargins = True
