@@ -62,7 +62,7 @@ var
   FHitTolerance: Integer = 5; // Pixels tolerance for hitting handles.
   FLineTolerance: Integer = 5; // Pixels tolerance for hitting lines.
   FHandleRadius: Integer = 4; //
-  FSagFactor: Single = 0.5;
+  FSagFactor: Single = 0.9;
 
 implementation
 

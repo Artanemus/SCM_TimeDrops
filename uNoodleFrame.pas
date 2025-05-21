@@ -36,8 +36,13 @@ type
     FHotSpots: Array of TRect;
     FixedRowHeight: integer;   // identical to SCM TMS TAdvDBGrid.
     FNoodles: TObjectList<TNoodleLink>; // Noodles
+
+    FHotSpotStartIndex: integer;
+    FHotSpotStartRect: TRect;
+
     FRopeColor: TColor;
     FRopeThickness: Integer;
+
     // Configuration
     FSelectedLink: TNoodleLink;
     FSelectedRopeColor: TColor;
@@ -72,6 +77,9 @@ type
 
 var
   NoodleFrame: TNoodleFrame;
+
+  FPreviewHitTolerance: Integer = 5; // Pixels tolerance for hitting HotSpots.
+
 
 implementation
 
@@ -116,10 +124,10 @@ begin
   FDraggingLink := nil;
 
   // --- Configure Appearance ---
-  FSagFactor := 0.2;  // 20% sag relative to distance
+  FSagFactor := 0.9;  // 90% sag relative to distance
   FRopeColor := clGray;
   FSelectedRopeColor := clHighlight;
-  FRopeThickness := 2;
+  FRopeThickness := 4;
   FHandleColor := clRed;
   // Ensure PaintBox is on top and covers the grid areas
   pbNoodles.BringToFront;
@@ -353,39 +361,33 @@ begin
   begin
     if HitHandle.IsValid then
     begin
-      // Check the exact position again to confirm it's a handle
-      if System.Math.Hypot(ClickedPoint.X - HitHandle.CenterF.X,
-                          ClickedPoint.Y - HitHandle.CenterF.Y) <= FHandleRadius then
-      begin
-        FDragState := ndsDraggingExistingHandle;
-        FDraggingLink := HitLink; // Store the link being dragged.
-        FDraggingHandle := HitHandle; // Store which handle is grabbed.
-        FDragStartPoint := ClickedPoint;
-        FDragCurrentPoint := ClickedPoint;
-        SelectLink(HitLink); // Select the link visually
-        pbNoodles.Invalidate;
-        Exit; // Don't check for other things
-      end;
+      FDragState := ndsDraggingExistingHandle;
+      FDraggingLink := HitLink; // Store the link being dragged.
+      FDraggingHandle := HitHandle; // Store which handle is grabbed.
+      FDragStartPoint := TPoint.Create(ROUND(HitHandle.CenterF.X), ROUND(HitHandle.CenterF.Y));
+      FDragCurrentPoint := ClickedPoint;
+      SelectLink(HitLink); // Select the link visually
+      pbNoodles.Invalidate;
+      Exit; // Don't check for other things
+    end
+    else
+    begin
+      // 2. Clicked on an existing link's LINE (not handles)
+      SelectLink(HitLink);
+      pbNoodles.Invalidate;
+      // Don't start drag, just select
+      Exit;
     end;
-  end;
-
-
-  // 2. Check if clicking on an existing link's LINE (not handles)
-  if HitTest(ClickedPoint, HitLink, HitHandle) then // HitHandle will be default if line is hit
-  begin
-    SelectLink(HitLink);
-    pbNoodles.Invalidate;
-    // Don't start drag, just select
-    Exit;
   end;
 
   // 3. Check if clicking on a HotSpot
   if HitTestHotSpot(ClickedPoint, ARect, index) then
   begin
     FDragState := ndsDraggingNew;
-    FDragStartPoint := ARect.CenterPoint;
-    FDragStartRect := ARect;
+    FDragStartPoint := ClickedPoint;
     FDragCurrentPoint := ClickedPoint;
+    FHotSpotStartRect := ARect;
+    FHotSpotStartIndex := index;
     pbNoodles.Invalidate; // Show drag preview
     Exit;
   end;
@@ -417,7 +419,7 @@ var
   Canvas: TCanvas;
   AColor: TColor;
   BitMap: TBitMap;
-  deflate: integer;
+  deflate, indx: integer;
   LText: String;
 begin
   Canvas := (Sender as TPaintBox).Canvas;
@@ -428,7 +430,6 @@ begin
   begin
     deflate := ((DefaultRowHeight - IMG.vimglistDTGrid.Height) DIV 2);
     HotSpot.inflate(-deflate, -deflate);
-//    IMG.ImgcolDT.Draw(Canvas, HotSpot, 'EvBlue', true);
     IMG.vimglistDTGrid.Draw(Canvas, HotSpot.Left, HotSpot.Top, 'EvBlue', true);
   end;
 
@@ -436,31 +437,48 @@ begin
   for Link in FNoodles do
   begin
     if (not Link.NoodleHandleStart.IsValid) or (not Link.NoodleHandleEnd.IsValid) then continue;
-
     P0 := Link.NoodleHandleStart.CenterF;
     P1 := Link.NoodleHandleEnd.CenterF;;
-
     // Only draw if both endpoints are valid (visible/exist)
-    if (P0.X <> -1) and (P1.X <> -1) then
-    begin
-      if Link.IsSelected then
-        AColor := FSelectedRopeColor else  AColor := FRopeColor;
-      DrawNoodle(Canvas, P0, P1,AColor, FRopeThickness, Link.IsSelected);
-    end;
+    if (P0.IsZero or P1.IsZero) then continue;
+    if Link.IsSelected then
+      AColor := FSelectedRopeColor else  AColor := FRopeColor;
+    DrawNoodle(Canvas, P0, P1, AColor, FRopeThickness, Link.IsSelected);
   end;
 
-  // 2. Draw dragging preview line (if any)
+  // 2. DRAWPREVIEW LINE AND START AND END ICONS.
   if FDragState = ndsDraggingNew then
   begin
     // Draw from start dot to current mouse pos
-    P0 := FDragStartPoint;
+    P0 := FHotSpotStartRect.CenterPoint;
     P1 := FDragCurrentPoint;
-    DrawNoodle(Canvas, P0, P1, clLime, FRopeThickness, False);
-    Spot := FDragStartPoint;
+    DrawNoodle(Canvas, P0, P1, clBlack, FRopeThickness, False);
+    // Draw the preview startpoint ...
+    Spot := FHotSpotStartRect.CenterPoint;
     Spot.X := Spot.X - (IMG.vimglistDTGrid.Height DIV 2);
     Spot.Y := Spot.Y - (IMG.vimglistDTGrid.Height DIV 2);
     IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'DotCircle', true);
+    // if the current point is hovering over a HotSpot - then show
+    // the 'dragging' preview endpoint ...
+    // this indicates to the user - a possible snap available
+    if HitTestHotSpot(FDragCurrentPoint, HotSpot, indx) then
+    begin
+      // still dragging over starting hotspot - do nothing ...
+      if (indx <> FHotSpotStartIndex) then
+      begin
+        Spot := FDragCurrentPoint;
+        Spot.X := Spot.X - (IMG.vimglistDTGrid.Height DIV 2);
+        Spot.Y := Spot.Y - (IMG.vimglistDTGrid.Height DIV 2);
+        IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'DotCircle', true);
+        // dragging preview onto the same side - illegal patch.
+        // flag with icon.
+        if (HotSpot.CenterPoint.X = P0.X) then
+          IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'ActiveRTNone', true);
+        end;
+    end;
   end
+
+
   else if FDragState = ndsDraggingExistingHandle then
   begin
     // Draw from fixed end to current mouse pos
@@ -477,115 +495,74 @@ end;
 procedure TNoodleFrame.pbNoodlesMouseUp(Sender: TObject; Button: TMouseButton;
     Shift: TShiftState; X, Y: Integer);
 var
-  EndPoint: TPoint;
+  EndPoint, P0, P1: TPoint;
   EndHandle, HitHandle: TNoodleHandle;
   NewLink, NoodleLink: TNoodleLink;
   ExistingLink: TNoodleLink;
+  FHotSpotEndRect: TRect;
+
+  FHotSpotEndIndex: integer;
+  IsDuplicate: boolean;
 begin
   if Button <> mbLeft then Exit;
-
   EndPoint := Point(X, Y);
 
   if FDragState = ndsDraggingNew then
   begin
-
-    for NoodleLink in FNoodles do
+    // CHECKS
+    // --- Validation: Prevent linking dot to itself or same grid row ---
+    if HitTestHotSpot(FDragCurrentPoint, FHotSpotEndRect, FHotSpotEndIndex) then
     begin
-      { // Check if dropped on a valid connection point }
-      if NoodleLink.HitTestNoodle(EndPoint, HitHandle) then
+      // released button over starting hotspot - exit...
+      if (FHotSpotEndIndex <> FHotSpotStartIndex) then
       begin
-        // --- Validation: Prevent linking same handle ---
-        if (FDragStartHandle = HitHandle) then
-        begin
-           // Dropped on same starting handle ...
-        end
-        // --- Validation: prevent linking TDS to TDS or SCM to SCM) ---
-        else if FDragStartHandle.PointType = HitHandle.PointType  then
-        begin
-          // Linking identical point types if not allowed.
-        end
-        else
-        begin
-          // --- Check for duplicate link ---
-          var IsDuplicate := False;
-          for ExistingLink in FNoodles do
-          begin
-              // Check both directions
-              if (ExistingLink.NoodleHandleStart = HitHandle) or  (ExistingLink.NoodleHandleEnd = HitHandle) then
-              begin
-                  IsDuplicate := True;
-                  Break;
-              end;
-          end;
-
-          if not IsDuplicate then
-          begin
-              // Create the new link
-              NewLink := TNoodleLink.Create(FDragStartHandle.ARectF, EndHandle.ARectF);
-              FNoodles.Add(NewLink);
-              SelectLink(NewLink); // Select the newly created link
-              // Optional: Trigger an OnLinkCreated event here
-              // if Assigned(FOnLinkCreated) then FOnLinkCreated(Self, NewLink);
-          end
-          else
-          begin
-              // Handle duplicate link (e.g., show message)
-              ShowMessage('This link already exists.');
-          end;
-
-        end;
-
+        FDragState := ndsIdle;
+        pbNoodles.Invalidate; // Redraw final state
+        exit;
       end;
-    end;
-
-    if FindNoodleHandleAtHotSpot(EndPoint, EndHandle) then
-    begin
-      // --- Validation: Prevent linking dot to itself or same grid row ---
-      if (EndHandle.CenterF = FDragStartHandle.CenterF) then
+      //  - illegal patch - Dragging onto the same side.
+      P0 := FHotSpotStartRect.CenterPoint;
+      P1 := FHotSpotEndRect.CenterPoint;
+      if (P1.X = P0.X) then
       begin
-         // Dropped on same start point, cancel
-      end
-
-      // --- Add more validation if needed
-      // (e.g., prevent linking lptA to lptA) ---
-      else if EndHandle.PointType = FDragStartHandle.PointType then
+        FDragState := ndsIdle;
+        pbNoodles.Invalidate; // Redraw final state
+        exit;
+      end;
+      // before creating link - Check if this will be a duplicate link.
+      IsDuplicate := false;
+      for ExistingLink in FNoodles do
       begin
-        // Linking identical point types if not allowed.
+          // Check both directions
+          if ((ExistingLink.NoodleHandleStart.CenterF = P0) and
+              (ExistingLink.NoodleHandleEnd.CenterF = P1)) or
+             ((ExistingLink.NoodleHandleStart.CenterF = P1)  and
+              (ExistingLink.NoodleHandleEnd.CenterF = P0)) then
+          begin
+              IsDuplicate := True;
+              Break;
+          end;
+      end;
+
+      if not IsDuplicate then
+      begin
+        // Create the new link
+        NewLink := TNoodleLink.Create(FHotSpotStartRect, FHotSpotEndRect);
+        FNoodles.Add(NewLink);
+        SelectLink(NewLink); // Select the newly created link
+        // Optional: Trigger an OnLinkCreated event here
+        // if Assigned(FOnLinkCreated) then FOnLinkCreated(Self, NewLink);
+        FDragState := ndsIdle;
+        pbNoodles.Invalidate; // Redraw final state
+        exit;
       end
       else
       begin
-        // --- Check for duplicate link ---
-        var IsDuplicate := False;
-        for ExistingLink in FNoodles do
-        begin
-            // Check both directions
-            if ((ExistingLink.NoodleHandleStart.CenterF = FDragStartHandle.CenterF) and
-                (ExistingLink.NoodleHandleEnd.CenterF = EndHandle.CenterF)) or
-               ((ExistingLink.NoodleHandleStart.CenterF = EndHandle.CenterF)  and
-                (ExistingLink.NoodleHandleEnd.CenterF = FDragStartHandle.CenterF)) then
-            begin
-                IsDuplicate := True;
-                Break;
-            end;
-        end;
-
-        if not IsDuplicate then
-        begin
-            // Create the new link
-            NewLink := TNoodleLink.Create(FDragStartHandle.ARectF, EndHandle.ARectF);
-            FNoodles.Add(NewLink);
-            SelectLink(NewLink); // Select the newly created link
-            // Optional: Trigger an OnLinkCreated event here
-            // if Assigned(FOnLinkCreated) then FOnLinkCreated(Self, NewLink);
-        end
-        else
-        begin
-            // Handle duplicate link (e.g., show message)
-            ShowMessage('This link already exists.');
-        end;
-
+        FDragState := ndsIdle;
+        pbNoodles.Invalidate; // Redraw final state
+        exit;
       end;
-    end; // else: Dropped on empty space, cancel drag
+    end;
 
     FDragState := ndsIdle;
     pbNoodles.Invalidate; // Redraw final state
