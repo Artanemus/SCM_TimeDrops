@@ -4,7 +4,7 @@ object Main: TMain
   BorderStyle = bsSingle
   Caption = 'SwimClubMeet - TimeDrops'
   ClientHeight = 833
-  ClientWidth = 1535
+  ClientWidth = 1454
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -8979,7 +8979,7 @@ object Main: TMain
   object actnMenuBar: TActionMainMenuBar
     Left = 0
     Top = 0
-    Width = 1535
+    Width = 1454
     Height = 27
     UseSystemFont = False
     ActionManager = actnManager
@@ -8995,11 +8995,12 @@ object Main: TMain
     Font.Name = 'Segoe UI'
     Font.Style = []
     Spacing = 0
+    ExplicitWidth = 1535
   end
   object rpnlBody: TRelativePanel
     Left = 0
     Top = 27
-    Width = 1535
+    Width = 1454
     Height = 771
     ControlCollection = <
       item
@@ -9033,8 +9034,9 @@ object Main: TMain
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
+    ExplicitWidth = 1535
     DesignSize = (
-      1535
+      1454
       771)
     object pnlTool1: TPanel
       AlignWithMargins = True
@@ -9210,7 +9212,7 @@ object Main: TMain
       AlignWithMargins = True
       Left = 153
       Top = 3
-      Width = 1232
+      Width = 1229
       Height = 765
       BevelOuter = bvNone
       ParentBackground = False
@@ -9786,17 +9788,18 @@ object Main: TMain
         end
       end
       object pnlTDSGrid: TPanel
-        Left = 619
+        Left = 616
         Top = 0
         Width = 613
         Height = 765
         Align = alRight
         BevelOuter = bvNone
         TabOrder = 1
+        ExplicitLeft = 619
         object dbtxtDTFileName: TDBText
           Left = 0
           Top = 17
-          Width = 598
+          Width = 521
           Height = 31
           Alignment = taCenter
           DataField = 'FileName'
@@ -9810,7 +9813,7 @@ object Main: TMain
         object lblEventDetailsTD: TLabel
           Left = 15
           Top = 40
-          Width = 597
+          Width = 506
           Height = 27
           Hint = 
             'Dolphin Timing Filename. (DO3, DO4)'#13#10'2nd line - Session : Event ' +
@@ -9831,7 +9834,7 @@ object Main: TMain
         object lblKeyBoardInfo: TLabel
           Left = 0
           Top = 73
-          Width = 597
+          Width = 521
           Height = 17
           Alignment = taCenter
           AutoSize = False
@@ -9848,7 +9851,7 @@ object Main: TMain
         object btnNextDTFile: TButton
           Left = 0
           Top = 679
-          Width = 597
+          Width = 521
           Height = 50
           Hint = 
             'LMB Move to next record (heat, event, session)'#13#10'CNTRL+LMB Move t' +
@@ -9860,7 +9863,7 @@ object Main: TMain
           OnClick = btnNextDTFileClick
         end
         object btnPickDTTreeView: TButton
-          Left = 539
+          Left = 461
           Top = 96
           Width = 58
           Height = 50
@@ -9877,7 +9880,7 @@ object Main: TMain
         object btnPrevDTFile: TButton
           Left = 0
           Top = 97
-          Width = 533
+          Width = 455
           Height = 49
           Hint = 
             'LMB Move to previous record (heat, event, session)'#13#10'CNTRL+LMB Mo' +
@@ -9889,16 +9892,16 @@ object Main: TMain
           OnClick = btnPrevDTFileClick
         end
         object tdsGrid: TDBAdvGrid
-          Left = 0
+          Left = 3
           Top = 152
-          Width = 597
+          Width = 518
           Height = 523
           Cursor = crDefault
           BevelInner = bvNone
           BevelKind = bkFlat
           BevelOuter = bvNone
           Color = 6445643
-          ColCount = 8
+          ColCount = 7
           Ctl3D = True
           DefaultRowHeight = 46
           DrawingStyle = gdsClassic
@@ -10055,6 +10058,7 @@ object Main: TMain
               HeaderFont.Height = -12
               HeaderFont.Name = 'Segoe UI'
               HeaderFont.Style = []
+              Name = 'Nav'
               PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
               PrintFont.Charset = DEFAULT_CHARSET
               PrintFont.Color = clWindowText
@@ -10062,36 +10066,6 @@ object Main: TMain
               PrintFont.Name = 'Segoe UI'
               PrintFont.Style = []
               Width = 20
-            end
-            item
-              Alignment = taRightJustify
-              Borders = []
-              BorderPen.Color = clSilver
-              ButtonHeight = 18
-              CheckFalse = 'N'
-              CheckTrue = 'Y'
-              Color = 6445643
-              DataImageField = True
-              FieldName = 'imgPatch'
-              Font.Charset = DEFAULT_CHARSET
-              Font.Color = clWindow
-              Font.Height = -16
-              Font.Name = 'Segoe UI'
-              Font.Style = []
-              Header = ' '
-              HeaderFont.Charset = DEFAULT_CHARSET
-              HeaderFont.Color = clWindow
-              HeaderFont.Height = -16
-              HeaderFont.Name = 'Segoe UI'
-              HeaderFont.Style = []
-              Images = IMG.vimglistDTGrid
-              PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
-              PrintFont.Charset = DEFAULT_CHARSET
-              PrintFont.Color = clWindowText
-              PrintFont.Height = -12
-              PrintFont.Name = 'Segoe UI'
-              PrintFont.Style = []
-              Width = 34
             end
             item
               Alignment = taCenter
@@ -10113,6 +10087,7 @@ object Main: TMain
               HeaderFont.Name = 'Segoe UI'
               HeaderFont.Style = []
               HeaderAlignment = taCenter
+              Name = 'Lane'
               PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
               PrintFont.Charset = DEFAULT_CHARSET
               PrintFont.Color = clWindowText
@@ -10141,12 +10116,14 @@ object Main: TMain
               HeaderFont.Name = 'Segoe UI'
               HeaderFont.Style = []
               HeaderAlignment = taCenter
+              Name = 'T1'
               PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
               PrintFont.Charset = DEFAULT_CHARSET
               PrintFont.Color = clWindowText
               PrintFont.Height = -12
               PrintFont.Name = 'Segoe UI'
               PrintFont.Style = []
+              Tag = 1
               Width = 94
             end
             item
@@ -10169,12 +10146,14 @@ object Main: TMain
               HeaderFont.Name = 'Segoe UI'
               HeaderFont.Style = []
               HeaderAlignment = taCenter
+              Name = 'T2'
               PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
               PrintFont.Charset = DEFAULT_CHARSET
               PrintFont.Color = clWindowText
               PrintFont.Height = -12
               PrintFont.Name = 'Segoe UI'
               PrintFont.Style = []
+              Tag = 2
               Width = 94
             end
             item
@@ -10197,12 +10176,14 @@ object Main: TMain
               HeaderFont.Name = 'Segoe UI'
               HeaderFont.Style = []
               HeaderAlignment = taCenter
+              Name = 'T3'
               PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
               PrintFont.Charset = DEFAULT_CHARSET
               PrintFont.Color = clWindowText
               PrintFont.Height = -12
               PrintFont.Name = 'Segoe UI'
               PrintFont.Style = []
+              Tag = 3
               Width = 94
             end
             item
@@ -10228,6 +10209,7 @@ object Main: TMain
               HeaderFont.Style = []
               HeaderAlignment = taCenter
               Images = IMG.vimglistDTGrid
+              Name = 'ActiveRT'
               PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
               PrintFont.Charset = DEFAULT_CHARSET
               PrintFont.Color = clWindowText
@@ -10256,13 +10238,14 @@ object Main: TMain
               HeaderFont.Name = 'Segoe UI'
               HeaderFont.Style = []
               HeaderAlignment = taCenter
+              Name = 'RT'
               PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
               PrintFont.Charset = DEFAULT_CHARSET
               PrintFont.Color = clWindowText
               PrintFont.Height = -16
               PrintFont.Name = 'Segoe UI'
               PrintFont.Style = []
-              Width = 120
+              Width = 94
             end>
           DataSource = TDS.dsmLane
           InvalidPicture.Data = {
@@ -10404,20 +10387,19 @@ object Main: TMain
           ShowUnicode = False
           ColWidths = (
             20
-            34
             44
             94
             94
             94
             64
-            120)
+            94)
           RowHeights = (
             34
             46)
           object lbl_tdsGridOverlay: TLabel
             Left = 0
             Top = 384
-            Width = 593
+            Width = 514
             Height = 135
             Align = alBottom
             Alignment = taCenter
@@ -10455,7 +10437,7 @@ object Main: TMain
     end
     object pnlTool2: TPanel
       AlignWithMargins = True
-      Left = 1388
+      Left = 1307
       Top = 3
       Width = 144
       Height = 765
@@ -10561,7 +10543,7 @@ object Main: TMain
   object StatBar: TStatusBar
     Left = 0
     Top = 798
-    Width = 1535
+    Width = 1454
     Height = 35
     Hint = 'Check here for information, messages and warnings.'
     Panels = <>
@@ -10570,6 +10552,7 @@ object Main: TMain
     SimplePanel = True
     SimpleText = 'Check here for information and messages.'
     StyleElements = [seClient, seBorder]
+    ExplicitWidth = 1535
   end
   object TDPushResultFile: TFileOpenDialog
     DefaultExtension = '.JSON'

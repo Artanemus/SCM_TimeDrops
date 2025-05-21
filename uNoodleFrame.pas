@@ -6,7 +6,7 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls,
   System.Generics.Collections, Vcl.VirtualImage, System.Math,
-  dmIMG, uNoodleLink, System.Types;
+  dmIMG, uNoodleLink, System.Types, Vcl.StdCtrls;
 
 type
   // State for dragging operations
@@ -215,8 +215,8 @@ begin
 
   A.X := ROUND(P0.X);
   A.Y := ROUND(P0.Y);
-  B.X := ROUND(P0.X);
-  B.Y := ROUND(P0.Y);
+  B.X := ROUND(P1.X);
+  B.Y := ROUND(P1.Y);
 
   // Draw the Bezier curve
   DrawQuadraticBezier(ACanvas, A, P_Control, B, 30); // 30 segments
@@ -383,7 +383,6 @@ begin
   if HitTestHotSpot(ClickedPoint, ARect, index) then
   begin
     FDragState := ndsDraggingNew;
-//    FDragStartHandle := HitConnPoint; // Store grid/row/position of start
     FDragStartPoint := ARect.CenterPoint;
     FDragStartRect := ARect;
     FDragCurrentPoint := ClickedPoint;
@@ -413,11 +412,13 @@ procedure TNoodleFrame.pbNoodlesPaint(Sender: TObject);
 var
   Link: TNoodleLink;
   P0, P1: TPointF;
+  Spot: TPoint;
   HotSpot: TRect;
   Canvas: TCanvas;
   AColor: TColor;
   BitMap: TBitMap;
   deflate: integer;
+  LText: String;
 begin
   Canvas := (Sender as TPaintBox).Canvas;
   Canvas.Brush.Style := bsClear; // Make background transparent (won't erase grids)
@@ -452,7 +453,13 @@ begin
   if FDragState = ndsDraggingNew then
   begin
     // Draw from start dot to current mouse pos
-    DrawNoodle(Canvas, FDragStartPoint, FDragCurrentPoint, clLime, FRopeThickness, False);
+    P0 := FDragStartPoint;
+    P1 := FDragCurrentPoint;
+    DrawNoodle(Canvas, P0, P1, clLime, FRopeThickness, False);
+    Spot := FDragStartPoint;
+    Spot.X := Spot.X - (IMG.vimglistDTGrid.Height DIV 2);
+    Spot.Y := Spot.Y - (IMG.vimglistDTGrid.Height DIV 2);
+    IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'DotCircle', true);
   end
   else if FDragState = ndsDraggingExistingHandle then
   begin

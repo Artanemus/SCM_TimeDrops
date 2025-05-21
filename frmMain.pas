@@ -2157,118 +2157,123 @@ begin
 
   if (ARow >= tdsGrid.FixedRows) then
   begin
-    case ACol of
-      7: // C O L U M N   E N T E R   U S E R   R A C E T I M E  .
+    if ACol = tdsGrid.ColumnByName['RT'].Index then // RaceTime
+    begin
+      // C O L U M N   E N T E R   U S E R   R A C E T I M E  .
+      // 2025/04/16 :: The ALT key isn't required.
+      ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+      if (ActiveRT = artUser) then // Enter a user race-time.
+      begin
+        grid.BeginUpdate;
+        // create the 'Enter Race-Time' dialogue.
+        dlg := TUserRaceTime.Create(Self);
+        // Assign : Current displayed racetime.
+        dlg.RaceTime := ADataSet.FieldByName('RaceTime').AsDateTime;
+        // Assign : Store user racetime.
+        dlg.RaceTimeUser := ADataSet.FieldByName('RaceTimeUser').AsDateTime;
+        mr := dlg.ShowModal;
+        if IsPositiveResult(mr) then
         begin
-          // 2025/04/16 :: The ALT key isn't required.
-          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
-          if (ActiveRT = artUser) then // Enter a user race-time.
-          begin
-            grid.BeginUpdate;
-            // create the 'Enter Race-Time' dialogue.
-            dlg := TUserRaceTime.Create(Self);
-            // Assign : Current displayed racetime.
-            dlg.RaceTime := ADataSet.FieldByName('RaceTime').AsDateTime;
-            // Assign : Store user racetime.
-            dlg.RaceTimeUser := ADataSet.FieldByName('RaceTimeUser').AsDateTime;
-            mr := dlg.ShowModal;
-            if IsPositiveResult(mr) then
+          t := dlg.RaceTimeUser;
+          ADataSet.Edit;
+          try
             begin
-              t := dlg.RaceTimeUser;
-              ADataSet.Edit;
-              try
-                begin
-                  if (t = 0) then
-                    ADataSet.FieldByName('RaceTime').Clear
-                  else
-                    ADataSet.FieldByName('RaceTime').AsDateTime := t;
-                  ADataSet.FieldByName('RaceTimeUser').AsDateTime := t;
-                  ADataSet.Post;
-                end;
-              except on E: Exception do
-                ADataSet.Cancel;
-              end;
+              if (t = 0) then
+                ADataSet.FieldByName('RaceTime').Clear
+              else
+                ADataSet.FieldByName('RaceTime').AsDateTime := t;
+              ADataSet.FieldByName('RaceTimeUser').AsDateTime := t;
+              ADataSet.Post;
             end;
-            dlg.Free;
-            // if routine 'POST selected' is immediately called after the
-            // above change in user's racetime - the grid reports
-            // SelectedRowCount = 0. Solution :: re-select the row.
-            grid.SelectRows(ARow,1); // REQUIRED.
-            grid.EndUpdate;
-
-            {TODO -oBSA -cGeneral : Row still needs a repaint!
-            grid.repaintRow(ARow);  NOT WORKING...
-            grid.ClearRowSelect;
-            grid.invalidate;  }
-
+          except on E: Exception do
+            ADataSet.Cancel;
           end;
         end;
-      6: // C O L U M N   T O G G L E   A C T I V E - R T .
+        dlg.Free;
+        // if routine 'POST selected' is immediately called after the
+        // above change in user's racetime - the grid reports
+        // SelectedRowCount = 0. Solution :: re-select the row.
+        grid.SelectRows(ARow,1); // REQUIRED.
+        grid.EndUpdate;
+
+        {TODO -oBSA -cGeneral : Row still needs a repaint!
+        grid.repaintRow(ARow);  NOT WORKING...
+        grid.ClearRowSelect;
+        grid.invalidate;  }
+
+      end;
+    end;
+
+    if ACol = tdsGrid.ColumnByName['ActiveRT'].Index then
+    begin
+      // C O L U M N   T O G G L E   A C T I V E - R T .
+      grid.BeginUpdate;
+      { ALT KEY is active :: Toggle tblEntrant.ActiveRT}
+      if (GetKeyState(VK_MENU) < 0) then
+        // toggle backwards
+        ActiveRT := TDS.ToggleActiveRT(ADataSet, 1)
+      else
+        // toggle forward (default)
+        ActiveRT := TDS.ToggleActiveRT(ADataSet);
+      { Modifies tblEntrant: ActiveRT, RaceTime, imgActiveRT }
+      TDS.SetActiveRT(ADataSet, ActiveRT);
+      case ActiveRT of
+        artAutomatic:
         begin
-          grid.BeginUpdate;
-          { ALT KEY is active :: Toggle tblEntrant.ActiveRT}
-          if (GetKeyState(VK_MENU) < 0) then
-            // toggle backwards
-            ActiveRT := TDS.ToggleActiveRT(ADataSet, 1)
-          else
-            // toggle forward (default)
-            ActiveRT := TDS.ToggleActiveRT(ADataSet);
-          { Modifies tblEntrant: ActiveRT, RaceTime, imgActiveRT }
-          TDS.SetActiveRT(ADataSet, ActiveRT);
-          case ActiveRT of
-            artAutomatic:
-            begin
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artManual:
-            begin
-              // The RaceTime needs to be recalculated...
-              TDS.CalcRaceTimeM(ADataSet);
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artUser:
-            begin
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artSplit:
-            begin
-              // The RaceTime needs to be recalculated...
-              TDS.CalcRTSplitTime(ADataSet);
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-
-            artNone:
-               UpdateCellIcons(ADataSet, ARow, ActiveRT);
-          end;
-          grid.EndUpdate;
+          UpdateCellIcons(ADataSet, ARow, ActiveRT);
         end;
-      3, 4, 5:
+        artManual:
         begin
-
-          if ADataSet.FieldByName('LaneIsEmpty').AsBoolean then exit;
-
-          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
-          // Must be artmanual for the user to toggle watch-time state.
-          if ActiveRT <> artManual then exit;
-
-          // the ALT key is required to perform toggle.
-          if (GetKeyState(VK_MENU) < 0) then
-          begin
-            s := 'Time' + IntToStr(ACol - 2);
-            // Can toggle an empty TimeKeeper's stopwatch time...
-            if (ADataSet.FieldByName(s).IsNull) then exit;
-            grid.BeginUpdate;
-            // modify TimeKeeper's stopwatch state.
-            // idx in [1..3]. Asserts : dtTimeKeeperMode = dtManual.
-            TDS.ToggleWatchTime(ADataSet, (Acol - 2), ActiveRT);
-            UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            // The RaceTime needs to be recalculated...
-            TDS.CalcRaceTimeM(ADataset);
-            grid.EndUpdate;
-          end;
+          // The RaceTime needs to be recalculated...
+          TDS.CalcRaceTimeM(ADataSet);
+          UpdateCellIcons(ADataSet, ARow, ActiveRT);
         end;
+        artUser:
+        begin
+          UpdateCellIcons(ADataSet, ARow, ActiveRT);
+        end;
+        artSplit:
+        begin
+          // The RaceTime needs to be recalculated...
+          TDS.CalcRTSplitTime(ADataSet);
+          UpdateCellIcons(ADataSet, ARow, ActiveRT);
+        end;
+        artNone:
+           UpdateCellIcons(ADataSet, ARow, ActiveRT);
+      end;
+      grid.EndUpdate;
+    end;
+
+    if (ACol = tdsGrid.ColumnByName['T1'].Index)
+      or (ACol = tdsGrid.ColumnByName['T2'].Index)
+        or (ACol = tdsGrid.ColumnByName['T3'].Index) then
+    begin
+      if ADataSet.FieldByName('LaneIsEmpty').AsBoolean then exit;
+      ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+      // Must be artmanual for the user to toggle watch-time state.
+      if ActiveRT <> artManual then exit;
+      // the ALT key is required to perform toggle.
+      if (GetKeyState(VK_MENU) < 0) then
+      begin
+        s := tdsGrid.Columns[ACol].FieldName; // Time1, Time2, Time3
+        // Can toggle an empty TimeKeeper's stopwatch time...
+        if (ADataSet.FieldByName(s).IsNull) then exit;
+        grid.BeginUpdate;
+        // modify TimeKeeper's stopwatch state.
+        // idx in [1..3]. Asserts : dtTimeKeeperMode = dtManual.
+        {TODO -oBSA -cGeneral : Obtain an index either by using name suffix
+          or peek at Tag value for ACol ?? - which ever is clearer and concise.
+         TDS.ToggleWatchTime(ADataSet, (Acol - 1), ActiveRT);
+          }
+        TDS.ToggleWatchTime(ADataSet, tdsGrid.Columns[Acol].Tag, ActiveRT);
+        UpdateCellIcons(ADataSet, ARow, ActiveRT);
+        // The RaceTime needs to be recalculated...
+        TDS.CalcRaceTimeM(ADataset);
+        grid.EndUpdate;
+      end;
     end;
   end;
+
 end;
 
 procedure TMain.Timer1Timer(Sender: TObject);
@@ -2303,7 +2308,7 @@ end;
 procedure TMain.UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
     scmActiveRT);
 var
-I: integer;
+I, indx: integer;
 s: string;
 b, b2: boolean;
 begin
@@ -2312,33 +2317,34 @@ begin
 
   tdsGrid.BeginUpdate;
   // Clear out - point to cell icon
-  tdsGrid.RemoveImageIdx(7, ARow);
+  indx := tdsGrid.ColumnByName['ActiveRT'].Index;
+  tdsGrid.RemoveImageIdx(indx, ARow);
 
   case AActiveRT of
     artAutomatic:
     begin
-      // Update watch time : cell's icon.
-      for I := 3 to 5 do
+      // Update watch time : cell's icon.  for I := 2 to 4 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(I, ARow);
-        s := 'Time' + IntToStr(I - 2);
+        s := tdsGrid.Columns[I].FieldName; // Time1, Time2, Time3
         if ADataSet.FieldByName(s).IsNull then
           continue
         else
         begin
-          s := 'T' + IntToStr(I - 2) + 'A';
+          s := tdsGrid.Columns[I].Name + 'A'; // T1A, T2A, T3A
           b := ADataSet.FieldByName(s).AsBoolean;
           // Empty, zero or bad race-time - display CROSS in BOX.
           if (b = false) then
           begin
-              tdsGrid.AddImageIdx(I, ARow, 5, TCellHAlign.haFull,
+            tdsGrid.AddImageIdx(I, ARow, 5, TCellHAlign.haFull,
                 TCellVAlign.vaFull);
           end;
           { watch-time 1 :
               If the time is valid but the deviation between min and mid_
               is not acceptable then ...
           }
-          if (I = 3)  then
+          if (I = tdsGrid.ColumnByName['T1'].Index)  then
           begin
             s := 'TDev1';
             b2 := ADataSet.FieldByName(s).AsBoolean;
@@ -2353,7 +2359,7 @@ begin
               If the time is valid but the deviation between mid and max
               is not acceptable then ...
           }
-          if (I = 5)  then
+          if (I = tdsGrid.ColumnByName['T3'].Index)  then
           begin
             s := 'TDev2';
             b2 := ADataSet.FieldByName(s).AsBoolean;
@@ -2371,15 +2377,15 @@ begin
     end;
     artManual:
     begin
-      for I := 3 to 5 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(I, ARow);
-        s := 'Time' + IntToStr(I - 2);
+        s := tdsGrid.Columns[I].FieldName; // Time1, Time2, Time3
         if ADataSet.FieldByName(s).IsNull then
           continue
         else
           begin
-            s := 'T' + IntToStr(I - 2) + 'M';
+            s := tdsGrid.Columns[I].Name + 'M'; // T1M, T2M, T3M
             b := ADataSet.FieldByName(s).AsBoolean;
             // Empty, zero or illegal watch time - display CROSS in BOX.
             if (not b) then
@@ -2393,7 +2399,7 @@ begin
     end;
     artUser:
     begin
-      for I := 3 to 5 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(i, ARow);
       { s := 'Time' + IntToStr(I - 2);
@@ -2408,7 +2414,7 @@ begin
     end;
     artSplit:
     begin
-      for I := 3 to 5 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(I, ARow);
         // display small blue bug.
@@ -2419,7 +2425,7 @@ begin
     end;
     artNone:
     begin
-      for I := 3 to 5 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(I, ARow);
         // display red cross.
@@ -2439,49 +2445,5 @@ end;
 
 
 
-
-
-
-
-
-
-(*
-CONST
-    {MSG_CONFIRM_RECONSTRUCT =
-        'This uses the data in the current session to build Time-Drops %s files.' +
-            sLineBreak +
-                'Files are saved to the reconstruct folder specified in preferences.' +
-                    sLineBreak +
-                        'Do you want to perform the reconstruct?';
-                        }
-  {  MSG_RECONSTRUCT_COMPLETE = 'Re-construct and export of %s files is complete.';
-  }
-
-procedure TMain.ReconstructAndExportFiles(fileExtension: string; messageText:
-  string);
-var
-  mr: TModalResult;
-begin
-  if AppData.qrysession.Active then
-  begin
-    mr := MessageBox(0,
-      PChar(Format(MSG_CONFIRM_RECONSTRUCT, [fileExtension])),
-      PChar(Format(CAPTION_RECONSTRUCT, [fileExtension])), MB_ICONQUESTION or
-      MB_YESNO);
-    if isPositiveResult(mr) then
-    begin
-      scmGrid.BeginUpdate;
-      scmGrid.DataSource.DataSet.DisableControls;
-      ReConstructSession(AppData.qrySession.FieldByName('SessionID').AsInteger);
-      scmGrid.DataSource.DataSet.EnableControls;
-      scmGrid.EndUpdate;
-      MessageBox(0,
-        PChar(Format(MSG_RECONSTRUCT_COMPLETE, [fileExtension])),
-        PChar(Format(CAPTION_RECONSTRUCT, [fileExtension])), MB_ICONINFORMATION
-          or MB_OK);
-    end;
-  end;
-end;
-*)
 
 end.
