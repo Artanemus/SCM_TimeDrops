@@ -4,7 +4,7 @@ interface
 
 uses
   System.Classes, Vcl.Controls, System.Types, System.SysUtils,
-  System.Math, Vcl.Graphics, Vcl.Forms;
+  System.Math, Vcl.Graphics, Vcl.Forms, SCMDefines;
 
 
 type
@@ -62,7 +62,6 @@ var
   FHitTolerance: Integer = 5; // Pixels tolerance for hitting handles.
   FLineTolerance: Integer = 5; // Pixels tolerance for hitting lines.
   FHandleRadius: Integer = 4; //
-  FSagFactor: Single = 0.9;
 
 implementation
 
@@ -152,8 +151,6 @@ end;
 
 // Gets the center point of given rectF.
 function TNoodleLink.GetCenterPoint(ARect: TRectF): TPointF;
-var
-  ScreenPos, PaintBoxScreenPos: TPointF;
 begin
   Result := TPointF.Zero; // Default invalid point
   if (ARect = TRectF.Empty) then Exit;
@@ -292,7 +289,7 @@ begin
     var Distance := System.Math.Hypot(P1.X - P0.X, P1.Y - P0.Y);
     var ActualSag := 0.0;
     if Distance > 10 then
-      ActualSag := Distance * FSagFactor;
+      ActualSag := Distance * scmSagFactor;
 
     PControl.X := Round(MidPointX);
     PControl.Y := Round(MidPointY + ActualSag); // Simple vertical sag

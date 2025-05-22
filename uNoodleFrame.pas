@@ -6,7 +6,8 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls,
   System.Generics.Collections, Vcl.VirtualImage, System.Math,
-  dmIMG, uNoodleLink, System.Types, Vcl.StdCtrls;
+  dmIMG, uNoodleLink, System.Types, Vcl.StdCtrls, SCMDefines, Vcl.Menus,
+  System.Actions, Vcl.ActnList;
 
 type
   // State for dragging operations
@@ -15,6 +16,12 @@ type
 type
   TNoodleFrame = class(TFrame)
     pbNoodles: TPaintBox;
+    pumenuNoodle: TPopupMenu;
+    DeleteNoodle: TMenuItem;
+    actnList: TActionList;
+    actDeleteNoodle: TAction;
+    procedure actDeleteNoodleExecute(Sender: TObject);
+    procedure actDeleteNoodleUpdate(Sender: TObject);
     procedure pbNoodlesMouseDown(Sender: TObject; Button: TMouseButton; Shift:
         TShiftState; X, Y: Integer);
     procedure pbNoodlesMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -28,9 +35,9 @@ type
     FDragCurrentPoint: TPoint; // Current mouse position during drag (PaintBox coords)
     FDraggingHandle: TNoodleHandle; // Which handle of FDraggingLink is being dragged.
     FDraggingLink: TNoodleLink; // The existing link being dragged (if ndsDraggingExistingHandle)
-    FDragStartHandle: TNoodleHandle;
+//    FDragStartHandle: TNoodleHandle;
     FDragStartPoint: TPoint; // Point where drag started (PaintBox coords)
-    FDragStartRect: TRect;
+//    FDragStartRect: TRect;
     FDragState: TNoodleDragState;
     FHandleColor: TColor;
     FHotSpots: Array of TRect;
@@ -39,6 +46,7 @@ type
 
     FHotSpotStartIndex: integer;
     FHotSpotStartRect: TRect;
+    FNumOfLanes: Integer;
 
     FRopeColor: TColor;
     FRopeThickness: Integer;
@@ -89,10 +97,11 @@ implementation
 
 procedure  TNoodleFrame.CreateHotSpots;
 var
-I, J: integer;
+I, J, indx: integer;
 ARect: TRect;
 begin
   SetLength(FHotSpots, (NumberOfLanes*2));
+  indx := NumberOfLanes;
   for i:=0 to NumberOfLanes-1 do
   begin
     ARect.Top := FixedRowHeight + (i*DefaultRowHeight);
@@ -107,7 +116,7 @@ begin
     Arect.Left := Width - DefaultRowHeight;
     ARect.Height := DefaultRowHeight;
     ARect.Width := DefaultRowHeight;
-    FHotSpots[i+J] := ARect;
+    FHotSpots[indx+J] := ARect;
   end;
 end;
 
@@ -124,11 +133,10 @@ begin
   FDraggingLink := nil;
 
   // --- Configure Appearance ---
-  FSagFactor := 0.9;  // 90% sag relative to distance
   FRopeColor := clGray;
   FSelectedRopeColor := clHighlight;
   FRopeThickness := 4;
-  FHandleColor := clRed;
+  FHandleColor := clHighlight;
   // Ensure PaintBox is on top and covers the grid areas
   pbNoodles.BringToFront;
 
@@ -148,6 +156,18 @@ begin
   fNoodles.Free;  // release noodle collection.
   // Custom cleanup code here
   inherited Destroy; // Call the inherited destructor
+end;
+
+procedure TNoodleFrame.actDeleteNoodleExecute(Sender: TObject);
+begin
+  // delete the noodle
+end;
+
+procedure TNoodleFrame.actDeleteNoodleUpdate(Sender: TObject);
+begin
+  // if cursor position is over a noodle.
+  // if the noodle at the cursor position is selected.
+
 end;
 
 procedure TNoodleFrame.SelectLink(ALink: TNoodleLink);
@@ -211,7 +231,7 @@ begin
   Distance := System.Math.Hypot(P1.X - P0.X, P1.Y - P0.Y);
 
   ActualSag := 0.0;
-  if Distance > 10 then ActualSag := Distance * FSagFactor;
+  if Distance > 10 then ActualSag := Distance * scmSagFactor;
 
   P_Control.X := Round(MidPointX);
   P_Control.Y := Round(MidPointY + ActualSag); // Simple vertical sag
@@ -346,7 +366,7 @@ var
   ClickedPoint: TPoint;
   HitLink: TNoodleLink;
   HitHandle: TNoodleHandle;
-  HitConnPoint: TNoodleHandle;
+//  HitConnPoint: TNoodleHandle;
   ARect: TRect;
   index: integer;
 begin
@@ -418,9 +438,9 @@ var
   HotSpot: TRect;
   Canvas: TCanvas;
   AColor: TColor;
-  BitMap: TBitMap;
+//  BitMap: TBitMap;
   deflate, indx: integer;
-  LText: String;
+//  LText: String;
 begin
   Canvas := (Sender as TPaintBox).Canvas;
   Canvas.Brush.Style := bsClear; // Make background transparent (won't erase grids)
@@ -436,10 +456,11 @@ begin
   // 1. Draw all existing noodles
   for Link in FNoodles do
   begin
+    // Only draw if both endpoints are valid.
     if (not Link.NoodleHandleStart.IsValid) or (not Link.NoodleHandleEnd.IsValid) then continue;
     P0 := Link.NoodleHandleStart.CenterF;
     P1 := Link.NoodleHandleEnd.CenterF;;
-    // Only draw if both endpoints are valid (visible/exist)
+    // ASSERT : Only draw if both endpoints are valid.
     if (P0.IsZero or P1.IsZero) then continue;
     if Link.IsSelected then
       AColor := FSelectedRopeColor else  AColor := FRopeColor;
@@ -496,8 +517,10 @@ procedure TNoodleFrame.pbNoodlesMouseUp(Sender: TObject; Button: TMouseButton;
     Shift: TShiftState; X, Y: Integer);
 var
   EndPoint, P0, P1: TPoint;
-  EndHandle, HitHandle: TNoodleHandle;
-  NewLink, NoodleLink: TNoodleLink;
+  EndHandle: TNoodleHandle;
+//  HitHandle: TNoodleHandle;
+  NewLink: TNoodleLink;
+//  NoodleLink: TNoodleLink;
   ExistingLink: TNoodleLink;
   FHotSpotEndRect: TRect;
 
@@ -514,7 +537,7 @@ begin
     if HitTestHotSpot(FDragCurrentPoint, FHotSpotEndRect, FHotSpotEndIndex) then
     begin
       // released button over starting hotspot - exit...
-      if (FHotSpotEndIndex <> FHotSpotStartIndex) then
+      if (FHotSpotEndIndex = FHotSpotStartIndex) then
       begin
         FDragState := ndsIdle;
         pbNoodles.Invalidate; // Redraw final state
@@ -534,10 +557,10 @@ begin
       for ExistingLink in FNoodles do
       begin
           // Check both directions
-          if ((ExistingLink.NoodleHandleStart.CenterF = P0) and
-              (ExistingLink.NoodleHandleEnd.CenterF = P1)) or
-             ((ExistingLink.NoodleHandleStart.CenterF = P1)  and
-              (ExistingLink.NoodleHandleEnd.CenterF = P0)) then
+          if (ExistingLink.NoodleHandleStart.CenterF = P0) or
+              (ExistingLink.NoodleHandleEnd.CenterF = P1) or
+             (ExistingLink.NoodleHandleStart.CenterF = P1)  or
+              (ExistingLink.NoodleHandleEnd.CenterF = P0) then
           begin
               IsDuplicate := True;
               Break;
@@ -549,7 +572,7 @@ begin
         // Create the new link
         NewLink := TNoodleLink.Create(FHotSpotStartRect, FHotSpotEndRect);
         FNoodles.Add(NewLink);
-        SelectLink(NewLink); // Select the newly created link
+        SelectLink(NewLink); // DeSelect all then Select the newly created link
         // Optional: Trigger an OnLinkCreated event here
         // if Assigned(FOnLinkCreated) then FOnLinkCreated(Self, NewLink);
         FDragState := ndsIdle;
@@ -593,13 +616,13 @@ begin
                for ExistingLink in FNoodles do
                begin
                    if ExistingLink = FDraggingLink then Continue; // Skip self
-                   if ((ExistingLink.NoodleHandleStart.CenterF = EndHandle.CenterF)  and
-                       (ExistingLink.NoodleHandleEnd.CenterF = OriginalHandleA.CenterF) ) or
-                      ((ExistingLink.NoodleHandleStart.CenterF = OriginalHandleB.CenterF)  and
-                       (ExistingLink.NoodleHandleEnd.CenterF = EndHandle.CenterF) ) then
+                   if (ExistingLink.NoodleHandleStart.CenterF = EndHandle.CenterF)  or
+                       (ExistingLink.NoodleHandleEnd.CenterF = OriginalHandleA.CenterF) or
+                      (ExistingLink.NoodleHandleStart.CenterF = OriginalHandleB.CenterF)  or
+                       (ExistingLink.NoodleHandleEnd.CenterF = EndHandle.CenterF) then
                    begin
                        IsValidTarget := False;
-                       ShowMessage('This modification would create a duplicate link.');
+//                       ShowMessage('This modification would create a duplicate link.');
                        Break;
                    end;
                end;

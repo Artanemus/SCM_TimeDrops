@@ -664,13 +664,11 @@ end;
 
 procedure TMain.actnRptSCMEventBasicExecute(Sender: TObject);
 var
-rpt: TReportsSCM;
+  rpt: TReportsSCM;
 begin
   try
-    rpt := TReportsSCM.Create(Self);
-  except
-    on E: Exception do
-    exit;
+    rpt := TReportsSCM.Create(self);
+  except on E: Exception do exit;
   end;
   rpt.RptExecute;
   FreeAndNil(rpt);
@@ -685,8 +683,7 @@ begin
   end
   else
   begin
-    if TAction(Sender).Enabled = true then
-      TAction(Sender).Enabled := false;
+    if TAction(Sender).Enabled = true then TAction(Sender).Enabled := false;
   end;
 end;
 
@@ -1593,7 +1590,6 @@ begin
         Key := 0; // Mark key as handled.
       end;
     end;
-
   end;
 end;
 

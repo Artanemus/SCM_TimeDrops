@@ -12,11 +12,29 @@ object NoodleFrame: TNoodleFrame
     Align = alClient
     Color = clBtnFace
     ParentColor = False
+    PopupMenu = pumenuNoodle
     OnMouseDown = pbNoodlesMouseDown
     OnMouseMove = pbNoodlesMouseMove
     OnMouseUp = pbNoodlesMouseUp
     OnPaint = pbNoodlesPaint
     ExplicitWidth = 144
     ExplicitHeight = 581
+  end
+  object pumenuNoodle: TPopupMenu
+    Left = 64
+    Top = 336
+    object DeleteNoodle: TMenuItem
+      Action = actDeleteNoodle
+    end
+  end
+  object actnList: TActionList
+    Left = 64
+    Top = 440
+    object actDeleteNoodle: TAction
+      Caption = 'Delete Noodle ...'
+      Enabled = False
+      OnExecute = actDeleteNoodleExecute
+      OnUpdate = actDeleteNoodleUpdate
+    end
   end
 end
