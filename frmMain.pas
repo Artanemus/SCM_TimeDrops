@@ -102,7 +102,7 @@ type
     vimgStrokeBug: TVirtualImage;
     pnlSCMGrid: TPanel;
     pnlTDSGrid: TPanel;
-    Noodles: TNoodleFrame;
+    frameNoodles: TNoodleFrame;
     procedure actBuildTDTablesExecute(Sender: TObject);
     procedure actBuildTDTablesUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);
@@ -1582,11 +1582,11 @@ procedure TMain.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
   if Key = VK_DELETE then
   begin
-    if Assigned(NoodleFrame) then
+    if Assigned(frameNoodles) then
     begin
-      if NoodleFrame.SelectedLink <> nil then
+      if frameNoodles.SelectedLink <> nil then
       begin
-        NoodleFrame.DeleteSelectedLink;
+        frameNoodles.actDeleteNoodle.Execute;
         Key := 0; // Mark key as handled.
       end;
     end;

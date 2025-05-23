@@ -40,11 +40,7 @@ type
     // Get details for a specific end of the noodle.
     function GetNoodleHandleCenter(ALinkPointType: TLinkPointType): TPointF;
     function GetNoodleHandle(ALinkPointType: TLinkPointType): TNoodleHandle;
-
-
-    // Does the noodle have this handle.
-//    function TestForNoodleHandle(ANoodleHandle: TNoodleHandle): boolean;
-
+    function GetOtherHandle(ANoodleHandle: TNoodleHandle): TNoodleHandle;
 
     property IsSelected: Boolean read FIsSelected write FIsSelected;
     property SelectedHandle: TLinkPointType read FSelectedHandle write
@@ -61,7 +57,7 @@ type
 var
   FHitTolerance: Integer = 5; // Pixels tolerance for hitting handles.
   FLineTolerance: Integer = 5; // Pixels tolerance for hitting lines.
-  FHandleRadius: Integer = 4; //
+  FHandleRadius: Integer = 6; //
 
 implementation
 
@@ -228,6 +224,13 @@ begin
     Exit;
   ARect := FNoodleHandles[Ord(ALinkPointType)].ARectF;
   Result := GetCenterPoint(ARect);
+end;
+
+function TNoodleLink.GetOtherHandle(
+  ANoodleHandle: TNoodleHandle): TNoodleHandle;
+begin
+  if FNoodleHandles[0] = ANoodleHandle then  result := FNoodleHandles[1]
+  else result := FNoodleHandles[0];
 end;
 
 function TNoodleLink.HitTest(P: TPointF; out HitHandle: TNoodleHandle): Boolean;

@@ -10416,7 +10416,7 @@ object Main: TMain
           end
         end
       end
-      inline Noodles: TNoodleFrame
+      inline frameNoodles: TNoodleFrame
         Left = 466
         Top = 152
         Width = 150
