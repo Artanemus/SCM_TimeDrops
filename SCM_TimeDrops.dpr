@@ -37,7 +37,8 @@ uses
   rptReportsSCM in 'rptReportsSCM.pas' {ReportsSCM: TDataModule},
   uNoodleLink in 'uNoodleLink.pas',
   TransparentPanel in 'TransparentPanel.pas',
-  uNoodleFrame in 'uNoodleFrame.pas' {NoodleFrame: TFrame};
+  uNoodleFrame in 'uNoodleFrame.pas' {NoodleFrame: TFrame},
+  uNoodleData in 'uNoodleData.pas';
 
 {$R *.res}
 

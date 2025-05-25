@@ -29,17 +29,12 @@ type
     procedure AssignDataLaneToWT(flds: TFields);
     procedure CalcAutoWatchTimeLane(aLaneID: integer);
     procedure CalcAutoWatchTimeHeat(aHeatID: integer);
-    procedure CalcAutoWatchTimeEvent(aEventID: integer);
-    procedure CalcAutoWatchTimeSession(aSessionID: integer);
-
-  protected
-
+//    procedure CalcAutoWatchTimeEvent(aEventID: integer);
+//    procedure CalcAutoWatchTimeSession(aSessionID: integer);
   public
     constructor Create();
     destructor Destroy; override;
-
     procedure ProcessHeat(aHeatID: integer);
-
   end;
 
 implementation
@@ -258,27 +253,29 @@ begin
 
 end;
 
-procedure TWatchTime.CalcAutoWatchTimeEvent(aEventID: integer);
-var
-found: boolean;
-begin
-  if TDS.tblmEvent.FieldByName('EventID').AsInteger <> aEventID then
-    found := TDS.LocateTEventID(aEventID)
-  else
-    found := true;
-
-  if found then
+(*
+  procedure TWatchTime.CalcAutoWatchTimeEvent(aEventID: integer);
+  var
+  found: boolean;
   begin
-    TDS.tblmHeat.ApplyMaster;
-    TDS.tblmHeat.First;
-    while not TDS.tblmHeat.Eof do
+    if TDS.tblmEvent.FieldByName('EventID').AsInteger <> aEventID then
+      found := TDS.LocateTEventID(aEventID)
+    else
+      found := true;
+
+    if found then
     begin
-      if TDS.tblmHeat.FieldByName('EventID').AsInteger = aEventID then
-        CalcAutoWatchTimeHeat(TDS.tblmHeat.FieldByName('HeatID').AsInteger);
-      TDS.tblmHeat.Next;
+      TDS.tblmHeat.ApplyMaster;
+      TDS.tblmHeat.First;
+      while not TDS.tblmHeat.Eof do
+      begin
+        if TDS.tblmHeat.FieldByName('EventID').AsInteger = aEventID then
+          CalcAutoWatchTimeHeat(TDS.tblmHeat.FieldByName('HeatID').AsInteger);
+        TDS.tblmHeat.Next;
+      end;
     end;
   end;
-end;
+*)
 
 procedure TWatchTime.CalcAutoWatchTimeHeat(aHeatID: integer);
 var
@@ -331,28 +328,30 @@ begin
 
 end;
 
-procedure TWatchTime.CalcAutoWatchTimeSession(aSessionID: integer);
-var
-found: boolean;
-begin
-  if TDS.tblmSession.FieldByName('SessionID').AsInteger <> aSessionID then
-    found := TDS.LocateTSessionID(aSessionID)
-  else
-    found := true;
-
-  if found then
+(*
+  procedure TWatchTime.CalcAutoWatchTimeSession(aSessionID: integer);
+  var
+  found: boolean;
   begin
-    TDS.tblmEvent.ApplyMaster;
-    TDS.tblmEvent.First;
-    while not TDS.tblmEvent.Eof do
+    if TDS.tblmSession.FieldByName('SessionID').AsInteger <> aSessionID then
+      found := TDS.LocateTSessionID(aSessionID)
+    else
+      found := true;
+
+    if found then
     begin
-      if TDS.tblmEvent.FieldByName('SessionID').AsInteger = aSessionID then
-        CalcAutoWatchTimeEvent(TDS.tblmEvent.FieldByName('EventID').AsInteger);
-      TDS.tblmEvent.Next;
+      TDS.tblmEvent.ApplyMaster;
+      TDS.tblmEvent.First;
+      while not TDS.tblmEvent.Eof do
+      begin
+        if TDS.tblmEvent.FieldByName('SessionID').AsInteger = aSessionID then
+          CalcAutoWatchTimeEvent(TDS.tblmEvent.FieldByName('EventID').AsInteger);
+        TDS.tblmEvent.Next;
+      end;
     end;
   end;
-end;
 
+*)
 
 procedure TWatchTime.CheckDeviation;
 var

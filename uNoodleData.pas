@@ -7,38 +7,35 @@ type
     TNoodleData = class
     private
     FSynced: Boolean;
-    procedure NewNoodle(ANoodleLink: TNoodleLink);
-    procedure DeleteNoodle(ANoodleLink: TNoodleLink);
-    procedure UpdateNoodle(ANoodleLink: TNoodleLink);
 
     public
     constructor Create;
     destructor Destroy; override;
     
-    property Synced: Boolean read FSynced write FSynced;
-    
     // Methods to manage noodles
     procedure AddNoodle(ANoodleLink: TNoodleLink);
-    procedure RemoveNoodle(ANoodleLink: TNoodleLink);
-    procedure ModifyNoodle(ANoodleLink: TNoodleLink);
+    procedure DeleteNoodle(ANoodleLink: TNoodleLink);
+    procedure UpdateNoodle(ANoodleLink: TNoodleLink);
 
-
+    property Synced: Boolean read FSynced write FSynced;
 
 end;
 
 implementation
 
-procedure TNoodleData.NewNoodle(ANoodleLink: TNoodleLink);
+procedure TNoodleData.AddNoodle(ANoodleLink: TNoodleLink);
 var
     ANoodleID: Integer;
 begin
   // Code to handle the creation of a new noodle link
   // This could involve adding it to a list or database
+  ANoodleID := TDS.MaxID_Noodle;
+
   FSynced := False; // Mark as unsynced
-  dm.tblmNoodle.Insert;
-    dm.tblmNoodle.FieldByName('NoodleID').AsInteger := ANoodleID;
-    dm.tblmNoodle.FieldByName('HeatID').AsInteger := dm.tblmHeat.FieldByNameID('HeatID').AsInteger;
-    dm.tblmNoodle.FieldByName('LaneID').AsInteger := dm.tblmLane.FieldByNameID('LaneID').AsInteger;
+  TDS.tblmNoodle.Insert;
+  TDS.tblmNoodle.FieldByName('NoodleID').AsInteger := ANoodleID;
+  TDS.tblmNoodle.FieldByName('HeatID').AsInteger := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+  TDS.tblmNoodle.FieldByName('LaneID').AsInteger := TDS.tblmLane.FieldByName('LaneID').AsInteger;
 
 end;
 procedure TNoodleData.DeleteNoodle(ANoodleLink: TNoodleLink);

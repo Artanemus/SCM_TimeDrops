@@ -80,7 +80,8 @@ type
     function MaxID_Lane: integer;
     function MaxID_Event(): integer;
     function MaxID_Heat(): integer;
-    function MaxID_Session():integer;
+    function MaxID_Session(): integer;
+    function MaxID_Noodle(): integer;
 
     procedure POST_All;
     procedure POST_Lane(ALaneNum: Integer);
@@ -729,6 +730,23 @@ begin
     if (id > max) then
       max := id;
     tblmLane.Next;
+  end;
+  result := max;
+end;
+
+function TTDS.MaxID_Noodle: integer;
+var
+max, id: integer;
+begin
+  // To function correctly disableDTMasterDetail.
+  max := 0;
+  tblmNoodle.First;
+  while not tblmNoodle.eof do
+  begin
+    id := tblmNoodle.FieldByName('NoodleID').AsInteger;
+    if (id > max) then
+      max := id;
+    tblmNoodle.Next;
   end;
   result := max;
 end;

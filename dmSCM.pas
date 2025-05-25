@@ -75,7 +75,7 @@ type
     fDataIsActive: Boolean;
     { Private declarations }
     fDBModel, fDBVersion, fDBMajor, fDBMinor: integer;
-    procedure AssertMasterDetail;
+//    procedure AssertMasterDetail;
   public
     fLoginTimeout: integer;  //---
     msgHandle: HWND;  // TForm.dtfrmExec ...   // Both DataModules
@@ -186,63 +186,65 @@ begin
   end;
 end;
 
-procedure TSCM.AssertMasterDetail;
-begin
-  if (fDataIsActive = false) then
+(*
+  procedure TSCM.AssertMasterDetail;
   begin
-    // should be ok to run this procedure with out a connection.
-    // assigning a master will result in query state = close.
-    // must be explicitly reopened. (ActivateDataSCM)
+    if (fDataIsActive = false) then
+    begin
+      // should be ok to run this procedure with out a connection.
+      // assigning a master will result in query state = close.
+      // must be explicitly reopened. (ActivateDataSCM)
 
-    // Master - index field.
-    qrySwimClub.IndexFieldNames := 'SwimClubID';
+      // Master - index field.
+      qrySwimClub.IndexFieldNames := 'SwimClubID';
 
-    // ASSERT Master - Detail
-    qrySession.MasterSource := dsSwimClub;
-    qrySession.MasterFields := 'SwimClubID';
-    qrySession.DetailFields := 'SwimClubID';
-    qrySession.IndexFieldNames := 'SwimClubID';
+      // ASSERT Master - Detail
+      qrySession.MasterSource := dsSwimClub;
+      qrySession.MasterFields := 'SwimClubID';
+      qrySession.DetailFields := 'SwimClubID';
+      qrySession.IndexFieldNames := 'SwimClubID';
 
-    qryEvent.MasterSource := dsSession;
-    qryEvent.MasterFields := 'SessionID';
-    qryEvent.DetailFields := 'SessionID';
-    qryEvent.IndexFieldNames := 'SessionID';
+      qryEvent.MasterSource := dsSession;
+      qryEvent.MasterFields := 'SessionID';
+      qryEvent.DetailFields := 'SessionID';
+      qryEvent.IndexFieldNames := 'SessionID';
 
-    qryDistance.MasterSource := dsEvent;
-    qryDistance.MasterFields := 'DistanceID';
-    qryDistance.DetailFields := 'DistanceID';
-    qryDistance.IndexFieldNames := 'DistanceID';
+      qryDistance.MasterSource := dsEvent;
+      qryDistance.MasterFields := 'DistanceID';
+      qryDistance.DetailFields := 'DistanceID';
+      qryDistance.IndexFieldNames := 'DistanceID';
 
-    qryStroke.MasterSource := dsEvent;
-    qryStroke.MasterFields := 'StrokeID';
-    qryStroke.DetailFields := 'StrokeID';
-    qryStroke.IndexFieldNames := 'StrokeID';
+      qryStroke.MasterSource := dsEvent;
+      qryStroke.MasterFields := 'StrokeID';
+      qryStroke.DetailFields := 'StrokeID';
+      qryStroke.IndexFieldNames := 'StrokeID';
 
-    qryHeat.MasterSource := dsEvent;
-    qryHeat.MasterFields := 'EventID';
-    qryHeat.DetailFields := 'EventID';
-    qryHeat.IndexFieldNames := 'EventID';
+      qryHeat.MasterSource := dsEvent;
+      qryHeat.MasterFields := 'EventID';
+      qryHeat.DetailFields := 'EventID';
+      qryHeat.IndexFieldNames := 'EventID';
 
-    qryINDV.MasterSource := dsHeat;
-    qryINDV.MasterFields := 'HeatID';
-    qryINDV.DetailFields := 'HeatID';
-    qryINDV.IndexFieldNames := 'HeatID';
+      qryINDV.MasterSource := dsHeat;
+      qryINDV.MasterFields := 'HeatID';
+      qryINDV.DetailFields := 'HeatID';
+      qryINDV.IndexFieldNames := 'HeatID';
 
-    qryTEAM.MasterSource := dsHeat;
-    qryTEAM.MasterFields := 'HeatID';
-    qryTEAM.DetailFields := 'HeatID';
-    qryTEAM.IndexFieldNames := 'HeatID';
+      qryTEAM.MasterSource := dsHeat;
+      qryTEAM.MasterFields := 'HeatID';
+      qryTEAM.DetailFields := 'HeatID';
+      qryTEAM.IndexFieldNames := 'HeatID';
 
-    qryTeamEntrant.MasterSource := dsTeam;
-    qryTeamEntrant.MasterFields := 'TeamID';
-    qryTeamEntrant.DetailFields := 'TeamID';
-    qryTeamEntrant.IndexFieldNames := 'TeamID';
+      qryTeamEntrant.MasterSource := dsTeam;
+      qryTeamEntrant.MasterFields := 'TeamID';
+      qryTeamEntrant.DetailFields := 'TeamID';
+      qryTeamEntrant.IndexFieldNames := 'TeamID';
+
+    end;
 
   end;
 
-end;
 
-procedure TSCM.BuildCSVEventData(AFileName: string);
+*)procedure TSCM.BuildCSVEventData(AFileName: string);
 var
   sl: TStringList;
   s, s2, s3: string;
