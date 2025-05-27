@@ -590,6 +590,7 @@ var
   Canvas: TCanvas;
   AColor: TColor;
   deflate: integer;
+  HandlePtr: TNoodleHandleP;
 
   procedure DrawGridIcons();
   begin
@@ -635,14 +636,18 @@ begin
   // 1. Draw all existing noodles
   for Link in FNoodles do
   begin
-    // Don't draw the handle we are dragging
+    // Skip the Noodle when we are dragging.
     if (FDragState = ndsDraggingExistingHandle) and (Link = FDragLink) then
       continue;
-    // Only draw if both endpoints are valid.
+
+    // ASSERT: Only draw if both endpoints are valid.
     if not Link.HasValidHandles then continue;
 
-    // ASSERT : Only draw if both endpoints are valid.
-    if (P0.IsZero or P1.IsZero) then continue;
+    HandlePtr := Link.GetHandlePtr(0);
+    P0 := HandlePtr.RectF.CenterPoint;
+    HandlePtr := Link.GetHandlePtr(1);
+    P1 := HandlePtr.RectF.CenterPoint;
+
     if Link.IsSelected then
       AColor := FSelectedLinkColor else  AColor := FLinkColor;
     DrawNoodleLink(Canvas, P0, P1, AColor, FRopeThickness, Link.IsSelected);
@@ -660,6 +665,7 @@ begin
     Spot.X := Spot.X - (IMG.vimglistDTGrid.Height DIV 2);
     Spot.Y := Spot.Y - (IMG.vimglistDTGrid.Height DIV 2);
     IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'DotCircle', true);
+
     DrawGridIcons;
   end;
 
@@ -669,10 +675,60 @@ begin
     P0 := FDragAnchour.RectF.CenterPoint;
     P1 := FMousePoint;
     Rect := HotSpot.Rect; // conversion of THostSpot.RectF.
-    DrawNoodleLink(Canvas, P0, P1, clLime, FRopeThickness, False);
-    DrawGridIcons;
-  end;
+    DrawNoodleLink(Canvas, P0, P1, FSelectedLinkColor, FRopeThickness, False);
 
+    // Draw the Default-BullsEye to dragging mouse ...
+    Spot := FMousePoint;
+    Spot.X := Spot.X - (IMG.vimglistDTGrid.Height DIV 2);
+    Spot.Y := Spot.Y - (IMG.vimglistDTGrid.Height DIV 2);
+    IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'DotCircle', true);
+
+    // dropping onto itself..
+    if FDragLink.IsPointOnHandle(FMousePoint, HandlePtr) then
+    begin
+      if HandlePtr.Bank = FDragAnchour.Bank then // flag with Red-BullsEye
+        IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'ActiveRTNone', true);
+    end;
+    // dragging over another hotspot on the same bank.
+    if TryHitTestHotSpot(FMousePoint, HotSpot) then
+    begin
+      if HotSpot.Bank = FDragAnchour.Bank then
+        IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'ActiveRTNone', true);
+    end;
+    // dropping onto another noodle....
+    if TryHitTestNoodle(FMousePoint, Link, HandlePtr) then
+    begin
+      ;
+    end;
+
+
+//    if TryHitTestHotSpot(FMousePoint, HotSpot) then
+//    begin
+//      // find the link and get the handle that's being dragged ..
+//      if TryHitTestNoodle(FMousePoint, Link, HandlePtr) then
+//      begin
+//        if Assigned(HandlePtr) then  // found the drag handle
+//        begin
+//          var AnchorHandle: TNoodleHandle;
+//          // get the anchor handle ...
+////          Link.GetOtherHandle(HandlePtr^, AnchorHandle);
+//          // Dragging over the starting hotspot
+////          if (HotSpot.Lane = AnchorHandle.Lane)
+////            and (HotSpot.Bank = AnchorHandle.Bank) then exit; // done..
+//
+//          // Same Bank - illegal. Display read bullsEye.
+//          if (HotSpot.Bank = AnchorHandle.Bank) then
+//          begin
+//            Spot := FMousePoint;
+//            Spot.X := Spot.X - (IMG.vimglistDTGrid.Height div 2);
+//            Spot.Y := Spot.Y - (IMG.vimglistDTGrid.Height div 2);
+//            // flag with Red-BullsEye
+//            IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'ActiveRTNone', true);
+//          end;
+//        end;
+//      end;
+//    end;
+  end;
 end;
 
 procedure TNoodleFrame.SelectNoodleLink(ALink: TNoodleLink);
@@ -684,8 +740,6 @@ begin
     FSelectedLink := ALink;
   end;
 end;
-
-
 
 { THotSpot }
 
