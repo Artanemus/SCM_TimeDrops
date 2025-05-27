@@ -7,7 +7,7 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls,
   System.Generics.Collections, Vcl.VirtualImage, System.Math,
   dmIMG, uNoodleLink, System.Types, Vcl.StdCtrls, SCMDefines, Vcl.Menus,
-  System.Actions, Vcl.ActnList;
+  System.Actions, Vcl.ActnList, dmSCM, Data.DB, dmTDS;
 
 type
   // State for dragging operations
@@ -27,10 +27,6 @@ type
   end;
 
 type
-  TNoodleLinkP = ^TNoodleLink;
-
-
-type
   TNoodleFrame = class(TFrame)
     actDeleteNoodle: TAction;
     actnList: TActionList;
@@ -48,27 +44,22 @@ type
   private
     FDefaultRowHeight: integer;
     FMousePoint: TPoint;
-
     FDragHandle: TNoodleHandle;
     FDragAnchour: TNoodleHandle;
-    FDragLinkPtr: TNoodleHandleP;
-
+    FDragLink: TNoodleLink;
     FDragState: TNoodleDragState;
     FDragColor: TColor;
     FHandleColor: TColor;
     FHotSpots: Array of THotSpot;
     FHotSpotAnchour: THotSpot;
-//    FHotSpots: Array of TRect;
-//    FHotSpotStartIndex: integer;
-//    FHotSpotStartRect: TRect;
-    FixedRowHeight: integer;   // identical to SCM TMS TAdvDBGrid.
+    FixedRowHeight: integer;   // assigned TMS TAdvDBGrid row height.
     FLinkColor: TColor;
     FNoodles: TObjectList<TNoodleLink>; // Noodles
     FRopeColor: TColor;
     FRopeThickness: Integer;
     FSelectedHandleColor: TColor;
     FSelectedLinkColor: TColor;
-    FSelectedLinkPtr: TNoodleLinkP;
+    FSelectedLink: TNoodleLink;
     FSelectedRopeColor: TColor;
     FNumberOfLanes: integer;
     procedure InitializeHotSpots;
@@ -79,14 +70,14 @@ type
         AThickness: Integer; ASelected: Boolean);
     procedure DrawQuadraticBezierCurve(ACanvas: TCanvas; P0, P1, P2: TPoint;
         NumSegments: Integer);
-//    function TryGetHandleAtHotSpot(P: TPoint; out ANoodleHandle: TNoodleHandle):
-//        Boolean;
     procedure TryGetHandlePtrAtPoint(P: TPoint; out AHandlePtr: TNoodleHandleP);
     function SelectNoodleLink: TNoodleLink; overload;
-    function TryHitTestNoodle(P: TPoint; var HitLink: TNoodleLinkP; out HitHandle:
-        TNoodleHandleP): Boolean; overload;
-    function TryHitTestHotSpot(P: TPoint; out HotSpot: THotSpot): boolean;
     procedure SelectNoodleLink(ALink: TNoodleLink); overload;
+
+    function TryHitTestNoodle(P: TPoint; var Link: TNoodleLink; out HandlePtr:
+        TNoodleHandleP): Boolean;
+
+    function TryHitTestHotSpot(P: TPoint; out HotSpot: THotSpot): boolean;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
@@ -112,8 +103,8 @@ begin
 
   FNoodles := TObjectList<TNoodleLink>.Create(True); // True = OwnsObjects
   FDragState := ndsIdle;
-  FSelectedLinkPtr := nil;
-  FDragLinkPtr := nil;
+  FSelectedLink := nil;
+  FDragLink := nil;
 
   // --- Configure COLORS ---
   FDragColor := clBlack;
@@ -155,7 +146,7 @@ begin
     if ALink.IsSelected then
     begin
       FNoodles.Remove(ALink); // This will free the object - if OwnsObjects is True
-      FSelectedLinkPtr := nil; // Clear the selected link
+      FSelectedLink := nil; // Clear the selected link
       pbNoodles.Invalidate; // Redraw without the deleted link
       // Optional: Trigger OnLinkDeleted event
       // if Assigned(FOnLinkDeleted) then FOnLinkDeleted(Self, LinkToDelete);
@@ -171,7 +162,7 @@ begin
   // if the array fNoodles is not empty.
   if FNoodles.Count > 0 then
   begin
-    if FSelectedLinkPtr <> nil then
+    if FSelectedLink <> nil then
     begin
       if not TAction(Sender).Enabled then
         TAction(Sender).Enabled := True;
@@ -195,6 +186,7 @@ I, J, indx: integer;
 ARect: TRect;
 begin
   SetLength(FHotSpots, (FNumberOfLanes*2));
+
   indx := FNumberOfLanes;
   for i:=0 to FNumberOfLanes-1 do
   begin
@@ -205,8 +197,8 @@ begin
     FHotSpots[i].RectF := ARect;
     FHotSpots[i].Bank := 0;
     FHotSpots[i].Lane := (i+1);
-
   end;
+
   for J:=0 to FNumberOfLanes-1 do
   begin
     ARect.Top := FixedRowHeight + (j*FDefaultRowHeight);
@@ -214,8 +206,8 @@ begin
     ARect.Height := FDefaultRowHeight;
     ARect.Width := FDefaultRowHeight;
     FHotSpots[indx+J].RectF := ARect;
-    FHotSpots[j].Bank := 1;
-    FHotSpots[j].Lane := (j+1);
+    FHotSpots[indx+J].Bank := 1;
+    FHotSpots[indx+J].Lane := (j+1);
   end;
 end;
 
@@ -226,7 +218,7 @@ begin
   // Also iterate just in case state is inconsistent
   for Link in FNoodles do
     Link.IsSelected := False;
-  FSelectedLinkPtr := nil; // Ensure this is cleared
+  FSelectedLink := nil; // Ensure this is cleared
 end;
 
 procedure TNoodleFrame.DrawNoodleHandle(ACanvas: TCanvas; P: TPoint; AColor:
@@ -315,47 +307,12 @@ begin
   for I := 0 to FNoodles.Count - 1 do
   begin
     Link := FNoodles[I];
-    Link.FindHandlePtrAtPoint(PFloat, AHandlePtr); // <-- Pass as var/out
+    Link.IsPointOnHandle(PFloat, AHandlePtr); // <-- Pass as var/out
     if AHandlePtr <> nil then
       Exit;
   end;
 end;
 
-(*
-  function TNoodleFrame.TryGetHandleAtHotSpot(P: TPoint; out ANoodleHandle:
-      TNoodleHandle): Boolean;
-  var
-    HandleRadiusSq: Int64;
-  //  DistSq: Int64;
-    CenterF: TPointF;
-    DistSqF: Double;
-    HotSpot: TRect;
-    AHandle: TNoodleHandle;
-    ALink: TNoodleLink;
-  begin
-    Result := False;
-    ANoodleHandle.Clear;
-    HandleRadiusSq := FHandleRadius * FHandleRadius; // margin of acceptance.
-    for HotSpot in FHotSpots do
-    begin
-      if HotSpot.IsEmpty then continue;
-      CenterF := HotSpot.CenterPoint;
-      DistSqF := (P.X - CenterF.X) * (P.X - CenterF.X) + (P.Y - CenterF.Y) * (P.Y - CenterF.Y);
-      if DistSqF <= HandleRadiusSq then
-      begin
-        if TryHitTestNoodle(HotSpot.CenterPoint, ALink, AHandle) then
-        begin
-          if AHandle.IsValid then
-          begin
-            ANoodleHandle := AHandle;
-            Result := True;
-            Exit; // Found a noodle handle within margin of acceptance.
-          end;
-        end;
-      end;
-    end;
-  end;
-*)
 
 function TNoodleFrame.SelectNoodleLink: TNoodleLink;
 var
@@ -373,31 +330,24 @@ begin
   end;
 end;
 
-function TNoodleFrame.TryHitTestNoodle(P: TPoint; var HitLink: TNoodleLinkP;
-    out HitHandle: TNoodleHandleP): Boolean;
+function TNoodleFrame.TryHitTestNoodle(P: TPoint; var Link: TNoodleLink; out HandlePtr:
+        TNoodleHandleP): Boolean;
 var
-  LinkPtr: TNoodleLinkP;
-  ANoodleHandle: TNoodleHandle;
+//  Link: TNoodleLink;
+//  HandlePtr: TNoodleHandleP;
   i: Integer;
 begin
   Result := False;
-  HitLink := nil;
-  HitHandle.Clear; // Assign an empty HitHandle...
+  Link := nil;
+  HandlePtr := nil;
 
   // Iterate through the Noodles
   for i := 0 to FNoodles.Count - 1 do
   begin
     Link := FNoodles[i]; // Get the link at the current index
-    if Link.IsPointOnLinkOrHandle(P, LinkPtr, ANoodleHandle) then
+    if Link.IsPointOnLineOrHandle(P, HandlePtr) then
     begin
       Result := True;
-      // point must be located on a noddle handle for assignment.
-      // else point is located on link's connection line.
-      if ANoodleHandle.IsValid then
-      begin
-        HitHandle := ANoodleHandle;
-        FSelectedLinkPtr := LinkPtr;
-      end;
       Exit; // Exit as soon as a match is found
     end;
   end;
@@ -423,7 +373,7 @@ procedure TNoodleFrame.pbNoodlesMouseDown(Sender: TObject; Button: TMouseButton;
     Shift: TShiftState; X, Y: Integer);
 var
   HitLink: TNoodleLink;
-  HitHandle: TNoodleHandle;
+  HitHandlePtr: TNoodleHandleP;
   HotSpot: THotSpot;
 begin
   if Button <> mbLeft then Exit;
@@ -431,18 +381,16 @@ begin
   FMousePoint := Point(X, Y);
   ClearLinkSelection; // Deselect previous link first
 
-
-
   // 1. Check if clicking on an NoodleHandle
-  if TryHitTestNoodle(FMousePoint, HitLink, FDragLinkPtr) then
+  if TryHitTestNoodle(FMousePoint, HitLink, HitHandlePtr) then
   // TryHitTestNoodle returns lepSource for line hit, lepDestination or lepSource for specific handle
   begin
-    if HitHandle.IsValid then
+    if Assigned(HitHandlePtr) then
     begin
       FDragState := ndsDraggingExistingHandle;
-      FDragLinkPtr := HitLink; // Store the link being dragged.
-      FDragHandle := HitHandle; // Store which handle has been clicked.
-      HitLink.GetOtherHandle(HitHandle, FDragAnchour); // Assign Anchour Handle.
+      FDragLink := HitLink; // Store the link being dragged.
+      FDragHandle := HitHandlePtr^; // Store (copy) of handle that was clicked.
+      HitLink.GetOtherHandle(FDragHandle, FDragAnchour); // Assign Anchour Handle.
       SelectNoodleLink(HitLink); // Select the link visually
       pbNoodles.Invalidate;
       Exit; // Don't check for other things
@@ -486,51 +434,69 @@ end;
 procedure TNoodleFrame.pbNoodlesMouseUp(Sender: TObject; Button: TMouseButton;
     Shift: TShiftState; X, Y: Integer);
 var
-  EndPoint, P0, P1: TPoint;
   Link: TNoodleLink;
+  HandlePtr: TNoodleHandleP;
   HotSpot: THotSpot;
   IsDuplicate: boolean;
+
+  procedure AssignBank0Handle(Link: TNoodleLink);
+  begin
+    // Handle to bank 0 - Anchored hotspot...
+    HandlePtr := Link.GetHandlePtr(0);
+    // HandlePtr.Bank ... syntactic sugar, readability, common practice.
+    // HandlePtr^.Bank ... more explicit and correct.
+    HandlePtr.Bank := FHotSpotAnchour.Bank;
+    HandlePtr.Lane := FHotSpotAnchour.Lane;
+    var ADataSrc: TDataSource;
+    if SCM.DataIsActive and (SCM.qryHeat.IsEmpty = false) then
+    begin
+      HandlePtr.HeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger;
+      ADataSrc := SCM.GetActive_INDVorTEAM;
+      HandlePtr.LaneID := ADataSrc.DataSet.FieldByName('Lane').AsInteger;
+    end;
+  end;
+  procedure AssignBank1Handle(Link: TNoodleLink);
+  begin
+      // Handle to bank 1 - MousePoint over hotspot...
+      HandlePtr := Link.GetHandlePtr(1);
+      HandlePtr.Bank := HotSpot.Bank;
+      HandlePtr.Lane := HotSpot.Lane;
+      if TDS.DataIsActive and (TDS.tblmHeat.IsEmpty = false) then
+      begin
+        HandlePtr.HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+        HandlePtr.LaneID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
+      end;
+  end;
+
 begin
   if Button <> mbLeft then Exit;
-  EndPoint := Point(X, Y);
 
 
   case FDragState of
     ndsDraggingNew:
     begin
-      // CHECKS
+      // CHECKS ...
       // --- Validation: Prevent linking dot to itself or same grid row ---
       if TryHitTestHotSpot(FMousePoint, HotSpot) then
       begin
-        // released button over starting hotspot - exit...
-        if (HotSpot = FHotSpotAnchour) then
-        begin
-          FDragState := ndsIdle;
-          pbNoodles.Invalidate; // Redraw final state
-          exit;
-        end;
-        //  - illegal patch - Dragging onto the same side.
-        P0 := HotSpot.Rect.CenterPoint;
-        P1 := HotSpot.Rect.CenterPoint;
+        // released button over same bank as anchour - illegal ...
         if (HotSpot.Bank = FHotSpotAnchour.Bank) then
         begin
           FDragState := ndsIdle;
           pbNoodles.Invalidate; // Redraw final state
           exit;
         end;
-        // before creating link - Check if this will be a duplicate link.
+        // CHECKS : before creating link - Check if this will be a duplicate link.
         IsDuplicate := false;
         for Link in FNoodles do
         begin
-            // Check both directions
-            if (Link.NoodleHandleStart.RectF.CenterPoint = P0) or
-                (Link.NoodleHandleEnd.RectF.CenterPoint = P1) or
-               (Link.NoodleHandleStart.RectF.CenterPoint = P1)  or
-                (Link.NoodleHandleEnd.RectF.CenterPoint = P0) then
-            begin
-                IsDuplicate := True;
-                Break;
-            end;
+          // For each existing Noodle in the FNoodles list:
+          // Is the target drop HotSpot already an active handle?
+          if Link.IsPointOnHandle(HotSpot.Rect.CenterPoint, HandlePtr) then
+          begin
+            IsDuplicate := True;
+            Break;
+          end;
         end;
 
         if not IsDuplicate then
@@ -538,19 +504,19 @@ begin
           // Create the new link
           Link := TNoodleLink.Create(FHotSpotAnchour.RectF, HotSpot.RectF);
           FNoodles.Add(Link);
-          SelectNoodleLink(Link); // DeSelect all then Select the newly created link
+          // Important  : Assign correct bank .
+          if FHotSpotAnchour.Bank = 0 then
+            AssignBank0Handle(Link) else AssignBank1Handle(Link);
+          if HotSpot.Bank = 0 then
+            AssignBank0Handle(Link) else AssignBank1Handle(Link);
+          SelectNoodleLink(Link); // Select the newly created link
+
           // Optional: Trigger an OnLinkCreated event here
           // if Assigned(FOnLinkCreated) then FOnLinkCreated(Self, Link);
-          FDragState := ndsIdle;
-          pbNoodles.Invalidate; // Redraw final state
-          exit;
-        end
-        else
-        begin
-          FDragState := ndsIdle;
-          pbNoodles.Invalidate; // Redraw final state
-          exit;
         end;
+        FDragState := ndsIdle;
+        pbNoodles.Invalidate; // Redraw final state
+        exit;
       end;
     end;
 
@@ -561,8 +527,8 @@ begin
       if TryHitTestHotSpot(FMousePoint, HotSpot) then
       begin
         TryGetHandlePtrAtPoint(FMousePoint, AHandlePtr);
-        // RULE 1 : not handle currently at this mousepoint
-        if AHandlePtr = nil then // no handle here - safe to drop.
+        // RULE 1 : no handle currently at this mousepoint
+        if AHandlePtr = nil then // safe to drop.
         begin
           // RULE 2 : can drop on the same bank - illegal.
           if (HotSpot.Bank = FHotSpotAnchour.Bank) then
@@ -572,15 +538,30 @@ begin
             exit;
           end;
           // ASSERT the handle to update...
-          FDragLinkPtr.GetOtherHandlePtr(FDragAnchour, AHandlePtr);
+          FDragLink.GetOtherHandlePtr(FDragAnchour, AHandlePtr);
           // Go modify the active Noodle's handle...
           AHandlePtr.RectF := TRectF.Create(HotSpot.RectF);
-          AHandlePtr.IsValid := true;
-          FDragLinkPtr.IsSelected := true;
+          // Note: Bank data does not need an update ...AHandlePtr.Bank := AHandlePtr^.Bank;
+          AHandlePtr.Lane := HotSpot.Lane;
+          if AHandlePtr.Bank = 0 then
+          begin
+            var ADataSrc: TDataSource;
+            if SCM.DataIsActive then
+            begin
+              AHandlePtr.HeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger;
+              ADataSrc := SCM.GetActive_INDVorTEAM;
+              AHandlePtr.LaneID := ADataSrc.DataSet.FieldByName('Lane').AsInteger;
+            end;
+          end
+          else if AHandlePtr.Bank = 1 then
+          begin
+            AHandlePtr.HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+            AHandlePtr.LaneID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
+          end;
+
+
           FDragState := ndsIdle;
-
-          FDragLinkPtr.Free; // Clear the link being dragged.
-
+          FDragLink := nil; // Clear the link being dragged.
           pbNoodles.Invalidate; // Redraw final state
         end;
       end
@@ -597,10 +578,6 @@ begin
   pbNoodles.Invalidate; // Redraw final state
 
 end;
-
-
-
-
 
 
 procedure TNoodleFrame.pbNoodlesPaint(Sender: TObject);
@@ -659,12 +636,11 @@ begin
   for Link in FNoodles do
   begin
     // Don't draw the handle we are dragging
-    if (FDragState = ndsDraggingExistingHandle) and (Link = FDragLinkPtr) then
+    if (FDragState = ndsDraggingExistingHandle) and (Link = FDragLink) then
       continue;
     // Only draw if both endpoints are valid.
-    if (not Link.NoodleHandleStart.IsValid) or (not Link.NoodleHandleEnd.IsValid) then continue;
-    P0 := Link.NoodleHandleStart.RectF.CenterPoint;
-    P1 := Link.NoodleHandleEnd.RectF.CenterPoint;
+    if not Link.HasValidHandles then continue;
+
     // ASSERT : Only draw if both endpoints are valid.
     if (P0.IsZero or P1.IsZero) then continue;
     if Link.IsSelected then
@@ -701,11 +677,11 @@ end;
 
 procedure TNoodleFrame.SelectNoodleLink(ALink: TNoodleLink);
 begin
-  ClearLinkSelection; // Ensure only one is selected
+  ClearLinkSelection; // Ensure only one is selected.
   if ALink <> nil then
   begin
     ALink.IsSelected := True;
-    FSelectedLinkPtr := ALink;
+    FSelectedLink := ALink;
   end;
 end;
 

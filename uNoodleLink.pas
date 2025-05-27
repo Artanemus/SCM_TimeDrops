@@ -6,18 +6,32 @@ uses
   System.Classes, Vcl.Controls, System.Types, System.SysUtils,
   System.Math, Vcl.Graphics, Vcl.Forms, SCMDefines;
 
-
-//type
-//  TLinkPointType = (lptA, lptB, lptNone);
-
 type
-  // Record to hold info about a potential connection point
+  // Record to hold info about the connection point (or handle).
   TNoodleHandle = record
     RectF: TRectF;
-    IsValid: Boolean;
-    Bank: integer;
-    Lane: integer;
+    Bank: integer;  // Bank 0 = SCM : Bank 1 = TDS.
+    Lane: integer;  // 1 to SwimClubMeet.dbo.SwimClub.NumOfLanes.
+
+    //  Following identifiers are used to load Noodles....
+    { Possible heatID's - dependant on Bank...
+     - (SCM) SwimClubMeet.dbo.HeatIndividual.HeatID.
+     - (TDS) dmTDS.tblmHeat.HeatID.
+     }
+    HeatID: integer;
+    { Possible LaneID's - dependant on Bank...
+     - (SCM - EventTypeID = 1) SwimClubMeet.dbo.Entrant.Lane.
+     - (SCM - EventTypeID = 2) SwimClubMeet.dbo.Team.Lane.
+     - (TDS) dmTDS.tblmLane.LaneID.
+     }
+    LaneID: Integer;
+
+  private
+    function GetIsValid: boolean;
+
+  public
     procedure Clear;
+    property IsValid: boolean read GetIsValid;
     class operator Equal(a, b: TNoodleHandle): Boolean;
   end;
 
@@ -29,26 +43,27 @@ type
   private
     FNoodleHandles: array[0..1] of TNoodleHandle;
     FIsSelected: Boolean;
-//    FSelectedHandle: TLinkPointType; // Indicates if A or B handle is grabbed.
     FUserData: TObject;
-    SCMHeatID: integer;
-    TDSLaneID: integer;
-    function GetCenterPoint(ARect: TRectF): TPointF;
+
+//    function GetCenterPoint(ARect: TRectF): TPointF;
 
   public
     constructor Create(); overload;
-    constructor Create(RectA: TRectF; RectB: TRectF); overload;
+    constructor Create(RectBank0, RectBank1: TRectF); overload;
     destructor Destroy; override;
 
-    procedure FindHandlePtrAtPoint(P: TPointF; var HandlePtr: TNoodleHandleP);
-    // Get details for a specific end of the noodle.
-//    function GetHandleCenter(ALinkPointType: TLinkPointType): TPointF;
-//    function GetHandle(ALinkPointType: TLinkPointType): TNoodleHandle;
-
     // Function to check if a point is near this link's line or handles
-    function IsPointOnLinkOrHandle(P: TPointF): Boolean;
+    function IsPointOnLineOrHandle(P: TPointF; var HandlePtr: TNoodleHandleP):
+        Boolean;
+    // Checks to see if the point is near too either of the two link's handles.
+    // if so then the function returns a pointer to the handle
+    // else HandlePtr = nil.
     function IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
-    function IsPointOnLink(P: TPointF; var Link: TNoodleLink): Boolean;
+    // Function to check if a point is near this link's line.
+    function IsPointOnLine(P: TPointF): Boolean;
+
+    function GetHandlePtr(Bank: integer): TNoodleHandleP;
+    function HasValidHandles: Boolean;
 
     procedure GetOtherHandlePtr(const AHandle: TNoodleHandle; var BHandlePtr:
         TNoodleHandleP);
@@ -57,30 +72,23 @@ type
 
     property IsSelected: Boolean read FIsSelected write FIsSelected;
 //    property SelectedHandle: TLinkPointType read FSelectedHandle write
-//      FSelectedHandle; // Use IsPointOnLinkOrHandle to set this
-    property NoodleHandleStart: TNoodleHandle read FNoodleHandles[0];
-    property NoodleHandleEnd: TNoodleHandle read FNoodleHandles[1];
+//      FSelectedHandle; // Use IsPointOnLineOrHandle to set this
+//    property HandleBank0: TNoodleHandleP read @FNoodleHandles[0];
+//    property HandleBank1: TNoodleHandleP read GetHandlePtr(1);
+//
+
     property UserData: TObject read FUserData write FUserData;
   end;
-
-type
-TNoodleLinkP = ^TNoodleLink;
 
   // Helper function. Return ROUNDED TRect.
   function TRectFToTRect(const ARectF: TRectF): TRect;
   function TPointFToTPoint(const APointF: TPointF): TPoint;
 
 
-
-
-
-
 var
   FHitTolerance: Integer = 12; // Pixels tolerance for hitting handles.
   FLineTolerance: Integer = 5; // Pixels tolerance for hitting lines.
   FHandleRadius: Integer = 8;
-
-
 
 implementation
 
@@ -106,6 +114,12 @@ begin
 // Consider them equal if the distance is within the global FHandleRadius tolerance
   Result := dist <= FHitTolerance;
 end;
+
+function TNoodleHandle.GetIsValid: boolean;
+begin
+  if RectF.IsEmpty then  result := false else result := true;
+end;
+
 
 function TPointFToTPoint(const APointF: TPointF): TPoint;
 begin
@@ -176,39 +190,31 @@ begin
 end;
 
 // Gets the center point of given rectF.
-function TNoodleLink.GetCenterPoint(ARect: TRectF): TPointF;
-begin
-  Result := TPointF.Zero; // Default invalid point
-  if (ARect = TRectF.Empty) then Exit;
-  try
-    // Calculate center of the cell
-    Result.X := ARect.Left + (ARect.Right - ARect.Left) / 2;
-    Result.Y := ARect.Top + (ARect.Bottom - ARect.Top) / 2;
-  except
-    // Handle potential exceptions
-    Result := TPointF.Zero;
+(*
+  function TNoodleLink.GetCenterPoint(ARect: TRectF): TPointF;
+  begin
+    Result := TPointF.Zero; // Default invalid point
+    if (ARect = TRectF.Empty) then Exit;
+    try
+      // Calculate center of the cell
+      Result.X := ARect.Left + (ARect.Right - ARect.Left) / 2;
+      Result.Y := ARect.Top + (ARect.Bottom - ARect.Top) / 2;
+    except
+      // Handle potential exceptions
+      Result := TPointF.Zero;
+    end;
   end;
-end;
+*)
 
 // --- TNoodleLink Implementation ---
 
-constructor TNoodleLink.Create(RectA: TRectF; RectB: TRectF);
+constructor TNoodleLink.Create(RectBank0, RectBank1: TRectF);
 begin
   inherited Create;
-  // Initialize handle A
-  FNoodleHandles[0].IsValid := not RectA.IsEmpty;
-  if not RectA.IsEmpty then
-  begin
-    FNoodleHandles[0].RectF := RectA;
-//    FNoodleHandles[0].CenterF := GetCenterPoint(RectA);
-  end;
-  // Initialize handle B
-  FNoodleHandles[1].IsValid := not RectB.IsEmpty;
-  if not RectB.IsEmpty then
-  begin
-    FNoodleHandles[1].RectF := RectB;
-//    FNoodleHandles[1].CenterF := GetCenterPoint(RectB);
-  end;
+  if not RectBank0.IsEmpty then
+    FNoodleHandles[0].RectF := RectBank0 else FNoodleHandles[0].Clear;
+  if not RectBank1.IsEmpty then
+    FNoodleHandles[1].RectF := RectBank1 else FNoodleHandles[1].Clear;
 end;
 
 constructor TNoodleLink.Create;
@@ -216,22 +222,23 @@ begin
   inherited Create;
   // Initialize handle A
   FNoodleHandles[0].RectF := TRectF.Empty;
-  FNoodleHandles[0].IsValid := false;
-//  FNoodleHandles[0].CenterF := TPointF.Zero;
-
   // Initialize handle B
   FNoodleHandles[1].RectF := TRectF.Empty;
-  FNoodleHandles[1].IsValid := false;
-//  FNoodleHandles[1].CenterF := TPointF.Zero;
-
   FIsSelected := False;
-//  FSelectedHandle := lptNone; // Default, doesn't mean much until hit tested.
 end;
 
 destructor TNoodleLink.Destroy;
 begin
   // Free UserData if assigned and owned, or handle externally
   inherited Destroy;
+end;
+
+function TNoodleLink.GetHandlePtr(Bank: integer): TNoodleHandleP;
+begin
+  if Bank in [0..1] then
+    result := @FNoodleHandles[Bank]
+  else
+    result := nil;
 end;
 
 //function TNoodleLink.GetHandle(ALinkPointType: TLinkPointType): TNoodleHandle;
@@ -268,24 +275,29 @@ begin
     BHandlePtr := @FNoodleHandles[0];
 end;
 
-function TNoodleLink.IsPointOnLink(P: TPointF;  var Link: TNoodleLink): Boolean;
+
+
+function TNoodleLink.IsPointOnLine(P: TPointF): Boolean;
 var
   P0, P1, PControl, pt: TPointF;
-  DistSq, HandleRadiusSq: Double; // Use Int64 for squared distances
   i: Integer;
   t: Single;
   NearestDistSq: Double;
-
 begin
+  result := false;
+  NearestDistSq := MaxInt;
 
-  Link := nil;
+  If FNoodleHandles[0].RectF.IsEmpty or FNoodleHandles[1].RectF.IsEmpty then
+    Exit;
 
-  // --- More complex: Check if point is near the Bezier curve ---
-  // Approximate the curve with line segments and check distance to segments.
-  // This is simpler than precise Bezier distance calculation.
+  P0 := FNoodleHandles[0].RectF.CenterPoint;
+  P1 := FNoodleHandles[1].RectF.CenterPoint;
+  // ASSERT again...
   if IsValidPointF(P0) and IsValidPointF(P1) then
   begin
-    // Calculate control point (simplified version from your code)
+    // --- More complex: Check if point is near the Bezier curve ---
+    // Approximate the curve with line segments and check distance to segments.
+    // This is simpler than precise Bezier distance calculation.
     var MidPointX := (P0.X + P1.X) / 2;
     var MidPointY := (P0.Y + P1.Y) / 2;
     var Distance := System.Math.Hypot(P1.X - P0.X, P1.Y - P0.Y);
@@ -298,9 +310,9 @@ begin
 
     // Iterate through Bezier segments
     var ptPrev := P0;
-    for i := 1 to NumSegments do
+    for i := 1 to scmNumOfSegments do
     begin
-      t := i / NumSegments;
+      t := i / scmNumOfSegments;
       // Quadratic Bezier formula
       pt.X := Round(Power(1 - t, 2) * P0.X + 2 * (1 - t) * t * PControl.X +
         Power(t, 2) * P1.X);
@@ -309,104 +321,7 @@ begin
 
       // Calculate squared distance from point P to the line segment ptPrev -> pt
       // (Using SquareDistanceToSegment function - implementation below)
-      var SegDistSq := SquareDistanceToSegment(P, ptPrev, pt);
-      if SegDistSq < NearestDistSq then
-      begin
-        NearestDistSq := SegDistSq;
-      end;
-      ptPrev := pt;
-    end;
-  end;
 
-  if NearestDistSq <= (FLineTolerance * FLineTolerance) then
-  begin
-    Result := True;
-    for Link in Noodles do
-    begin
-      if True then
-
-    end;
-
-  end;
-end;
-
-function TNoodleLink.IsPointOnLinkOrHandle(P: TPointF): Boolean;
-var
-  //  FLineTolerance, FHandleRadius: Integer;
-  P0, P1, PControl, pt: TPointF;
-  DistSq, HandleRadiusSq: Double; // Use Int64 for squared distances
-  i: Integer;
-  t: Single;
-  NearestDistSq: Double;
-  // Bezier segment approximation parameters
-const
-  NumSegments = 20; // Fewer segments for faster hit testing needed? Adjust.
-begin
-  Result := False;
-  HitHandle.Clear(); // Assign an empty HitHandle...
-  P0 :=  TPointF.Zero;
-  P1 :=  TPointF.Zero;
-  HandleRadiusSq := FHandleRadius * FHandleRadius;
-  NearestDistSq := System.Math.MaxDouble; // Find minimum distance squared.
-
-  // Check if point is near [0] handle
-  if FNoodleHandles[0].IsValid then
-  begin
-    P0 := FNoodleHandles[0].RectF.CenterPoint;
-    DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
-    if DistSq <= HandleRadiusSq then
-    begin
-      Result := True;
-      HitHandle := FNoodleHandles[0];
-      Exit;
-    end;
-  end;
-
-  // Check if point is near [1] handle
-  if FNoodleHandles[1].IsValid then
-  begin
-    P1 := FNoodleHandles[1].RectF.CenterPoint;
-    DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
-    if DistSq <= HandleRadiusSq then
-    begin
-      Result := True;
-      HitHandle := FNoodleHandles[1];
-      Exit;
-    end;
-  end;
-
-  if not (FNoodleHandles[0].IsValid and FNoodleHandles[1].IsValid) then
-    Exit(False);
-
-  // --- More complex: Check if point is near the Bezier curve ---
-  // Approximate the curve with line segments and check distance to segments.
-  // This is simpler than precise Bezier distance calculation.
-  if IsValidPointF(P0) and IsValidPointF(P1) then
-  begin
-    // Calculate control point (simplified version from your code)
-    var MidPointX := (P0.X + P1.X) / 2;
-    var MidPointY := (P0.Y + P1.Y) / 2;
-    var Distance := System.Math.Hypot(P1.X - P0.X, P1.Y - P0.Y);
-    var ActualSag := 0.0;
-    if Distance > 10 then
-      ActualSag := Distance * scmSagFactor;
-
-    PControl.X := Round(MidPointX);
-    PControl.Y := Round(MidPointY + ActualSag); // Simple vertical sag
-
-    // Iterate through Bezier segments
-    var ptPrev := P0;
-    for i := 1 to NumSegments do
-    begin
-      t := i / NumSegments;
-      // Quadratic Bezier formula
-      pt.X := Round(Power(1 - t, 2) * P0.X + 2 * (1 - t) * t * PControl.X +
-        Power(t, 2) * P1.X);
-      pt.Y := Round(Power(1 - t, 2) * P0.Y + 2 * (1 - t) * t * PControl.Y +
-        Power(t, 2) * P1.Y);
-
-      // Calculate squared distance from point P to the line segment ptPrev -> pt
-      // (Using SquareDistanceToSegment function - implementation below)
       var SegDistSq := SquareDistanceToSegment(P, ptPrev, pt);
       if SegDistSq < NearestDistSq then
       begin
@@ -420,11 +335,30 @@ begin
   begin
     Result := True;
   end;
-
 end;
 
-function TNoodleLink.IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP):
-    Boolean;
+function TNoodleLink.IsPointOnLineOrHandle(P: TPointF; var HandlePtr:
+    TNoodleHandleP): Boolean;
+begin
+  HandlePtr := nil; // Assign an empty HitHandle...
+  if IsPointOnHandle(P, HandlePtr) then
+  begin
+    if Assigned(HandlePtr) then
+    begin
+      result := true;
+      exit;
+    end;
+  end;
+  result := IsPointOnLine(p);
+end;
+
+function TNoodleLink.HasValidHandles: Boolean;
+begin
+  if FNoodleHandles[0].RectF.IsEmpty or FNoodleHandles[1].RectF.IsEmpty then
+  result := false else result := true;
+end;
+
+function TNoodleLink.IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
 var
   P0, P1: TPointF;
   DistSq, HandleRadiusSq: Double;
@@ -461,50 +395,10 @@ begin
 end;
 
 
-procedure TNoodleLink.FindHandlePtrAtPoint(P: TPointF; var HandlePtr:
-    TNoodleHandleP);
-var
-  P0, P1: TPointF;
-  DistSq, HandleRadiusSq: Double; // Use Int64 for squared distances
-const
-  NumSegments = 20; // Fewer segments for faster hit testing needed? Adjust.
-begin
-  HandlePtr := nil; // Assign an empty HitHandle...
-  P0 :=  TPointF.Zero;
-  P1 :=  TPointF.Zero;
-  HandleRadiusSq := FHandleRadius * FHandleRadius;
-
-  // Check if point is near [0] handle
-  if FNoodleHandles[0].IsValid then
-  begin
-    P0 := FNoodleHandles[0].RectF.CenterPoint;
-    DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
-    if DistSq <= HandleRadiusSq then
-    begin
-      HandlePtr := @FNoodleHandles[0];
-      Exit;
-    end;
-  end;
-
-  // Check if point is near [1] handle
-  if FNoodleHandles[1].IsValid then
-  begin
-    P1 := FNoodleHandles[1].RectF.CenterPoint;
-    DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
-    if DistSq <= HandleRadiusSq then
-    begin
-      HandlePtr := @FNoodleHandles[1];
-      Exit;
-    end;
-  end;
-end;
-
-
 procedure TNoodleHandle.Clear;
 begin
   // Assign an empty HitHandle...
   RectF := TRectF.Empty;
-  IsValid := false; // Assign as empty...
 end;
 
 end.
