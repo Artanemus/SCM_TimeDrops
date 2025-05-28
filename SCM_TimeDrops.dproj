@@ -216,7 +216,7 @@
             <FormType>dfm</FormType>
             <DesignClass>TDataModule</DesignClass>
         </DCCReference>
-        <DCCReference Include="uNoodleLink.pas"/>
+        <DCCReference Include="uNoodle.pas"/>
         <DCCReference Include="TransparentPanel.pas"/>
         <DCCReference Include="uNoodleFrame.pas">
             <Form>NoodleFrame</Form>

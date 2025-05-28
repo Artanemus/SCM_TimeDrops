@@ -1,4 +1,4 @@
-unit uNoodleLink;
+unit uNoodle;
 
 interface
 
@@ -39,43 +39,35 @@ TNoodleHandleP = ^TNoodleHandle;
 
 
 type
-  TNoodleLink = class
+  TNoodle = class
   private
-    FNoodleHandles: array[0..1] of TNoodleHandle;
     FIsSelected: Boolean;
+    // SCM - index 0 (Bank 0), TDS - index 1 (Bank 1)...
+    FNoodleHandles: array[0..1] of TNoodleHandle;
     FUserData: TObject;
-
-//    function GetCenterPoint(ARect: TRectF): TPointF;
-
   public
     constructor Create(); overload;
     constructor Create(RectBank0, RectBank1: TRectF); overload;
     destructor Destroy; override;
-
-    // Function to check if a point is near this link's line or handles
-    function IsPointOnRopeOrHandle(P: TPointF; var HandlePtr: TNoodleHandleP):
-        Boolean;
+    function GetHandlePtr(Bank: integer): TNoodleHandleP;
+    procedure GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
+        TNoodleHandle);
+//    procedure GetOtherHandlePtr(const AHandle: TNoodleHandle; var BHandlePtr:
+//        TNoodleHandleP);
+    function HasValidHandles: Boolean;
+    function IsPointOnHandle(P: TPointF; out Handle: TNoodleHandle): Boolean;overload;
     // Checks to see if the point is near too either of the two link's handles.
     // if so then the function returns a pointer to the handle
     // else HandlePtr = nil.
-    function IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
+    function IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;overload;
     // Function to check if a point is near this link's line.
     function IsPointOnRope(P: TPointF): Boolean;
 
-    function GetHandlePtr(Bank: integer): TNoodleHandleP;
-    function HasValidHandles: Boolean;
-
-    procedure GetOtherHandlePtr(const AHandle: TNoodleHandle; var BHandlePtr:
-        TNoodleHandleP);
-    procedure GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
-        TNoodleHandle);
+    // Function to check if a point is near this link's line or handles
+    function IsPointOnRopeOrHandle(P: TPointF; out Handle: TNoodleHandle): Boolean; overload;
+    function IsPointOnRopeOrHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean; overload;
 
     property IsSelected: Boolean read FIsSelected write FIsSelected;
-//    property SelectedHandle: TLinkPointType read FSelectedHandle write
-//      FSelectedHandle; // Use IsPointOnRopeOrHandle to set this
-//    property HandleBank0: TNoodleHandleP read @FNoodleHandles[0];
-//    property HandleBank1: TNoodleHandleP read GetHandlePtr(1);
-//
 
     property UserData: TObject read FUserData write FUserData;
   end;
@@ -189,9 +181,19 @@ begin
   end;
 end;
 
+constructor TNoodle.Create;
+begin
+  inherited Create;
+  // Initialize handle A
+  FNoodleHandles[0].RectF := TRectF.Empty;
+  // Initialize handle B
+  FNoodleHandles[1].RectF := TRectF.Empty;
+  FIsSelected := False;
+end;
+
 // Gets the center point of given rectF.
 (*
-  function TNoodleLink.GetCenterPoint(ARect: TRectF): TPointF;
+  function TNoodle.GetCenterPoint(ARect: TRectF): TPointF;
   begin
     Result := TPointF.Zero; // Default invalid point
     if (ARect = TRectF.Empty) then Exit;
@@ -206,9 +208,9 @@ end;
   end;
 *)
 
-// --- TNoodleLink Implementation ---
+// --- TNoodle Implementation ---
 
-constructor TNoodleLink.Create(RectBank0, RectBank1: TRectF);
+constructor TNoodle.Create(RectBank0, RectBank1: TRectF);
 begin
   inherited Create;
   if not RectBank0.IsEmpty then
@@ -217,23 +219,13 @@ begin
     FNoodleHandles[1].RectF := RectBank1 else FNoodleHandles[1].Clear;
 end;
 
-constructor TNoodleLink.Create;
-begin
-  inherited Create;
-  // Initialize handle A
-  FNoodleHandles[0].RectF := TRectF.Empty;
-  // Initialize handle B
-  FNoodleHandles[1].RectF := TRectF.Empty;
-  FIsSelected := False;
-end;
-
-destructor TNoodleLink.Destroy;
+destructor TNoodle.Destroy;
 begin
   // Free UserData if assigned and owned, or handle externally
   inherited Destroy;
 end;
 
-function TNoodleLink.GetHandlePtr(Bank: integer): TNoodleHandleP;
+function TNoodle.GetHandlePtr(Bank: integer): TNoodleHandleP;
 begin
   if Bank in [0..1] then
     result := @FNoodleHandles[Bank]
@@ -241,12 +233,12 @@ begin
     result := nil;
 end;
 
-//function TNoodleLink.GetHandle(ALinkPointType: TLinkPointType): TNoodleHandle;
+//function TNoodle.GetHandle(ALinkPointType: TLinkPointType): TNoodleHandle;
 //begin
 //  Result := FNoodleHandles[Ord(ALinkPointType)];
 //end;
 
-//function TNoodleLink.GetHandleCenter(ALinkPointType: TLinkPointType): TPointF;
+//function TNoodle.GetHandleCenter(ALinkPointType: TLinkPointType): TPointF;
 //var
 //  ARect: TRectF;
 //begin
@@ -257,7 +249,7 @@ end;
 //  Result := GetCenterPoint(ARect);
 //end;
 
-procedure TNoodleLink.GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
+procedure TNoodle.GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
     TNoodleHandle);
 begin
   if FNoodleHandles[0] = AHandle then
@@ -266,7 +258,8 @@ begin
     BHandle := FNoodleHandles[0];
 end;
 
-procedure TNoodleLink.GetOtherHandlePtr(const AHandle: TNoodleHandle; var
+(*
+procedure TNoodle.GetOtherHandlePtr(const AHandle: TNoodleHandle; var
     BHandlePtr: TNoodleHandleP);
 begin
   if FNoodleHandles[0] = AHandle then
@@ -274,10 +267,65 @@ begin
   else
     BHandlePtr := @FNoodleHandles[0];
 end;
+*)
 
+function TNoodle.HasValidHandles: Boolean;
+begin
+  if FNoodleHandles[0].RectF.IsEmpty or FNoodleHandles[1].RectF.IsEmpty then
+  result := false else result := true;
+end;
 
+function TNoodle.IsPointOnHandle(P: TPointF;  out Handle: TNoodleHandle): Boolean;
+var
+HandlePtr: TNoodleHandleP;
+begin
+  Handle.RectF := TRectF.Empty; // Assign invalid handle.
+  HandlePtr := nil; // Assign an empty HitHandle...
+  result := false;
+  if IsPointOnHandle(P, HandlePtr) then
+  begin
+    Handle := HandlePtr^;
+    result := true;
+  end;
+end;
 
-function TNoodleLink.IsPointOnRope(P: TPointF): Boolean;
+function TNoodle.IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
+var
+  P0, P1: TPointF;
+  DistSq, HandleRadiusSq: Double;
+begin
+  Result := False;
+  HandlePtr := nil; // Assign an empty HitHandle...
+  HandleRadiusSq := FHandleRadius * FHandleRadius;
+
+  // Check if point is near [0] handle
+  if FNoodleHandles[0].IsValid then
+  begin
+    P0 := FNoodleHandles[0].RectF.CenterPoint;
+    DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
+    if DistSq <= HandleRadiusSq then
+    begin
+      Result := True;
+      HandlePtr := @FNoodleHandles[0];
+      Exit;
+    end;
+  end;
+  // Check if point is near [1] handle
+  if FNoodleHandles[1].IsValid then
+  begin
+    P1 := FNoodleHandles[1].RectF.CenterPoint;
+    DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
+    if DistSq <= HandleRadiusSq then
+    begin
+      Result := True;
+      HandlePtr := @FNoodleHandles[1];
+      Exit;
+    end;
+  end;
+
+end;
+
+function TNoodle.IsPointOnRope(P: TPointF): Boolean;
 var
   P0, P1, PControl, pt: TPointF;
   i: Integer;
@@ -331,14 +379,23 @@ begin
     end;
   end;
 
-  if NearestDistSq <= (FLineTolerance * FLineTolerance) then
+  if NearestDistSq <= (FLineTolerance * FLineTolerance) then Result := True;
+
+end;
+
+
+function TNoodle.IsPointOnRopeOrHandle(P: TPointF;  out Handle: TNoodleHandle): Boolean;
+begin
+  Handle.RectF := TRectF.Empty; // Assign invalid handle.
+  result := false;
+  if IsPointOnRopeOrHandle(P, Handle) then
   begin
-    Result := True;
+    result := true;
   end;
 end;
 
-function TNoodleLink.IsPointOnRopeOrHandle(P: TPointF; var HandlePtr:
-    TNoodleHandleP): Boolean;
+
+function TNoodle.IsPointOnRopeOrHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
 begin
   HandlePtr := nil; // Assign an empty HitHandle...
   if IsPointOnHandle(P, HandlePtr) then
@@ -350,48 +407,6 @@ begin
     end;
   end;
   result := IsPointOnRope(p);
-end;
-
-function TNoodleLink.HasValidHandles: Boolean;
-begin
-  if FNoodleHandles[0].RectF.IsEmpty or FNoodleHandles[1].RectF.IsEmpty then
-  result := false else result := true;
-end;
-
-function TNoodleLink.IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
-var
-  P0, P1: TPointF;
-  DistSq, HandleRadiusSq: Double;
-begin
-  Result := False;
-  HandlePtr := nil; // Assign an empty HitHandle...
-  HandleRadiusSq := FHandleRadius * FHandleRadius;
-
-  // Check if point is near [0] handle
-  if FNoodleHandles[0].IsValid then
-  begin
-    P0 := FNoodleHandles[0].RectF.CenterPoint;
-    DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
-    if DistSq <= HandleRadiusSq then
-    begin
-      Result := True;
-      HandlePtr := @FNoodleHandles[0];
-      Exit;
-    end;
-  end;
-  // Check if point is near [1] handle
-  if FNoodleHandles[1].IsValid then
-  begin
-    P1 := FNoodleHandles[1].RectF.CenterPoint;
-    DistSq := (P.X - P1.X) * (P.X - P1.X) + (P.Y - P1.Y) * (P.Y - P1.Y);
-    if DistSq <= HandleRadiusSq then
-    begin
-      Result := True;
-      HandlePtr := @FNoodleHandles[1];
-      Exit;
-    end;
-  end;
-
 end;
 
 

@@ -1584,7 +1584,7 @@ begin
   begin
     if Assigned(frameNoodles) then
     begin
-      if frameNoodles.SelectedLink <> nil then
+      if frameNoodles.SelectedNoodle <> nil then
       begin
         frameNoodles.actDeleteNoodle.Execute;
         Key := 0; // Mark key as handled.
