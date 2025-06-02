@@ -186,7 +186,7 @@ type
     procedure MSG_ScanMeets(var Msg: TMessage); message SCM_SCAN_TIMEDROPS;
     procedure MSG_UpdateUISCM(var Msg: TMessage); message SCM_UPDATEUI_SCM;
     procedure MSG_UpdateUITDS(var Msg: TMessage); message SCM_UPDATEUI_TDS;
-    procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
+//    procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
 
   public
   end;
@@ -1319,6 +1319,10 @@ begin
   // Update UI controls ...
   // paint cell icons into grid.
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+
+  // Update noodles
+  if Assigned(NoodleFrame) then
+    PostMessage(NoodleFrame.Handle, SCM_UPDATE_NOODLES, 0, 0);
 end;
 
 procedure TMain.btnPrevEventClick(Sender: TObject);
@@ -1684,11 +1688,6 @@ begin
     actnScanMeetsFolderExecute(Self);
 end;
 
-procedure TMain.MSG_UpdateUINOODLES(var Msg: TMessage);
-begin
-//  PaintBoxNoodles.BringToFront;
-//  UpdatePaintBoxBounds; // Initial positioning
-end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
 var

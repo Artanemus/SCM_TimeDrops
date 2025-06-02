@@ -8975,7 +8975,7 @@ object DataDebug: TDataDebug
     Top = 0
     Width = 971
     Height = 635
-    ActivePage = tabsheetLane
+    ActivePage = tabsheetNoodle
     Align = alClient
     TabOrder = 0
     object grid: TTabSheet
@@ -9054,6 +9054,7 @@ object DataDebug: TDataDebug
         Width = 963
         Height = 603
         Align = alClient
+        DataSource = TDS.dsmNoodle
         TabOrder = 0
         TitleFont.Charset = DEFAULT_CHARSET
         TitleFont.Color = clWindowText

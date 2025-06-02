@@ -66,7 +66,7 @@ type
     function LocateTRaceNum(aRaceNum: integer): boolean;
     function LocateTLaneID(ALaneID: integer): boolean;
     function LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
-
+    function LocateTNoodle(ANoodleID: integer): boolean;
 
     function SyncDTtoSCM(SessionID, EventNum, HeatNum: Integer): boolean;
     function SyncCheck(SessionID, EventNum, HeatNum: Integer): boolean;
@@ -356,21 +356,31 @@ begin
   // ---------------------------------------------
   // Primary Key
   tblmNoodle.FieldDefs.Add('NoodleID', ftInteger);
+
   // dtHeat Master-Detail.
   tblmNoodle.FieldDefs.Add('HeatID', ftInteger);
-  // dtEntrant - Route to lane/timekeepers/splits details
-  tblmNoodle.FieldDefs.Add('EntrantID', ftInteger);
-  // dtEntrant.Lane - Quick lookup. Improve search times?
-  tblmNoodle.FieldDefs.Add('Lane', ftInteger);
-  // LINK TO SwimClubMeet DATA
-  // An entrant may be INDV or TEAM event.
-  tblmNoodle.FieldDefs.Add('SCM_EventTypeID', ftInteger);
-  // Route to individual entrant.
-  tblmNoodle.FieldDefs.Add('SCM_INDVID', ftInteger);
-  // Route to team (relay-team) entrant.
-  tblmNoodle.FieldDefs.Add('SCM_TEAMID', ftInteger);
-  // Quick lookup?
-  tblmNoodle.FieldDefs.Add('SCM_Lane', ftInteger);
+
+  { Noodle HANDLE BANK 0 ...
+   - (SCM) SwimClubMeet.dbo.HeatIndividual.HeatID.
+   - (SCM - EventTypeID = 1)
+    Bank0_Lane = SwimClubMeet.dbo.Entrant.Lane.
+    Bank0_LaneID = SwimClubMeet.dbo.Entrant.EntrantID.
+   - (SCM - EventTypeID = 2)
+    Bank0_Lane = SwimClubMeet.dbo.Team.Lane.
+    Bank0_LaneID = SwimClubMeet.dbo.Team.LaneID.
+   }
+  tblmNoodle.FieldDefs.Add('SCMHeatID', ftInteger); // HeatIndividual.HeatID.
+  tblmNoodle.FieldDefs.Add('SCMRefID', ftInteger); // Entrand/Team ID.
+  tblmNoodle.FieldDefs.Add('SCMLane', ftInteger);   // Entrant/Team LaneNum.
+  { Noodle HANDLE BANK 1 ...
+   - (TDS) dmTDS.tblmHeat.HeatID.
+   - (TDS) dmTDS.tblmLane.LaneID.
+   - (TDS) dmTDS.tblmLane.LaneNum.
+   }
+  tblmNoodle.FieldDefs.Add('TDSHeatID', ftInteger);  // tblmHeat.HeatID.
+  tblmNoodle.FieldDefs.Add('TDSRefID', ftInteger);  // tblmLane.LaneID.
+  tblmNoodle.FieldDefs.Add('TDSLane', ftInteger);    // tblmLane.LaneNum.
+
   tblmNoodle.CreateDataSet;
 {$IFDEF DEBUG}
   // save schema ...
@@ -667,9 +677,21 @@ begin
   indexStr := tblmLane.IndexFieldNames;
   LOptions := [];
   tblmLane.IndexFieldNames := 'HeatID;LaneNum';
-  result := tblmLane.Locate('HeatID;LaneNum', VarArrayOf([AHeatID, ALaneNum]), []);
+  result := tblmLane.Locate('HeatID;LaneNum', VarArrayOf([AHeatID, ALaneNum]), LOptions);
   // Restore the original index field names
   tblmLane.IndexFieldNames := indexStr;
+end;
+
+function TTDS.LocateTNoodle(ANoodleID: integer): boolean;
+var
+  LOptions: TLocateOptions;
+begin
+  result := false;
+  if not tblmNoodle.Active then exit;
+  if (ANoodleID = 0) then exit;
+  LOptions := [];
+  result := tblmNoodle.Locate('NoodleID', ANoodleID, LOptions);
+  if result then dsmNoodle.DataSet.Refresh;
 end;
 
 function TTDS.LocateTRaceNum(aRaceNum: integer): boolean;

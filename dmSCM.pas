@@ -88,6 +88,7 @@ type
     // MISC SCM ROUTINES/FUNCTIONS
     function GetNumberOfHeats(AEventID: integer): integer;
     function GetRoundABBREV(AEventID: integer): string;
+    function GetEventType(aEventID: integer): scmEventType;
     // L O C A T E S   F O R   S W I M C L U B M E E T   D A T A.
     // WARNING : Master-Detail enabled...
     // .......................................................
@@ -123,6 +124,28 @@ uses
 {%CLASSGROUP 'Vcl.Controls.TControl'}
 
 {$R *.dfm}
+
+
+
+function TSCM.GetEventType(aEventID: integer): scmEventType;
+var
+  v: variant;
+  SQL: string;
+begin
+  result := etUnknown;
+    if not SCM.qryEvent.IsEmpty then
+    begin
+      SQL := 'SELECT [EventTypeID] FROM [SwimClubMeet].[dbo].[Event] ' +
+        'INNER JOIN Distance ON [Event].DistanceID = Distance.DistanceID ' +
+        'WHERE EventID = :ID';
+      v := SCM.scmConnection.ExecSQLScalar(SQL, [aEventID]);
+      if VarIsNull(v) or VarIsEmpty(v) or (v = 0) then exit;
+    end;
+    case v of
+      1: result := etINDV;
+      2: result := etTEAM;
+    end;
+end;
 
 procedure TSCM.ActivateDataSCM;
 begin

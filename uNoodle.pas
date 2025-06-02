@@ -11,7 +11,7 @@ type
   TNoodleHandle = record
     RectF: TRectF;
     Bank: integer;  // Bank 0 = SCM : Bank 1 = TDS.
-    Lane: integer;  // 1 to SwimClubMeet.dbo.SwimClub.NumOfLanes.
+    Lane: integer;
 
     //  Following identifiers are used to load Noodles....
     { Possible heatID's - dependant on Bank...
@@ -24,7 +24,7 @@ type
      - (SCM - EventTypeID = 2) SwimClubMeet.dbo.Team.Lane.
      - (TDS) dmTDS.tblmLane.LaneID.
      }
-    LaneID: Integer;
+    RefID: Integer;
 
   private
     function GetIsValid: boolean;
@@ -41,15 +41,17 @@ TNoodleHandleP = ^TNoodleHandle;
 type
   TNoodle = class
   private
-    FIsSelected: Boolean;
     // SCM - index 0 (Bank 0), TDS - index 1 (Bank 1)...
     FNoodleHandles: array[0..1] of TNoodleHandle;
+    FIsSelected: Boolean;
+    FNDataID: integer;  // ID of TDS.tblmNoodle.NoodleID;
     FUserData: TObject;
   public
+
     constructor Create(); overload;
     constructor Create(RectBank0, RectBank1: TRectF); overload;
     destructor Destroy; override;
-    function GetHandlePtr(Bank: integer): TNoodleHandleP;
+    function GetHandlePtr(Indx: integer): TNoodleHandleP;
     procedure GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
         TNoodleHandle);
 //    procedure GetOtherHandlePtr(const AHandle: TNoodleHandle; var BHandlePtr:
@@ -68,7 +70,7 @@ type
     function IsPointOnRopeOrHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean; overload;
 
     property IsSelected: Boolean read FIsSelected write FIsSelected;
-
+    property NDataID: integer read FNDataID write FNDataID ;
     property UserData: TObject read FUserData write FUserData;
   end;
 
@@ -188,6 +190,7 @@ begin
   FNoodleHandles[0].RectF := TRectF.Empty;
   // Initialize handle B
   FNoodleHandles[1].RectF := TRectF.Empty;
+  FNDataID := 0;
   FIsSelected := False;
 end;
 
@@ -225,10 +228,10 @@ begin
   inherited Destroy;
 end;
 
-function TNoodle.GetHandlePtr(Bank: integer): TNoodleHandleP;
+function TNoodle.GetHandlePtr(Indx: integer): TNoodleHandleP;
 begin
-  if Bank in [0..1] then
-    result := @FNoodleHandles[Bank]
+  if Indx in [0..1] then
+    result := @FNoodleHandles[Indx]
   else
     result := nil;
 end;
