@@ -49,7 +49,7 @@ type
   public
 
     constructor Create(); overload;
-    constructor Create(RectBank0, RectBank1: TRectF); overload;
+    constructor Create(SCMRectF, TDSRectF: TRectF); overload;
     destructor Destroy; override;
     function GetHandlePtr(Indx: integer): TNoodleHandleP;
     procedure GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
@@ -213,13 +213,13 @@ end;
 
 // --- TNoodle Implementation ---
 
-constructor TNoodle.Create(RectBank0, RectBank1: TRectF);
+constructor TNoodle.Create(SCMRectF, TDSRectF: TRectF);
 begin
   inherited Create;
-  if not RectBank0.IsEmpty then
-    FNoodleHandles[0].RectF := RectBank0 else FNoodleHandles[0].Clear;
-  if not RectBank1.IsEmpty then
-    FNoodleHandles[1].RectF := RectBank1 else FNoodleHandles[1].Clear;
+  if not SCMRectF.IsEmpty then
+    FNoodleHandles[0].RectF := SCMRectF else FNoodleHandles[0].Clear;
+  if not TDSRectF.IsEmpty then
+    FNoodleHandles[1].RectF := TDSRectF else FNoodleHandles[1].Clear;
 end;
 
 destructor TNoodle.Destroy;

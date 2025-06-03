@@ -19,6 +19,11 @@ type
     procedure UpdateNData(Noodle: TNoodle);
     procedure AssignNDataToNoodle(Noodle: TNoodle);
 
+    procedure NoodleCreatedByFrame(Sender: TObject; Noodle: TNoodle);
+    procedure NoodleDeletedByFrame(Sender: TObject; Noodle: TNoodle);
+    procedure NoodleUpdatedByFrame(Sender: TObject; Noodle: TNoodle);
+
+
 //    procedure UpdateTblData; overload;
 //    procedure UpdateTblData(const RefNoodle: TNoodle); overload;
 //    procedure UpdateTblData(const RefHandlePtr: TNoodleHandleP); overload;
@@ -36,6 +41,21 @@ implementation
 
 uses
   vcl.Dialogs;
+
+procedure TNoodleData.NoodleCreatedByFrame(Sender: TObject; Noodle: TNoodle);
+begin
+  Noodle.NDataID := InsertNData(Noodle);
+end;
+
+procedure TNoodleData.NoodleDeletedByFrame(Sender: TObject; Noodle: TNoodle);
+begin
+  DeleteNData(Noodle);
+end;
+
+procedure TNoodleData.NoodleUpdatedByFrame(Sender: TObject; Noodle: TNoodle);
+begin
+  UpdateNData(Noodle);
+end;
 
 procedure TNoodleData.AssignNDataToNoodle(Noodle: TNoodle);
 var
@@ -108,7 +128,7 @@ begin
     TDS.tblmNoodle.FieldByName('HeatID').AsInteger := HandlePtr.HeatID;
     MessageDlg('DeSync - HandlePtr.SCMHeatID <> SCM.qryHeat.HeatID...', mtInformation, [mbOK], 0);
   end;
-  TDS.tblmNoodle.FieldByName('SCMRefID').AsInteger := HandlePtr.RefID; // Entrant/TEAM ID.
+  TDS.tblmNoodle.FieldByName('SCMRefID').AsInteger := HandlePtr.RefID; // EntrantID/TEAMID.
   TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := HandlePtr.Lane; // lane number.
 
   HandlePtr := Noodle.GetHandlePtr(1);

@@ -10403,7 +10403,7 @@ object Main: TMain
             AutoSize = False
             Caption = 
               'BIG LETTERS IN THE GRID OVERLAY'#13#10'THREE LINES OF TEXT'#13#10'Reports th' +
-              'e state of the tabel data.'
+              'e state of the TDS data.'
             Font.Charset = DEFAULT_CHARSET
             Font.Color = clCoral
             Font.Height = -21

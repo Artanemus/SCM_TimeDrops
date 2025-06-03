@@ -26,6 +26,12 @@ type
     property Rect: TRect read GetCnvRect;
   end;
 
+
+type
+  TNoodleCreatedEvent = procedure(Sender: TObject; Noodle: TNoodle) of object;
+  TNoodleDeleteEvent = procedure(Sender: TObject; Noodle: TNoodle) of object;
+  TNoodleUpdateEvent = procedure(Sender: TObject; Noodle: TNoodle) of object;
+
 type
   TNoodleFrame = class(TFrame)
     actDeleteNoodle: TAction;
@@ -44,53 +50,56 @@ type
     procedure pbNoodlesPaint(Sender: TObject);
   private
     FDefaultRowHeight: Integer;
-    FMousePoint: TPoint;
-    FDragHandlePtr: TNoodleHandleP;
     FDragAnchor: TNoodleHandle;
+    FDragColor: TColor;
+    FDragHandlePtr: TNoodleHandleP;
     FDragNoodle: TNoodle;
     FDragState: TNoodleDragState;
-    FDragColor: TColor;
     FHandleColor: TColor;
-    FHotSpots: Array of THotSpot; // HotSpots *****************
     FHotSpotAnchour: THotSpot;
+    FHotSpots: Array of THotSpot; // HotSpots *****************
     FixedRowHeight: Integer; // assigned TMS TAdvDBGrid row height.
+    FMousePoint: TPoint;
     FNoodleColor: TColor;
     FNoodles: TObjectList<TNoodle>; // Noodles *****************
+    FNumberOfLanes: Integer;
     FRopeColor: TColor;
     FRopeThickness: Integer;
     FSelectedHandleColor: TColor;
-    FSelectedNoodleColor: TColor;
     FSelectedNoodle: TNoodle;
+    FSelectedNoodleColor: TColor;
     FSelectedRopeColor: TColor;
-    FNumberOfLanes: Integer;
-    procedure InitializeHotSpots;
-    procedure ClearLinkSelection;
+
+    FOnNoodleCreated: TNoodleCreatedEvent; // trigger event ***********
+    FOnNoodleDeleted: TNoodleDeleteEvent; // trigger event ***********
+    FOnNoodleUpdated: TNoodleUpdateEvent; // trigger event ***********
+
+    procedure ClearNoodleSelection;
+    procedure DeleteSelectedNoodles();
     procedure DrawNoodleHandle(ACanvas: TCanvas; P: TPoint; AColor: TColor;
       ARadius: Integer);
     procedure DrawNoodleLink(ACanvas: TCanvas; P0, P1: TPointF; AColor: TColor;
       AThickness: Integer; ASelected: Boolean);
     procedure DrawQuadraticBezierCurve(ACanvas: TCanvas; P0, P1, P2: TPoint;
       NumSegments: Integer);
-
-    procedure TryGetHandlePtrAtPoint(P: TPoint; out AHandlePtr: TNoodleHandleP);
-
-
-    function GetSelectNoodle: TNoodle;
+    function GetHotSpotRectF(Bank: integer; Lane: integer): TRectF;
+    procedure InitializeHotSpots;
+    procedure SelectAllNoodles;
     procedure SetSelectNoodle(ALink: TNoodle);
-
+    procedure TryGetHandlePtrAtPoint(P: TPoint; out AHandlePtr: TNoodleHandleP);
+    function TryHitTestHotSpot(P: TPoint; out HotSpot: THotSpot): Boolean;
     function TryHitTestNoodleOrHandlePtr(P: TPoint; var Noodle: TNoodle; out
       HandlePtr: TNoodleHandleP): Boolean; overload;
-
-    function TryHitTestHotSpot(P: TPoint; out HotSpot: THotSpot): Boolean;
-
-protected
+    function GetSelectNoodle: TNoodle;
+  protected
     procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
-
-
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
     property SelectedNoodle: TNoodle read GetSelectNoodle;
+    property OnNoodleCreated: TNoodleCreatedEvent read FOnNoodleCreated write FOnNoodleCreated;
+    property OnNoodleDeleted: TNoodleDeleteEvent read FOnNoodleDeleted write FOnNoodleDeleted;
+    property OnNoodleUpdated: TNoodleUpdateEvent read FOnNoodleUpdated write FOnNoodleUpdated;
   end;
 
 var
@@ -102,12 +111,20 @@ implementation
 
 {$R *.dfm}
 
+uses dmTDS, dmSCM;
+
+
+
 
 constructor TNoodleFrame.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner); // Call the inherited constructor
 
   if not Assigned(NoodleData) then NoodleData := TNoodleData.Create();
+
+  FOnNoodleCreated := NoodleData.NoodleCreatedByFrame;
+  FOnNoodleDeleted := NoodleData.NoodleDeletedByFrame;
+  FOnNoodleUpdated := NoodleData.NoodleUpdatedByFrame;
 
   FNoodles := TObjectList<TNoodle>.Create(True); // True = OwnsObjects
   FDragState := ndsIdle;
@@ -147,22 +164,9 @@ end;
 
 procedure TNoodleFrame.actDeleteNoodleExecute(Sender: TObject);
 var
-  ALink: TNoodle;
+  Noodle: TNoodle;
 begin
-  // delete the noodle
-  for ALink in FNoodles do
-  begin
-    if ALink.IsSelected then
-    begin
-      FNoodles.Remove(ALink);
-      // This will free the object - if OwnsObjects is True
-      FSelectedNoodle := nil; // Clear the selected link
-      pbNoodles.Invalidate; // Redraw without the deleted link
-      // Optional: Trigger OnLinkDeleted event
-      // if Assigned(FOnLinkDeleted) then FOnLinkDeleted(Self, LinkToDelete);
-      break;
-    end;
-  end;
+  DeleteSelectedNoodles;
 end;
 
 procedure TNoodleFrame.actDeleteNoodleUpdate(Sender: TObject);
@@ -190,67 +194,7 @@ begin
   end;
 end;
 
-procedure TNoodleFrame.InitializeHotSpots;
-var
-  I, J, indx: Integer;
-  ARect: TRect;
-begin
-  SetLength(FHotSpots, (FNumberOfLanes * 2));
-
-  indx := FNumberOfLanes;
-  for I := 0 to FNumberOfLanes - 1 do
-  begin
-    ARect.Top := FixedRowHeight + (I * FDefaultRowHeight);
-    ARect.Left := 0;
-    ARect.Height := FDefaultRowHeight;
-    ARect.Width := FDefaultRowHeight;
-    FHotSpots[I].RectF := ARect;
-    FHotSpots[I].Bank := 0;
-    FHotSpots[I].Lane := (I + 1);
-  end;
-
-  for J := 0 to FNumberOfLanes - 1 do
-  begin
-    ARect.Top := FixedRowHeight + (J * FDefaultRowHeight);
-    ARect.Left := Width - FDefaultRowHeight;
-    ARect.Height := FDefaultRowHeight;
-    ARect.Width := FDefaultRowHeight;
-    FHotSpots[indx + J].RectF := ARect;
-    FHotSpots[indx + J].Bank := 1;
-    FHotSpots[indx + J].Lane := (J + 1);
-  end;
-end;
-
-procedure TNoodleFrame.MSG_UpdateUINOODLES(var Msg: TMessage);
-var
-  Noodle: TNoodle;
-  Lane: integer;
-  HandlePtr: TNoodleHandleP;
-  RectF: TRectF;
-begin
-  // CLEAR THE NOODLES???
-//  FNoodles.Free;
-
-  // Also iterate just in case state is inconsistent
-  // ITERATE ACROSS THE DATA RECORDS IN TDS.tblmNoodles.
-(*
-    for Noodle in FNoodles do
-    begin
-      if Assigned(NoodleData) then
-      begin
-        NoodleData.UpdateNData(Noodle);
-        //Assign HotSpot;
-        HandlePtr := Noodle.GetHandlePtr(0);
-        HandlePtr.RectF := GetHotSpot(HandlePtr.Bank, HandlePtr.Lane);
-        Noodle.IsSelected := false;
-      end;
-    end;
-*)
-
-  FSelectedNoodle := nil; // Ensure this is cleared
-end;
-
-procedure TNoodleFrame.ClearLinkSelection;
+procedure TNoodleFrame.ClearNoodleSelection;
 var
   Noodle: TNoodle;
 begin
@@ -258,6 +202,27 @@ begin
   for Noodle in FNoodles do
     Noodle.IsSelected := false;
   FSelectedNoodle := nil; // Ensure this is cleared
+end;
+
+
+procedure TNoodleFrame.DeleteSelectedNoodles();
+var
+  Noodle: TNoodle;
+begin
+  // delete the noodle
+  for Noodle in FNoodles do
+  begin
+    if Noodle.IsSelected then
+    begin
+      FNoodles.Remove(Noodle);
+      // This will free the object - if OwnsObjects is True
+      FSelectedNoodle := nil; // Clear the selected link
+      pbNoodles.Invalidate; // Redraw without the deleted link
+      // Trigger OnNoodleDeleted event
+      if Assigned(OnNoodleDeleted) then OnNoodleDeleted(Self, Noodle);
+      break;
+    end;
+  end;
 end;
 
 procedure TNoodleFrame.DrawNoodleHandle(ACanvas: TCanvas; P: TPoint; AColor:
@@ -339,21 +304,18 @@ begin
   end;
 end;
 
-procedure TNoodleFrame.TryGetHandlePtrAtPoint(P: TPoint; out AHandlePtr:
-  TNoodleHandleP);
+function TNoodleFrame.GetHotSpotRectF(Bank: integer; Lane: integer): TRectF;
 var
-  I: Integer;
-  Noodle: TNoodle;
-  PFloat: TPointF;
+HotSpot: THotSpot;
 begin
-  AHandlePtr := nil;
-  PFloat := P; // TPointF.Create(P.X, P.Y);
-  for I := 0 to FNoodles.Count - 1 do
+  result := TRectF.Empty();
+  for HotSpot in FHotSpots do
   begin
-    Noodle := FNoodles[I];
-    Noodle.IsPointOnHandle(PFloat, AHandlePtr); // <-- Pass as var/out
-    if AHandlePtr <> nil then
-      Exit;
+    if HotSpot.Bank = Bank and HotSpot.Lane then
+    begin
+      result := HotSpot.RectF;
+      exit;
+    end;
   end;
 end;
 
@@ -373,41 +335,60 @@ begin
   end;
 end;
 
-function TNoodleFrame.TryHitTestNoodleOrHandlePtr(P: TPoint; var Noodle:
-  TNoodle; out HandlePtr: TNoodleHandleP): Boolean;
+procedure TNoodleFrame.InitializeHotSpots;
 var
-  I: Integer;
+  I, J, indx: Integer;
+  ARect: TRect;
 begin
-  result := false;
-  Noodle := nil;
-  HandlePtr := nil;
+  SetLength(FHotSpots, (FNumberOfLanes * 2));
 
-  // Iterate through the Noodles
-  for I := 0 to FNoodles.Count - 1 do
+  indx := FNumberOfLanes;
+  for I := 0 to FNumberOfLanes - 1 do
   begin
-    Noodle := FNoodles[I]; // Get the link at the current index
-    if Noodle.IsPointOnRopeOrHandle(P, HandlePtr) then
-    begin
-      result := True;
-      Exit; // Exit as soon as a match is found
-    end;
+    ARect.Top := FixedRowHeight + (I * FDefaultRowHeight);
+    ARect.Left := 0;
+    ARect.Height := FDefaultRowHeight;
+    ARect.Width := FDefaultRowHeight;
+    FHotSpots[I].RectF := ARect;
+    FHotSpots[I].Bank := 0;
+    FHotSpots[I].Lane := (I + 1);
+  end;
+
+  for J := 0 to FNumberOfLanes - 1 do
+  begin
+    ARect.Top := FixedRowHeight + (J * FDefaultRowHeight);
+    ARect.Left := Width - FDefaultRowHeight;
+    ARect.Height := FDefaultRowHeight;
+    ARect.Width := FDefaultRowHeight;
+    FHotSpots[indx + J].RectF := ARect;
+    FHotSpots[indx + J].Bank := 1;
+    FHotSpots[indx + J].Lane := (J + 1);
   end;
 end;
 
-function TNoodleFrame.TryHitTestHotSpot(P: TPoint;
-  out HotSpot: THotSpot): Boolean;
+procedure TNoodleFrame.MSG_UpdateUINOODLES(var Msg: TMessage);
 var
-  I: Integer;
+  Noodle: TNoodle;
+  Lane: integer;
+  HandlePtr: TNoodleHandleP;
+  SCMRectF, TDSRectF: TRectF;
 begin
-  result := false;
-  for I := Low(FHotSpots) to High(FHotSpots) do
+  if TDS.DataIsActive and SCM.DataIsActive then
   begin
-    if FHotSpots[I].RectF.Contains(P) then
+    FNoodles.Clear;  // Owner of objects - Deletes all items from the list.
+    // Also iterate just in case state is inconsistent
+    while not TDS.tblmNoodle.Eof do
     begin
-      HotSpot := FHotSpots[I];
-      result := True;
-      Exit;
+      // locate rect at bank, lane,
+      SCMRectF := GetHotSpotRectF(0, TDS.tblmNoodle.FieldByName('SCMLane').AsInteger);
+      TDSRectF := GetHotSpotRectF(1, TDS.tblmNoodle.FieldByName('TDSLane').AsInteger);
+      Noodle := TNoodle.Create(SCMRectF, TDSRectF); // Handle creation.
+      FNoodles.Add(Noodle);
+      NoodleData.AssignNDataToNoodle(Noodle);// Noodle + Handle data assignment.
+      TDS.tblmNoodle.Next;
     end;
+    FSelectedNoodle := nil; // no noodle is selected.
+    pbNoodles.Invalidate;
   end;
 end;
 
@@ -421,7 +402,7 @@ begin
     Exit;
 
   FMousePoint := Point(X, Y);
-  ClearLinkSelection; // Deselect previous link first
+  ClearNoodleSelection; // Deselect previous link first
   FDragHandlePtr := nil;
   FDragNoodle := nil;
 
@@ -458,7 +439,7 @@ begin
   end;
 
   // 4. Clicked on empty space
-  ClearLinkSelection; // Already done, but good practice
+  ClearNoodleSelection; // Already done, but good practice
   pbNoodles.Invalidate; // Redraw without selection
 
 end;
@@ -473,42 +454,6 @@ begin
   end;
   // Add hover effects here if desired (check TryHitTestNoodleOrHandlePtr/FindNoodleHandleAtHotSpot)
 end;
-
-(*
-  procedure TNoodleFrame.AssignDataSCM(HandlePtr: TNoodleHandleP);
-  begin
-  if SCM.DataIsActive and (SCM.qryHeat.IsEmpty = false) then
-  begin
-  HandlePtr.HeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger;
-  if SCM.qryDistance.FieldByName('EventTypeID').AsInteger =
-  ORD(scmEventType.etINDV) then
-  HandlePtr.SourceID := SCM.qryINDV.FieldByName('EntrantID').AsInteger
-  else
-  HandlePtr.SourceID := SCM.qryTEAM.FieldByName('TeamID').AsInteger;
-  end
-  else
-  begin
-  HandlePtr.HeatID := 0;
-  HandlePtr.SourceID := 0;
-  end;
-  end;
-*)
-
-(*
-  procedure TNoodleFrame.AssignDataTDS(HandlePtr: TNoodleHandleP);
-  begin
-  if TDS.DataIsActive and (TDS.tblmHeat.IsEmpty = false) then
-  begin
-  HandlePtr.HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
-  HandlePtr.SourceID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
-  end
-  else
-  begin
-  HandlePtr.HeatID := 0;
-  HandlePtr.SourceID := 0;
-  end;
-  end;
-*)
 
 procedure TNoodleFrame.pbNoodlesMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
@@ -586,10 +531,10 @@ begin
             else
               AssignBank1Handle(Noodle);
 
-            SetSelectNoodle(Noodle); // Select the newly created link
+            // Trigger an OnNoodleCreated event here - uNoodleData.
+            if Assigned(FOnNoodleCreated) then FOnNoodleCreated(Self, Noodle);
 
-            // Optional: Trigger an OnLinkCreated event here
-            // if Assigned(FOnLinkCreated) then FOnLinkCreated(Self, Noodle);
+            SetSelectNoodle(Noodle); // Select the newly created link
 
           end;
           FDragState := ndsIdle;
@@ -627,7 +572,8 @@ begin
             FDragHandlePtr.Bank := HotSpot.Bank;
             // Note: Bank doesn't need an update.
             FDragHandlePtr.Lane := HotSpot.Lane;
-            NoodleData.UpdateNData(FDragNoodle);
+            // Trigger an OnNoodleCreated event here - uNoodleData.
+            if Assigned(FOnNoodleUpdated) then FOnNoodleUpdated(Self, Noodle);
           end;
 
           FDragState := ndsIdle;
@@ -804,13 +750,76 @@ begin
   end;
 end;
 
+procedure TNoodleFrame.SelectAllNoodles;
+var
+  Noodle: TNoodle;
+begin
+  for Noodle in FNoodles do Noodle.IsSelected := true;
+end;
+
 procedure TNoodleFrame.SetSelectNoodle(ALink: TNoodle);
 begin
-  ClearLinkSelection; // Ensure only one is selected.
+  ClearNoodleSelection; // Ensure only one is selected.
   if ALink <> nil then
   begin
     ALink.IsSelected := True;
     FSelectedNoodle := ALink;
+  end;
+end;
+
+procedure TNoodleFrame.TryGetHandlePtrAtPoint(P: TPoint; out AHandlePtr:
+  TNoodleHandleP);
+var
+  I: Integer;
+  Noodle: TNoodle;
+  PFloat: TPointF;
+begin
+  AHandlePtr := nil;
+  PFloat := P; // TPointF.Create(P.X, P.Y);
+  for I := 0 to FNoodles.Count - 1 do
+  begin
+    Noodle := FNoodles[I];
+    Noodle.IsPointOnHandle(PFloat, AHandlePtr); // <-- Pass as var/out
+    if AHandlePtr <> nil then
+      Exit;
+  end;
+end;
+
+function TNoodleFrame.TryHitTestHotSpot(P: TPoint;
+  out HotSpot: THotSpot): Boolean;
+var
+  I: Integer;
+begin
+  result := false;
+  for I := Low(FHotSpots) to High(FHotSpots) do
+  begin
+    if FHotSpots[I].RectF.Contains(P) then
+    begin
+      HotSpot := FHotSpots[I];
+      result := True;
+      Exit;
+    end;
+  end;
+end;
+
+function TNoodleFrame.TryHitTestNoodleOrHandlePtr(P: TPoint; var Noodle:
+  TNoodle; out HandlePtr: TNoodleHandleP): Boolean;
+var
+  I: Integer;
+begin
+  result := false;
+  Noodle := nil;
+  HandlePtr := nil;
+
+  // Iterate through the Noodles
+  for I := 0 to FNoodles.Count - 1 do
+  begin
+    Noodle := FNoodles[I]; // Get the link at the current index
+    if Noodle.IsPointOnRopeOrHandle(P, HandlePtr) then
+    begin
+      result := True;
+      Exit; // Exit as soon as a match is found
+    end;
   end;
 end;
 
