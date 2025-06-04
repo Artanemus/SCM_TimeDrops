@@ -85,12 +85,15 @@ type
     function GetHotSpotRectF(Bank: integer; Lane: integer): TRectF;
     procedure InitializeHotSpots;
     procedure SelectAllNoodles;
-    procedure SetSelectNoodle(ALink: TNoodle);
+    procedure SetSelectNoodle(Noodle: TNoodle);
+    procedure SetSelectGridRow(NoodleHandle: TNoodleHandle); overload;
+    procedure SetSelectGridRow(HotSpot: THotSpot); overload;
     procedure TryGetHandlePtrAtPoint(P: TPoint; out AHandlePtr: TNoodleHandleP);
     function TryHitTestHotSpot(P: TPoint; out HotSpot: THotSpot): Boolean;
     function TryHitTestNoodleOrHandlePtr(P: TPoint; var Noodle: TNoodle; out
       HandlePtr: TNoodleHandleP): Boolean; overload;
     function GetSelectNoodle: TNoodle;
+    procedure LocateToGridRow(var Bank, Lane: integer);
   protected
     procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
   public
@@ -112,9 +115,6 @@ implementation
 {$R *.dfm}
 
 uses dmTDS, dmSCM;
-
-
-
 
 constructor TNoodleFrame.Create(AOwner: TComponent);
 begin
@@ -163,8 +163,6 @@ begin
 end;
 
 procedure TNoodleFrame.actDeleteNoodleExecute(Sender: TObject);
-var
-  Noodle: TNoodle;
 begin
   DeleteSelectedNoodles;
 end;
@@ -366,11 +364,38 @@ begin
   end;
 end;
 
+procedure TNoodleFrame.LocateToGridRow(var Bank, Lane: integer);
+var
+  EventType: scmEventType;
+  doUpdate: boolean;
+begin
+  case Bank of
+  0: // Handle in assigned to Main.SCMGrid.
+    begin
+      doUpdate := false;
+      EventType := SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
+      if EventType = etINDV then
+      begin
+        if SCM.qryINDV.FieldByName('Lane').AsInteger <> Lane then doUpdate := true;
+      end
+      else
+      begin
+        if SCM.qryTEAM.FieldByName('Lane').AsInteger <> Lane then doUpdate := true;
+      end;
+      if doUpdate then
+        SCM.LocateLaneNum(Lane, EventType);
+    end;
+  1:  // Handle is assigned to Main.TDSGrid.
+    begin
+      if TDS.tblmLane.FieldByName('LaneNum').AsInteger <> Lane then
+        TDS.LocateTLaneNum(TDS.tblmHeat.FieldByName('HeatID').AsInteger, Lane);
+    end;
+  end;
+end;
+
 procedure TNoodleFrame.MSG_UpdateUINOODLES(var Msg: TMessage);
 var
   Noodle: TNoodle;
-  Lane: integer;
-  HandlePtr: TNoodleHandleP;
   SCMRectF, TDSRectF: TRectF;
 begin
   if TDS.DataIsActive and SCM.DataIsActive then
@@ -417,12 +442,17 @@ begin
       // Assign Anchour Handle.
       SetSelectNoodle(HitNoodle); // Select the link visually.
       pbNoodles.Invalidate;
+      // select the Anchor's Grid row.
+      SetSelectGridRow(FDragAnchor);
       Exit; // Don't check for other things
     end
     else
     begin
       // 2. Clicked on an existing link's LINE (not handles)
       SetSelectNoodle(HitNoodle);
+      SetSelectGridRow(HitNoodle.GetHandle(0));
+      SetSelectGridRow(HitNoodle.GetHandle(1));
+
       pbNoodles.Invalidate;
       // Don't start drag, just select
       Exit;
@@ -434,6 +464,9 @@ begin
   begin
     FDragState := ndsDraggingNew;
     FHotSpotAnchour := HotSpot;
+    // select the Anchor's Grid row.
+    SetSelectGridRow(HotSpot);
+
     pbNoodles.Invalidate; // Show drag preview
     Exit;
   end;
@@ -521,11 +554,12 @@ begin
             FNoodles.Add(Noodle);
 
             // Important  : Assign correct bank .
+            // SCM data is always bank 0. TDS is always bank 1.
+            // Drawing a noodle 0>>1 or 1>>0 is switched correctly here.
             if FHotSpotAnchour.Bank = 0 then
               AssignBank0Handle(Noodle)
             else
               AssignBank1Handle(Noodle);
-
             if HotSpot.Bank = 0 then
               AssignBank0Handle(Noodle)
             else
@@ -573,7 +607,7 @@ begin
             // Note: Bank doesn't need an update.
             FDragHandlePtr.Lane := HotSpot.Lane;
             // Trigger an OnNoodleCreated event here - uNoodleData.
-            if Assigned(FOnNoodleUpdated) then FOnNoodleUpdated(Self, Noodle);
+            if Assigned(FOnNoodleUpdated) then FOnNoodleUpdated(Self, fDragNoodle);
           end;
 
           FDragState := ndsIdle;
@@ -757,13 +791,24 @@ begin
   for Noodle in FNoodles do Noodle.IsSelected := true;
 end;
 
-procedure TNoodleFrame.SetSelectNoodle(ALink: TNoodle);
+procedure TNoodleFrame.SetSelectGridRow(NoodleHandle: TNoodleHandle);
+begin
+  // Move to database record to select correct grid row.
+  LocateToGridRow(NoodleHandle.Bank, NoodleHandle.Lane);
+end;
+
+procedure TNoodleFrame.SetSelectGridRow(HotSpot: THotSpot);
+begin
+  LocateToGridRow(HotSpot.Bank, HotSpot.Lane);
+end;
+
+procedure TNoodleFrame.SetSelectNoodle(Noodle: TNoodle);
 begin
   ClearNoodleSelection; // Ensure only one is selected.
-  if ALink <> nil then
+  if Noodle <> nil then
   begin
-    ALink.IsSelected := True;
-    FSelectedNoodle := ALink;
+    Noodle.IsSelected := True;
+    FSelectedNoodle := Noodle;
   end;
 end;
 

@@ -126,7 +126,6 @@ uses
 {$R *.dfm}
 
 
-
 function TSCM.GetEventType(aEventID: integer): scmEventType;
 var
   v: variant;

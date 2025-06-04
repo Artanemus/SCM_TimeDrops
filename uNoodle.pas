@@ -13,18 +13,7 @@ type
     Bank: integer;  // Bank 0 = SCM : Bank 1 = TDS.
     Lane: integer;
 
-    //  Following identifiers are used to load Noodles....
-    { Possible heatID's - dependant on Bank...
-     - (SCM) SwimClubMeet.dbo.HeatIndividual.HeatID.
-     - (TDS) dmTDS.tblmHeat.HeatID.
-     }
-    HeatID: integer;
-    { Possible LaneID's - dependant on Bank...
-     - (SCM - EventTypeID = 1) SwimClubMeet.dbo.Entrant.Lane.
-     - (SCM - EventTypeID = 2) SwimClubMeet.dbo.Team.Lane.
-     - (TDS) dmTDS.tblmLane.LaneID.
-     }
-    RefID: Integer;
+
 
   private
     function GetIsValid: boolean;
@@ -44,14 +33,15 @@ type
     // SCM - index 0 (Bank 0), TDS - index 1 (Bank 1)...
     FNoodleHandles: array[0..1] of TNoodleHandle;
     FIsSelected: Boolean;
-    FNDataID: integer;  // ID of TDS.tblmNoodle.NoodleID;
+    FNDataID: integer;  // = TDS.tblmNoodle.NoodleID;
     FUserData: TObject;
   public
 
     constructor Create(); overload;
     constructor Create(SCMRectF, TDSRectF: TRectF); overload;
     destructor Destroy; override;
-    function GetHandlePtr(Indx: integer): TNoodleHandleP;
+    function GetHandlePtr(Indx: integer): TNoodleHandleP; overload;
+    function GetHandle(Indx: integer): TNoodleHandle; overload;
     procedure GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
         TNoodleHandle);
 //    procedure GetOtherHandlePtr(const AHandle: TNoodleHandle; var BHandlePtr:
@@ -226,6 +216,12 @@ destructor TNoodle.Destroy;
 begin
   // Free UserData if assigned and owned, or handle externally
   inherited Destroy;
+end;
+
+function TNoodle.GetHandle(Indx: integer): TNoodleHandle;
+begin
+  if Indx in [0..1] then
+    result := FNoodleHandles[Indx];
 end;
 
 function TNoodle.GetHandlePtr(Indx: integer): TNoodleHandleP;
