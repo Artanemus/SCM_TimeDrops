@@ -484,7 +484,28 @@ object SCM: TSCM
     UpdateOptions.EnableInsert = False
     UpdateOptions.EnableUpdate = False
     SQL.Strings = (
-      'SELECT * FROM SwimClub')
+      'SELECT [SwimClubID]'
+      '      ,[NickName]'
+      '      ,[Caption]'
+      '      ,[Email]'
+      '      ,[ContactNum]'
+      '      ,[WebSite]'
+      '      ,[HeatAlgorithm]'
+      '      ,[EnableTeamEvents]'
+      '      ,[EnableSwimOThon]'
+      '      ,[EnableExtHeatTypes]'
+      '      ,[EnableMembershipStr]'
+      '      ,[EnableSimpleDisqualification]'
+      '      ,[NumOfLanes]'
+      '      ,[LenOfPool]'
+      '      ,[StartOfSwimSeason]'
+      '      ,[CreatedOn]'
+      '      ,[LogoDir]'
+      '      ,[LogoImg]'
+      '      ,[LogoType]'
+      '      ,[PoolTypeID]'
+      '      ,[SwimClubTypeID]'
+      '  FROM [dbo].[SwimClub]')
     Left = 48
     Top = 200
   end

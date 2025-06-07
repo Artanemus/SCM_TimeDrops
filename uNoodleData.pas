@@ -40,11 +40,13 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function InsertNData(Noodle: TNoodle): integer;
+    function InsertNData(const Noodle: TNoodle): integer;
+    function GetRefID(const Noodle: TNoodle; const Bank, Lane: integer): integer;
+    function LocateToRecord(const Bank, Lane: integer): boolean;
 
     procedure DeleteNData(Noodle: TNoodle);
     procedure UpdateNData(Noodle: TNoodle);
-    procedure AssignNDataToNoodle(Noodle: TNoodle);
+    function AssignNDataToNoodle(var Noodle: TNoodle): boolean;
 
     procedure NoodleCreatedByFrame(Sender: TObject; Noodle: TNoodle);
     procedure NoodleDeletedByFrame(Sender: TObject; Noodle: TNoodle);
@@ -62,18 +64,7 @@ uses
   vcl.Dialogs;
 
 procedure TNoodleData.NoodleCreatedByFrame(Sender: TObject; Noodle: TNoodle);
-//var
-//EventType: scmEventType;
-//B1, B2: boolean;
 begin
-(*
-  // Assert: In sync with noodle selection.
-  EventType := SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
-  B1 := SCM.LocateLaneNum(Noodle.GetHandlePtr(0).Lane, EventType);
-  B2 := TDS.LocateTLaneNum(TDS.tblmHeat.FieldByName('HeatID').AsInteger,Noodle.GetHandlePtr(1).Lane);
-  // was syncronization successful -
-  if B1 and B2 then
-*)
     Noodle.NDataID := InsertNData(Noodle);
 end;
 
@@ -87,23 +78,28 @@ begin
   UpdateNData(Noodle);
 end;
 
-procedure TNoodleData.AssignNDataToNoodle(Noodle: TNoodle);
+function TNoodleData.AssignNDataToNoodle(var Noodle: TNoodle): boolean;
 var
   HandlePtr: TNoodleHandleP;
 begin
-  // ASSUMPTION : TABLES are sync with TPaintBox HotSpots.
+  // ASSUMPTION : TABLE SYNC.
 
   if (not TDS.DataIsActive) or (TDS.tblmHeat.IsEmpty)
-     or (TDS.tblmNoodle.IsEmpty) then exit;
+     or (TDS.tblmNoodle.IsEmpty) then
+    begin
+      Noodle.NDataID := 0;
+      result := false;
+      exit;
+    end;
 
   Noodle.NDataID := TDS.tblmNoodle.FieldByName('NoodleID').AsInteger;
-
   HandlePtr := Noodle.GetHandlePtr(0);
   HandlePtr.Lane := TDS.tblmNoodle.FieldByName('SCMLane').AsInteger;
   HandlePtr.Bank := 0;
   HandlePtr := Noodle.GetHandlePtr(1);
-  HandlePtr.Lane := TDS.tblmNoodle.FieldByName('TdsLane').AsInteger;
+  HandlePtr.Lane := TDS.tblmNoodle.FieldByName('TDSLane').AsInteger;
   HandlePtr.Bank := 1;
+  result := true;
 
 end;
 
@@ -111,12 +107,12 @@ constructor TNoodleData.Create;
 begin
   FSynced := True; // Initially, no noodles are present, so we consider it synced;
 end;
+
 destructor TNoodleData.Destroy;
 begin
   // Cleanup code if necessary
   inherited Destroy;
 end;
-
 
 function TNoodleData.GetMaxID: integer;
 begin
@@ -135,17 +131,46 @@ begin
   TDS.tblmNoodle.ApplyMaster;
 end;
 
-function TNoodleData.InsertNData(Noodle: TNoodle): integer;
+function TNoodleData.GetRefID(const Noodle: TNoodle; const Bank, Lane:
+    integer): integer;
+var
+  TDSHeatID, RefID: integer;
+  EventType: scmEventType;
+begin
+  result := 0;
+  RefID := 0;
+  case Bank of
+  0:
+    begin
+      EventType := SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
+      if SCM.LocateLaneNum(Lane, EventType) then
+      begin
+        if EventType = etINDV then
+          RefID := SCM.qryINDV.FieldByName('EntrantID').AsInteger
+        else
+          RefID := SCM.qryTEAM.FieldByName('TeamID').AsInteger;
+      end;
+    end;
+  1:
+    begin
+      TDSHeatID :=  TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+      if TDS.LocateTLaneNum(TDSHeatID, Lane) then
+        RefID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
+    end;
+  end;
+  if RefID <> 0 then result := RefID;
+
+end;
+
+function TNoodleData.InsertNData(const Noodle: TNoodle): integer;
 var
   AID: Integer;
   HandlePtr: TNoodleHandleP;
-  EventType: scmEventType;
-  LaneNum: integer;
 begin
   result := 0;
-  LaneNum := 0;
   // no data or no heats, or no lanes.
   if (not TDS.DataIsActive) or (TDS.tblmHeat.IsEmpty) then exit;
+  if (not SCM.DataIsActive) or (SCM.qryHeat.IsEmpty) then exit;
 
   AID := GetMaxID();
 
@@ -157,48 +182,15 @@ begin
 
   // SCM TABLE DATA -
   TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger :=
-    SCM.qryHeat.FieldByName('HeatID').AsInteger; // SwimClubMeet.dbo.HeatIndividual.HeatID.
-  // Reference data to Swimmer (EntrantID) or TEAM.
-  EventType := SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
-  // CHECKS
-  case EventType of
-    scmEventType.etINDV:
-    begin
-      TDS.tblmNoodle.FieldByName('SCMRefID').AsInteger :=
-        SCM.qryINDV.FieldByName('EntrantID').AsInteger;
-      LaneNum := SCM.qryINDV.FieldByName('Lane').AsInteger;
-    end;
-    scmEventType.etTEAM:
-    begin
-      TDS.tblmNoodle.FieldByName('SCMRefID').AsInteger :=
-        SCM.qryTEAM.FieldByName('TeamID').AsInteger;
-      LaneNum := TDS.tblmLane.FieldByName('Lane').AsInteger;
-    end;
-  end;
-
-  // lane number.
+    SCM.qryHeat.FieldByName('HeatID').AsInteger;
   HandlePtr := Noodle.GetHandlePtr(0);
-  if HandlePtr.Lane = LaneNum then
-    TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := HandlePtr.Lane
-  else
-  begin
-    MessageDlg('Lane number mismatch.', mtInformation, [mbOK], 0);
-    TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := LaneNum;
-  end;
+  TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := HandlePtr.Lane;
 
   // TDS TABLE DATA -
   TDS.tblmNoodle.FieldByName('TDSHeatID').AsInteger := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
-  TDS.tblmNoodle.FieldByName('TDSRefID').AsInteger  := TDS.tblmLane.FieldByName('LaneID').AsInteger;
   // lane number.
   HandlePtr := Noodle.GetHandlePtr(1);
-  if HandlePtr.Lane = TDS.tblmLane.FieldByName('LaneNum').AsInteger then
-    TDS.tblmNoodle.FieldByName('TDSLane').AsInteger := HandlePtr.Lane
-  else
-  begin
-    MessageDlg('Lane number mismatch.', mtInformation, [mbOK], 0);
-    TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := LaneNum;
-  end;
-
+  TDS.tblmNoodle.FieldByName('TDSLane').AsInteger := HandlePtr.Lane;
 
   // Write out the Noodle out.
   try
@@ -215,11 +207,36 @@ begin
 
 end;
 
+function TNoodleData.LocateToRecord(const Bank, Lane: integer): Boolean;
+var
+  HeatID: integer;
+  EventType: scmEventType;
+begin
+  result := false;
+  case Bank of
+    0:
+      begin
+        EventType :=
+        SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
+        // ALTERNATIVE...
+        // HeatID :=  SCM.qryHeat.FieldByName('HeatID').AsInteger;
+        // if SCM.LocateLaneNum(HeatID, Lane) then
+        if SCM.LocateLaneNum(Lane, EventType) then
+          result := true;
+      end;
+    1:
+      begin
+        HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+        if TDS.LocateTLaneNum(HeatID, Lane) then
+          result := true;
+      end;
+  end;
+end;
+
 procedure TNoodleData.UpdateNData(Noodle: TNoodle);
 var
   found: boolean;
   HandlePtr: TNoodleHandleP;
-  EventType: scmEventType;
 begin
   // ASSUMPTION : TABLES are sync with TPaintBox HotSpots.
   if TDS.tblmNoodle.IsEmpty then exit;
@@ -234,16 +251,9 @@ begin
     HandlePtr := Noodle.GetHandlePtr(0);
     TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger := SCM.qryHeat.FieldByName('HeatID').AsInteger;
     TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := HandlePtr.Lane;
-    // Find the SCMRefID - dependant on the event type.
-    EventType := SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
-    if EventType = etINDV then
-      TDS.tblmNoodle.FieldByName('SCMRefID').AsInteger := SCM.qryINDV.FieldByName('EntrantID').AsInteger
-    else
-      TDS.tblmNoodle.FieldByName('SCMRefID').AsInteger := SCM.qryTEAM.FieldByName('TeamID').AsInteger;
 
     HandlePtr := Noodle.GetHandlePtr(1);
     TDS.tblmNoodle.FieldByName('TDSHeatID').AsInteger := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
-    TDS.tblmNoodle.FieldByName('TDSRefID').AsInteger := TDS.tblmLane.FieldByName('LaneID').AsInteger;
     TDS.tblmNoodle.FieldByName('TDSLane').AsInteger := HandlePtr.Lane;
   end;
 end;
@@ -268,5 +278,3 @@ begin
 end;
 
 end.
-
-

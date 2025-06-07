@@ -360,25 +360,11 @@ begin
   // dtHeat Master-Detail.
   tblmNoodle.FieldDefs.Add('HeatID', ftInteger);
 
-  { Noodle HANDLE BANK 0 ...
-   - (SCM) SwimClubMeet.dbo.HeatIndividual.HeatID.
-   - (SCM - EventTypeID = 1)
-    Bank0_Lane = SwimClubMeet.dbo.Entrant.Lane.
-    Bank0_LaneID = SwimClubMeet.dbo.Entrant.EntrantID.
-   - (SCM - EventTypeID = 2)
-    Bank0_Lane = SwimClubMeet.dbo.Team.Lane.
-    Bank0_LaneID = SwimClubMeet.dbo.Team.LaneID.
-   }
+  { Noodle HANDLE BANK 0 ... }
   tblmNoodle.FieldDefs.Add('SCMHeatID', ftInteger); // HeatIndividual.HeatID.
-  tblmNoodle.FieldDefs.Add('SCMRefID', ftInteger); // Entrand/Team ID.
   tblmNoodle.FieldDefs.Add('SCMLane', ftInteger);   // Entrant/Team LaneNum.
-  { Noodle HANDLE BANK 1 ...
-   - (TDS) dmTDS.tblmHeat.HeatID.
-   - (TDS) dmTDS.tblmLane.LaneID.
-   - (TDS) dmTDS.tblmLane.LaneNum.
-   }
+  { Noodle HANDLE BANK 1 ... }
   tblmNoodle.FieldDefs.Add('TDSHeatID', ftInteger);  // tblmHeat.HeatID.
-  tblmNoodle.FieldDefs.Add('TDSRefID', ftInteger);  // tblmLane.LaneID.
   tblmNoodle.FieldDefs.Add('TDSLane', ftInteger);    // tblmLane.LaneNum.
 
   tblmNoodle.CreateDataSet;

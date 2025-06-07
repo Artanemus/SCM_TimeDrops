@@ -8,7 +8,8 @@ uses
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.ExtCtrls,
   System.Generics.Collections, Vcl.VirtualImage, System.Math,
   dmIMG, uNoodle, System.Types, Vcl.StdCtrls, SCMDefines, Vcl.Menus,
-  System.Actions, Vcl.ActnList, uNoodleData; // , dmSCM, Data.DB, dmTDS;
+  System.Actions, Vcl.ActnList, uNoodleData,
+  DBAdvGrid; // , dmSCM, Data.DB, dmTDS;
 
 type
   // State for dragging operations
@@ -69,6 +70,8 @@ type
     FSelectedNoodle: TNoodle;
     FSelectedNoodleColor: TColor;
     FSelectedRopeColor: TColor;
+    FscmGrid: TDBAdvGrid;
+    FtdsGrid: TDBAdvGrid;
 
     FOnNoodleCreated: TNoodleCreatedEvent; // trigger event ***********
     FOnNoodleDeleted: TNoodleDeleteEvent; // trigger event ***********
@@ -83,26 +86,30 @@ type
     procedure DrawQuadraticBezierCurve(ACanvas: TCanvas; P0, P1, P2: TPoint;
       NumSegments: Integer);
     function GetHotSpotRectF(Bank: integer; Lane: integer): TRectF;
-    procedure InitializeHotSpots;
     procedure SelectAllNoodles;
     procedure SetSelectNoodle(Noodle: TNoodle);
-    procedure SetSelectGridRow(NoodleHandle: TNoodleHandle); overload;
-    procedure SetSelectGridRow(HotSpot: THotSpot); overload;
+    procedure SetNumberOfLanes(LaneCount: integer);
+//    procedure SetSelectGridRow(NoodleHandle: TNoodleHandle); overload;
+//    procedure SetSelectGridRow(HotSpot: THotSpot); overload;
     procedure TryGetHandlePtrAtPoint(P: TPoint; out AHandlePtr: TNoodleHandleP);
     function TryHitTestHotSpot(P: TPoint; out HotSpot: THotSpot): Boolean;
     function TryHitTestNoodleOrHandlePtr(P: TPoint; var Noodle: TNoodle; out
       HandlePtr: TNoodleHandleP): Boolean; overload;
     function GetSelectNoodle: TNoodle;
-    procedure LocateToGridRow(var Bank, Lane: integer);
+//    procedure LocateToGridRow(var Bank, Lane: integer);
   protected
     procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy(); override;
+    procedure InitializeHotSpots;
     property SelectedNoodle: TNoodle read GetSelectNoodle;
     property OnNoodleCreated: TNoodleCreatedEvent read FOnNoodleCreated write FOnNoodleCreated;
     property OnNoodleDeleted: TNoodleDeleteEvent read FOnNoodleDeleted write FOnNoodleDeleted;
     property OnNoodleUpdated: TNoodleUpdateEvent read FOnNoodleUpdated write FOnNoodleUpdated;
+    property scmGrid: TDBAdvGrid read FscmGrid write FscmGrid;
+    property tdsGrid: TDBAdvGrid read FtdsGrid write FtdsGrid;
+    property NumberOfLanes: integer read FNumberOfLanes write SetNumberOfLanes;
   end;
 
 var
@@ -130,6 +137,8 @@ begin
   FDragState := ndsIdle;
   FSelectedNoodle := nil;
   FDragNoodle := nil;
+  FscmGrid:=nil;
+  FtdsGrid:=nil;
 
   // --- Configure COLORS ---
   FDragColor := clBlack;
@@ -147,8 +156,9 @@ begin
 
   FixedRowHeight := 34; // identical to SCM TMS TAdvDBGrid.
   FDefaultRowHeight := 46; // identical to SCM TMS TAdvDBGrid.
-  FNumberOfLanes := 10; // dbo.SwimClubMeet.SwimClub.NumOfLanes.
+  FNumberOfLanes := 10; // TimeDrops - max number of lanes. DEFAULT.
 
+  FNumberOfLanes := 10;
   InitializeHotSpots; // draw DOTS in left and right coloumns.
 
 end;
@@ -364,6 +374,7 @@ begin
   end;
 end;
 
+(*
 procedure TNoodleFrame.LocateToGridRow(var Bank, Lane: integer);
 var
   EventType: scmEventType;
@@ -383,15 +394,20 @@ begin
         if SCM.qryTEAM.FieldByName('Lane').AsInteger <> Lane then doUpdate := true;
       end;
       if doUpdate then
+      begin
+        if Assigned(FscmGrid) then FscmGrid.BeginUpdate;
         SCM.LocateLaneNum(Lane, EventType);
+        if Assigned(FscmGrid) then FscmGrid.EndUpdate;
+      end;
     end;
   1:  // Handle is assigned to Main.TDSGrid.
     begin
       if TDS.tblmLane.FieldByName('LaneNum').AsInteger <> Lane then
-        TDS.LocateTLaneNum(TDS.tblmHeat.FieldByName('HeatID').AsInteger, Lane);
+          TDS.LocateTLaneNum(TDS.tblmHeat.FieldByName('HeatID').AsInteger, Lane);
     end;
   end;
 end;
+*)
 
 procedure TNoodleFrame.MSG_UpdateUINOODLES(var Msg: TMessage);
 var
@@ -442,19 +458,14 @@ begin
       // Assign Anchour Handle.
       SetSelectNoodle(HitNoodle); // Select the link visually.
       pbNoodles.Invalidate;
-      // select the Anchor's Grid row.
-      SetSelectGridRow(FDragAnchor);
+      pbNoodles.Invalidate;
       Exit; // Don't check for other things
     end
     else
     begin
-      // 2. Clicked on an existing link's LINE (not handles)
-      SetSelectNoodle(HitNoodle);
-      SetSelectGridRow(HitNoodle.GetHandle(0));
-      SetSelectGridRow(HitNoodle.GetHandle(1));
-
+      // 2. Clicked on an existing link's Line/Rope (not handles)
+      SetSelectNoodle(HitNoodle); // Don't start drag, just select
       pbNoodles.Invalidate;
-      // Don't start drag, just select
       Exit;
     end;
   end;
@@ -464,9 +475,6 @@ begin
   begin
     FDragState := ndsDraggingNew;
     FHotSpotAnchour := HotSpot;
-    // select the Anchor's Grid row.
-    SetSelectGridRow(HotSpot);
-
     pbNoodles.Invalidate; // Show drag preview
     Exit;
   end;
@@ -754,33 +762,6 @@ begin
     begin
         ;
     end;
-
-    // if TryHitTestHotSpot(FMousePoint, HotSpot) then
-    // begin
-    // // find the link and get the handle that's being dragged ..
-    // if TryHitTestNoodleOrHandlePtr(FMousePoint, Noodle, HandlePtr) then
-    // begin
-    // if Assigned(HandlePtr) then  // found the drag handle
-    // begin
-    // var AnchorHandle: TNoodleHandle;
-    // // get the anchor handle ...
-    /// /          Noodle.GetOtherHandle(HandlePtr^, AnchorHandle);
-    // // Dragging over the starting hotspot
-    /// /          if (HotSpot.Lane = AnchorHandle.Lane)
-    /// /            and (HotSpot.Bank = AnchorHandle.Bank) then exit; // done..
-    //
-    // // Same Bank - illegal. Display read bullsEye.
-    // if (HotSpot.Bank = AnchorHandle.Bank) then
-    // begin
-    // Spot := FMousePoint;
-    // Spot.X := Spot.X - (IMG.vimglistDTGrid.Height div 2);
-    // Spot.Y := Spot.Y - (IMG.vimglistDTGrid.Height div 2);
-    // // flag with Red-BullsEye
-    // IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'ActiveRTNone', true);
-    // end;
-    // end;
-    // end;
-    // end;
   end;
 end;
 
@@ -791,9 +772,21 @@ begin
   for Noodle in FNoodles do Noodle.IsSelected := true;
 end;
 
+procedure TNoodleFrame.SetNumberOfLanes(LaneCount: integer);
+
+begin
+  if LaneCount in [1..12] then  // some pools have 12 lanes ... permit?
+  begin
+    if fNumberOflanes <> LaneCount then
+      fNumberOflanes := LaneCount;
+  end
+  else fNumberOflanes := 10;  // default.
+  InitializeHotSpots;
+end;
+
+(*
 procedure TNoodleFrame.SetSelectGridRow(NoodleHandle: TNoodleHandle);
 begin
-  // Move to database record to select correct grid row.
   LocateToGridRow(NoodleHandle.Bank, NoodleHandle.Lane);
 end;
 
@@ -801,6 +794,7 @@ procedure TNoodleFrame.SetSelectGridRow(HotSpot: THotSpot);
 begin
   LocateToGridRow(HotSpot.Bank, HotSpot.Lane);
 end;
+*)
 
 procedure TNoodleFrame.SetSelectNoodle(Noodle: TNoodle);
 begin

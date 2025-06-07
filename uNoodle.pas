@@ -12,12 +12,8 @@ type
     RectF: TRectF;
     Bank: integer;  // Bank 0 = SCM : Bank 1 = TDS.
     Lane: integer;
-
-
-
   private
     function GetIsValid: boolean;
-
   public
     procedure Clear;
     property IsValid: boolean read GetIsValid;
@@ -25,7 +21,6 @@ type
   end;
 
 TNoodleHandleP = ^TNoodleHandle;
-
 
 type
   TNoodle = class
@@ -44,8 +39,6 @@ type
     function GetHandle(Indx: integer): TNoodleHandle; overload;
     procedure GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
         TNoodleHandle);
-//    procedure GetOtherHandlePtr(const AHandle: TNoodleHandle; var BHandlePtr:
-//        TNoodleHandleP);
     function HasValidHandles: Boolean;
     function IsPointOnHandle(P: TPointF; out Handle: TNoodleHandle): Boolean;overload;
     // Checks to see if the point is near too either of the two link's handles.
@@ -76,12 +69,6 @@ var
 
 implementation
 
-
-
-
-
-
-
 function IsValidPointF(const P: TPointF): Boolean;
 begin
   Result := not ((P.X = 0) and (P.Y = 0));
@@ -100,10 +87,15 @@ begin
 end;
 
 function TNoodleHandle.GetIsValid: boolean;
+var
+b: boolean;
 begin
-  if RectF.IsEmpty then  result := false else result := true;
+  b:= true;
+  if RectF.IsEmpty then  b := false;
+  if not Bank in [0,1]  then b := false;
+  if lane = 0 then b := false;
+  result := b;
 end;
-
 
 function TPointFToTPoint(const APointF: TPointF): TPoint;
 begin
@@ -111,7 +103,6 @@ begin
     Round(APointF.X),
     Round(APointF.Y));
 end;
-
 
 function TRectFToTRect(const ARectF: TRectF): TRect;
 begin
@@ -184,22 +175,6 @@ begin
   FIsSelected := False;
 end;
 
-// Gets the center point of given rectF.
-(*
-  function TNoodle.GetCenterPoint(ARect: TRectF): TPointF;
-  begin
-    Result := TPointF.Zero; // Default invalid point
-    if (ARect = TRectF.Empty) then Exit;
-    try
-      // Calculate center of the cell
-      Result.X := ARect.Left + (ARect.Right - ARect.Left) / 2;
-      Result.Y := ARect.Top + (ARect.Bottom - ARect.Top) / 2;
-    except
-      // Handle potential exceptions
-      Result := TPointF.Zero;
-    end;
-  end;
-*)
 
 // --- TNoodle Implementation ---
 
@@ -221,7 +196,11 @@ end;
 function TNoodle.GetHandle(Indx: integer): TNoodleHandle;
 begin
   if Indx in [0..1] then
-    result := FNoodleHandles[Indx];
+    Result := FNoodleHandles[Indx]
+  else
+  begin
+    Result.Clear; // Set to invalid/empty handle
+  end;
 end;
 
 function TNoodle.GetHandlePtr(Indx: integer): TNoodleHandleP;
@@ -232,60 +211,32 @@ begin
     result := nil;
 end;
 
-//function TNoodle.GetHandle(ALinkPointType: TLinkPointType): TNoodleHandle;
-//begin
-//  Result := FNoodleHandles[Ord(ALinkPointType)];
-//end;
-
-//function TNoodle.GetHandleCenter(ALinkPointType: TLinkPointType): TPointF;
-//var
-//  ARect: TRectF;
-//begin
-//  Result := TPointF.Zero;
-//  if not FNoodleHandles[Ord(ALinkPointType)].IsValid then
-//    Exit;
-//  ARect := FNoodleHandles[Ord(ALinkPointType)].ARectF;
-//  Result := GetCenterPoint(ARect);
-//end;
-
 procedure TNoodle.GetOtherHandle(const AHandle: TNoodleHandle; out BHandle:
     TNoodleHandle);
 begin
-  if FNoodleHandles[0] = AHandle then
+  if FNoodleHandles[0] = AHandle then // Equals operator for TNoodle.
     BHandle := FNoodleHandles[1]
   else
     BHandle := FNoodleHandles[0];
 end;
 
-(*
-procedure TNoodle.GetOtherHandlePtr(const AHandle: TNoodleHandle; var
-    BHandlePtr: TNoodleHandleP);
-begin
-  if FNoodleHandles[0] = AHandle then
-    BHandlePtr := @FNoodleHandles[1]
-  else
-    BHandlePtr := @FNoodleHandles[0];
-end;
-*)
-
 function TNoodle.HasValidHandles: Boolean;
 begin
-  if FNoodleHandles[0].RectF.IsEmpty or FNoodleHandles[1].RectF.IsEmpty then
-  result := false else result := true;
+  result := FNoodleHandles[0].IsValid and FNoodleHandles[1].IsValid;
 end;
 
 function TNoodle.IsPointOnHandle(P: TPointF;  out Handle: TNoodleHandle): Boolean;
 var
 HandlePtr: TNoodleHandleP;
 begin
-  Handle.RectF := TRectF.Empty; // Assign invalid handle.
+  Handle.Clear; // Assign invalid handle.
   HandlePtr := nil; // Assign an empty HitHandle...
   result := false;
   if IsPointOnHandle(P, HandlePtr) then
   begin
     Handle := HandlePtr^;
     result := true;
-  end;
+  end
 end;
 
 function TNoodle.IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
@@ -385,7 +336,7 @@ end;
 
 function TNoodle.IsPointOnRopeOrHandle(P: TPointF;  out Handle: TNoodleHandle): Boolean;
 begin
-  Handle.RectF := TRectF.Empty; // Assign invalid handle.
+  Handle.Clear; // Assign invalid handle.
   result := false;
   if IsPointOnRopeOrHandle(P, Handle) then
   begin
@@ -413,6 +364,8 @@ procedure TNoodleHandle.Clear;
 begin
   // Assign an empty HitHandle...
   RectF := TRectF.Empty;
+  Bank := -1;
+  Lane := 0;
 end;
 
 end.

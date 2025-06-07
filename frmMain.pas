@@ -78,7 +78,7 @@ type
     lblSwimClubName: TLabel;
     lbl_scmGridOverlay: TLabel;
     lbl_tdsGridOverlay: TLabel;
-    pnlGrids: TPanel;
+    pnlNoodle: TPanel;
     pnlTool1: TPanel;
     pnlTool2: TPanel;
     rpnlBody: TRelativePanel;
@@ -298,6 +298,7 @@ end;
 procedure TMain.actnConnectToSCMExecute(Sender: TObject);
 var
   aLoginDlg: TLogin;  // 24/04/2020 uses simple INI access
+  NumOfLanes: integer;
 begin
   fDoLoginOnBoot := false; // Do Once...
   // -----------------------------------------------------------
@@ -321,7 +322,18 @@ begin
   begin
     TAction(Sender).Caption := 'Connect to the SCM database...';
   end;
-//  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 ); // UPDATE UI
+
+  if SCM.DataIsActive then
+  begin
+    NumOfLanes := SCM.qrySwimClub.FieldByName('NumOfLanes').AsInteger;
+    // NOTE: TimeDrops maxium of ten lanes but some pools have 10 lanes.
+    if NumOfLanes in [1..12] then
+    begin
+      if frameNoodles.NumberOflanes <> NumOfLanes then
+        frameNoodles.NumberOflanes := NumOfLanes;
+    end;
+  end;
+
 end;
 
 procedure TMain.actnConnectToSCMUpdate(Sender: TObject);
@@ -1403,9 +1415,6 @@ begin
       fDoClearAndScanOnBoot := true;
   end;
 
-
-
-
   // CREATE THE CORE SCM CONNECTION DATAMODULE.
   if not Assigned(SCM) then
   begin
@@ -1450,6 +1459,12 @@ begin
       IMG := TIMG.Create(Self);
     except on E: Exception do
     end;
+  end;
+
+  if Assigned(frameNoodles) then
+  begin
+    frameNoodles.scmGrid := Self.scmGrid;
+    frameNoodles.tdsGrid := Self.tdsGrid;
   end;
 
   {
@@ -2188,7 +2203,8 @@ begin
         // if routine 'POST selected' is immediately called after the
         // above change in user's racetime - the grid reports
         // SelectedRowCount = 0. Solution :: re-select the row.
-        grid.SelectRows(ARow,1); // REQUIRED.
+
+//        grid.SelectRows(ARow,1); // REQUIRED.
         grid.EndUpdate;
 
         {TODO -oBSA -cGeneral : Row still needs a repaint!

@@ -94,7 +94,8 @@ type
     // .......................................................
     function LocateEventID(AEventID: integer): boolean;
     function LocateHeatID(AHeatID: integer): boolean;
-    function LocateLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean;
+    function LocateLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean; overload;
+    function LocateLaneNum(AHeatID: integer; ALaneNum: integer): boolean; overload;
     // Uses SessionStart TDateTime...
     function LocateNearestSessionID(aDate: TDateTime): integer;
     function LocateSessionID(ASessionID: integer): boolean;
@@ -506,13 +507,32 @@ begin
       result := dsHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
 end;
 
+function TSCM.LocateLaneNum(AHeatID, ALaneNum: integer): boolean;
+var
+  found: boolean;
+  LOptions: TLocateOptions;
+  EventType: scmEventType;
+begin
+  result := false;
+  found := true;
+  if not fDataIsActive then exit;
+  LOptions := [];
+  if SCM.qryHeat.FieldByName('HeatID').AsInteger <> AHeatID then
+    found := SCM.LocateHeatID(AHeatID);
+  if found then
+  begin
+    EventType := GetEventType(SCM.qryHeat.FieldByName('EventID').AsInteger);
+    found := LocateLaneNum(ALaneNum, EventType);
+  end;
+  result := found;
+end;
+
 function TSCM.LocateLaneNum(ALaneNum: integer; aEventType: scmEventType):
     boolean;
 var
   found: boolean;
   LOptions: TLocateOptions;
 begin
-  // IGNORES SYNC STATE...
   result := false;
   found := false;
   if not fDataIsActive then exit;
