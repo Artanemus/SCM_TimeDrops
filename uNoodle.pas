@@ -168,9 +168,9 @@ constructor TNoodle.Create;
 begin
   inherited Create;
   // Initialize handle A
-  FNoodleHandles[0].RectF := TRectF.Empty;
+  FNoodleHandles[0].Clear;
   // Initialize handle B
-  FNoodleHandles[1].RectF := TRectF.Empty;
+  FNoodleHandles[1].Clear;
   FNDataID := 0;
   FIsSelected := False;
 end;
@@ -180,11 +180,19 @@ end;
 
 constructor TNoodle.Create(SCMRectF, TDSRectF: TRectF);
 begin
-  inherited Create;
+  TNoodle.Create();
+
   if not SCMRectF.IsEmpty then
-    FNoodleHandles[0].RectF := SCMRectF else FNoodleHandles[0].Clear;
+  begin
+    FNoodleHandles[0].RectF := SCMRectF;
+    FNoodleHandles[0].Bank := 0;
+  end;
+
   if not TDSRectF.IsEmpty then
-    FNoodleHandles[1].RectF := TDSRectF else FNoodleHandles[1].Clear;
+  begin
+    FNoodleHandles[1].RectF := TDSRectF;
+    FNoodleHandles[1].Bank := 1;
+  end;
 end;
 
 destructor TNoodle.Destroy;

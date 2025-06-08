@@ -186,7 +186,7 @@ type
     procedure MSG_ScanMeets(var Msg: TMessage); message SCM_SCAN_TIMEDROPS;
     procedure MSG_UpdateUISCM(var Msg: TMessage); message SCM_UPDATEUI_SCM;
     procedure MSG_UpdateUITDS(var Msg: TMessage); message SCM_UPDATEUI_TDS;
-//    procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
+    procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
 
   public
   end;
@@ -1703,6 +1703,24 @@ begin
     actnScanMeetsFolderExecute(Self);
 end;
 
+procedure TMain.MSG_UpdateUINOODLES(var Msg: TMessage);
+begin
+  if Assigned(frameNoodles) then
+  begin
+    frameNoodles.ClearNoodles;
+    //  frameNoodles.pbNoodles.Invalidate;
+    if Assigned(TDS) and TDS.DataIsActive then
+    begin
+      // tblmHeat has scrolled and noodles need to be re-draw
+      if not (TDS.tblmNoodle.IsEmpty) then
+      begin
+        frameNoodles.LoadNoodleData();
+      end;
+    end;
+  end;
+  frameNoodles.Invalidate;
+  frameNoodles.pbNoodles.Invalidate;
+end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
 var

@@ -8995,7 +8995,6 @@ object Main: TMain
     Font.Name = 'Segoe UI'
     Font.Style = []
     Spacing = 0
-    ExplicitWidth = 1454
   end
   object rpnlBody: TRelativePanel
     Left = 0
@@ -9055,7 +9054,6 @@ object Main: TMain
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitWidth = 1454
     DesignSize = (
       1460
       771)
@@ -9366,7 +9364,7 @@ object Main: TMain
         Left = 0
         Top = 28
         Width = 470
-        Height = 64
+        Height = 62
         Hint = 
           'Session : Event : Distance+Stroke : Heat.'#13#10'2nd line - Event Desc' +
           'ription. '
@@ -9384,7 +9382,6 @@ object Main: TMain
         ShowHint = True
         Layout = tlCenter
         WordWrap = True
-        ExplicitTop = 27
       end
       object lblSwimClubName: TLabel
         Left = 0
@@ -10578,7 +10575,6 @@ object Main: TMain
     SimplePanel = True
     SimpleText = 'Check here for information and messages.'
     StyleElements = [seClient, seBorder]
-    ExplicitWidth = 1454
   end
   object TDPushResultFile: TFileOpenDialog
     DefaultExtension = '.JSON'

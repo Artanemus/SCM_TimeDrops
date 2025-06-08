@@ -187,7 +187,8 @@ begin
   TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := HandlePtr.Lane;
 
   // TDS TABLE DATA -
-  TDS.tblmNoodle.FieldByName('TDSHeatID').AsInteger := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+  TDS.tblmNoodle.FieldByName('TDSHeatID').AsInteger :=
+    TDS.tblmHeat.FieldByName('HeatID').AsInteger;
   // lane number.
   HandlePtr := Noodle.GetHandlePtr(1);
   TDS.tblmNoodle.FieldByName('TDSLane').AsInteger := HandlePtr.Lane;
@@ -241,20 +242,28 @@ begin
   // ASSUMPTION : TABLES are sync with TPaintBox HotSpots.
   if TDS.tblmNoodle.IsEmpty then exit;
   if Noodle.NDataID = 0 then exit;
-  found := false;
+  found := true;
 
   if (TDS.tblmNoodle.FieldByName('NoodleID').AsInteger <> Noodle.NDataID) then
     found := TDS.LocateTNoodle(Noodle.NDataID);
 
   if found then
   begin
-    HandlePtr := Noodle.GetHandlePtr(0);
-    TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger := SCM.qryHeat.FieldByName('HeatID').AsInteger;
-    TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := HandlePtr.Lane;
-
-    HandlePtr := Noodle.GetHandlePtr(1);
-    TDS.tblmNoodle.FieldByName('TDSHeatID').AsInteger := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
-    TDS.tblmNoodle.FieldByName('TDSLane').AsInteger := HandlePtr.Lane;
+    try
+      TDS.tblmNoodle.Edit;
+      HandlePtr := Noodle.GetHandlePtr(0);
+      TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger :=
+        SCM.qryHeat.FieldByName('HeatID').AsInteger;
+      TDS.tblmNoodle.FieldByName('SCMLane').AsInteger := HandlePtr.Lane;
+      HandlePtr := Noodle.GetHandlePtr(1);
+      TDS.tblmNoodle.FieldByName('TDSHeatID').AsInteger :=
+        TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+      TDS.tblmNoodle.FieldByName('TDSLane').AsInteger := HandlePtr.Lane;
+      TDS.tblmNoodle.Post;
+    except
+      on E: Exception do
+        TDS.tblmNoodle.Cancel;
+    end;
   end;
 end;
 
@@ -265,16 +274,13 @@ begin
   // ASSUMPTION : TABLES are sync with TPaintBox HotSpots.
   if TDS.tblmNoodle.IsEmpty then exit;
   if Noodle.NDataID = 0 then exit;
-  found := false;
-
+  found := true;
   if (TDS.tblmNoodle.FieldByName('NoodleID').AsInteger <> Noodle.NDataID) then
     found := TDS.LocateTNoodle(Noodle.NDataID);
-
   if found then
   begin
     TDS.tblmNoodle.Delete;
   end;
-
 end;
 
 end.
