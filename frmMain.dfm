@@ -9279,7 +9279,7 @@ object Main: TMain
             HorizontalPositioning = sphpLeft
           end
           item
-            Control = sbtnAutoPatch
+            Control = spbtnAutoPatch
             HorizontalPositioning = sphpLeft
           end
           item
@@ -9320,24 +9320,18 @@ object Main: TMain
           Top = 90
           Width = 128
           Height = 41
-          Hint = 'Post the TD '#39'Race-Times'#39' to the SCM heat.'
-          Caption = 'POST'
+          Action = actnPost
           Images = IMG.vimglistMenu
           ParentShowHint = False
           ShowHint = True
-          OnClick = actnPostExecute
         end
-        object sbtnAutoPatch: TSpeedButton
+        object spbtnAutoPatch: TSpeedButton
           Left = 0
           Top = 135
           Width = 128
           Height = 41
-          Hint = 'Auto-Patch lanes and enable manual patching.'
-          Caption = 'PATCH'
-          ImageIndex = 14
-          ImageName = 'AutoPatch'
+          Action = actEnablePatches
           Images = IMG.vimglistMenu
-          Enabled = False
           ParentShowHint = False
           ShowHint = True
         end
@@ -10992,6 +10986,15 @@ object Main: TMain
       ImageName = 'VisibilityOn'
       OnExecute = actnRestartDirectoryWatcherExecute
       OnUpdate = actnRestartDirectoryWatcherUpdate
+    end
+    object actEnablePatches: TAction
+      Category = 'TimeDrops'
+      Caption = 'PATCH'
+      Checked = True
+      ImageIndex = 14
+      ImageName = 'AutoPatch'
+      OnExecute = actEnablePatchesExecute
+      OnUpdate = actEnablePatchesUpdate
     end
   end
   object FileSaveDlg: TFileSaveDialog

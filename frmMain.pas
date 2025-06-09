@@ -82,7 +82,7 @@ type
     pnlTool1: TPanel;
     pnlTool2: TPanel;
     rpnlBody: TRelativePanel;
-    sbtnAutoPatch: TSpeedButton;
+    spbtnAutoPatch: TSpeedButton;
     sbtnDirWatcher: TSpeedButton;
     sbtnRefreshSCM: TSpeedButton;
     sbtnSyncDTtoSCM: TSpeedButton;
@@ -103,8 +103,11 @@ type
     pnlSCMGrid: TPanel;
     pnlTDSGrid: TPanel;
     frameNoodles: TNoodleFrame;
+    actEnablePatches: TAction;
     procedure actBuildTDTablesExecute(Sender: TObject);
     procedure actBuildTDTablesUpdate(Sender: TObject);
+    procedure actEnablePatchesExecute(Sender: TObject);
+    procedure actEnablePatchesUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);
     procedure actnClearAndScanUpdate(Sender: TObject);
     procedure actnClearGridExecute(Sender: TObject);
@@ -222,6 +225,24 @@ end;
 procedure TMain.actBuildTDTablesUpdate(Sender: TObject);
 begin
   if Assigned(TDS) then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
+end;
+
+procedure TMain.actEnablePatchesExecute(Sender: TObject);
+begin
+  // toggle - enable/disable patching.
+  TAction(Sender).Checked := not(TAction(Sender).Checked);
+end;
+
+procedure TMain.actEnablePatchesUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -1555,6 +1576,10 @@ begin
   // Allow the form to receive KeyDown events
   Self.KeyPreview := True;
 
+  // if an action is assigned to a speed button - the image disappears!
+  spbtnPost.ImageIndex := 13;
+  spbtnAutoPatch.ImageIndex := 14;
+
 end;
 
 procedure TMain.FormDestroy(Sender: TObject);
@@ -2071,6 +2096,13 @@ begin
           UpdateCellIcons(ADataSet, J, ActiveRT);
         end;
 
+        // TIME DROPS AUTOMATIC RACETIME.
+        artFinalTime:
+        begin
+          TDS.SetActiveRT(ADataSet, artFinalTime);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
+
         // M A N U A L .
         artManual:
         begin
@@ -2088,6 +2120,12 @@ begin
         artSplit:
         begin
           TDS.SetActiveRT(ADataSet, artSplit);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
+
+        artPadTime:
+        begin
+          TDS.SetActiveRT(ADataSet, artPadTime);
           UpdateCellIcons(ADataSet, J, ActiveRT);
         end;
 
@@ -2247,7 +2285,7 @@ begin
       { Modifies tblEntrant: ActiveRT, RaceTime, imgActiveRT }
       TDS.SetActiveRT(ADataSet, ActiveRT);
       case ActiveRT of
-        artAutomatic:
+        artAutomatic, artFinalTime:
         begin
           UpdateCellIcons(ADataSet, ARow, ActiveRT);
         end;
@@ -2257,7 +2295,7 @@ begin
           TDS.CalcRaceTimeM(ADataSet);
           UpdateCellIcons(ADataSet, ARow, ActiveRT);
         end;
-        artUser:
+        artUser, artPadTime:
         begin
           UpdateCellIcons(ADataSet, ARow, ActiveRT);
         end;
@@ -2404,6 +2442,14 @@ begin
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'AUTO';
 
     end;
+
+    artFinalTime:
+    begin
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
+        tdsGrid.RemoveImageIdx(I, ARow);
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'FINALTIME';
+    end;
+
     artManual:
     begin
       for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
@@ -2426,38 +2472,35 @@ begin
       end;
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'MANUAL';
     end;
+
     artUser:
     begin
       for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(i, ARow);
-      { s := 'Time' + IntToStr(I - 2);
-        if ADataSet.FieldByName(s).IsNull then
-        continue;
-        tdsGrid.AddImageIdx(I, ARow, 7, TCellHAlign.haFull,
-        TCellVAlign.vaFull); }
       end;
-      // USER MODE : display - cell pointer
-      // tdsGrid.AddImageIdx(7, ARow, 9, TCellHAlign.haAfterText, TCellVAlign.vaTop);
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'EDIT RT';
     end;
+
     artSplit:
     begin
       for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
-      begin
         tdsGrid.RemoveImageIdx(I, ARow);
-        // display small blue bug.
-//        tdsGrid.AddImageIdx(I, ARow, 11, TCellHAlign.haFull,
-//            TCellVAlign.vaFull);
-      end;
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'SPLIT';
     end;
+
+    artPadTime:
+    begin
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
+        tdsGrid.RemoveImageIdx(I, ARow);
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'PADTIME';
+    end;
+
     artNone:
     begin
       for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(I, ARow);
-        // display red cross.
         tdsGrid.AddImageIdx(I, ARow, 8, TCellHAlign.haFull,
             TCellVAlign.vaFull);
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'NONE';

@@ -67,6 +67,7 @@ type
     function LocateTLaneID(ALaneID: integer): boolean;
     function LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
     function LocateTNoodle(ANoodleID: integer): boolean;
+    function LocateTNoodleByTDSLaneNum(ALaneNum: integer): boolean;
 
     function SyncDTtoSCM(SessionID, EventNum, HeatNum: Integer): boolean;
     function SyncCheck(SessionID, EventNum, HeatNum: Integer): boolean;
@@ -677,7 +678,17 @@ begin
   if (ANoodleID = 0) then exit;
   LOptions := [];
   result := tblmNoodle.Locate('NoodleID', ANoodleID, LOptions);
-  if result then dsmNoodle.DataSet.Refresh;
+end;
+
+function TTDS.LocateTNoodleByTDSLaneNum(ALaneNum: integer): boolean;
+var
+  LOptions: TLocateOptions;
+begin
+  result := false;
+  if not tblmNoodle.Active then exit;
+  if (ALaneNum = 0) then exit;
+  LOptions := [];
+  result := tblmNoodle.Locate('TDSLane', ALaneNum, LOptions);
 end;
 
 function TTDS.LocateTRaceNum(aRaceNum: integer): boolean;
@@ -812,20 +823,37 @@ end;
 
 procedure TTDS.POST_All;
 var
-  AEventType: scmEventType;
+//  AEventType: scmEventType;
   ALaneNum: integer;
+//  , NoodleLaneNum, SCMid, TDSid: integer;
 begin
   SCM.qryINDV.DisableControls;
   SCM.qryTEAM.DisableControls;
   tblmLane.DisableControls;
-
-  AEventType := scmEventType(SCM.qryDistance.FieldByName('EventTypeID').AsInteger);
-
   // ONE TO ONE SYNC....
   tblmLane.First;
-  while not (tblmLane.eof or SCM.qryINDV.eof) do
+  while not (tblmLane.eof) do
   begin
     ALaneNum := tblmLane.FieldByName('Lane').AsInteger;
+    POST_Lane(ALaneNum);
+(*
+    // Noodle pre-ceeds one to one sync. Requires Master/Detail in action.
+    if LocateTNoodleByTDSLaneNum(ALaneNum) then
+    begin
+      NoodleLaneNum := tblmNoodle.FieldByName('SCMLane').AsInteger;
+      SCMid := tblmNoodle.FieldByName('SCMID').AsInteger;
+      TDSid := tblmNoodle.FieldByName('TDSID').AsInteger;
+      // full test of all values before allowing assignment.
+      if (NoodleLaneNum <> 0) then
+      begin
+        if (SCM.qryHeat.FieldByName('HeatID').AsInteger = SCMid) and
+         (tblmHeat.FieldByName('HeatID').AsInteger = TDSid) then
+          // Switch to Noodle data..
+          ALaneNum := NoodleLaneNum;
+      end;
+    end;
+
+    AEventType := SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
     if SCM.LocateLaneNum(ALaneNum, AEventType) then
     begin
       if AEventType = etINDV then
@@ -851,30 +879,56 @@ begin
         end;
       end;
     end;
+*)
     tblmLane.Next;
   end;
-  if AEventType = etINDV then
-    SCM.qryINDV.First
-  else if AEventType = etTEAM then
-    SCM.qryTEAM.First;
+
+//  if AEventType = etINDV then
+//    SCM.qryINDV.First
+//  else if AEventType = etTEAM then
+//    SCM.qryTEAM.First;
   tblmLane.First;
   tblmLane.EnableControls;
-  SCM.qryTEAM.EnableControls;
-  SCM.qryINDV.EnableControls;
-
+//  SCM.qryTEAM.EnableControls;
+//  SCM.qryINDV.EnableControls;
 end;
 
 procedure TTDS.POST_Lane(ALaneNum: Integer);
 var
   AEventType: scmEventType;
   b1, b2: boolean;
+  NoodleLaneNum: Integer;
+  SCMid: Integer;
+  TDSid: Integer;
 begin
   SCM.qryINDV.DisableControls;
   SCM.qryTEAM.DisableControls;
   tblmLane.DisableControls;
-  AEventType := scmEventType(SCM.qryDistance.FieldByName('EventTypeID').AsInteger);
-  // SYNC to ROW ...
-  b1 := LocateTLaneNum(tblmHeat.FieldByName('HeatID').AsInteger, ALaneNum);
+
+  // SYNC to ROW only if required. Requires Master/Detail in action.
+  b1 := true;
+  if (tblmLane.FieldByName('LaneNum').AsInteger <> ALaneNum)  then
+    b1 := LocateTLaneNum(tblmHeat.FieldByName('HeatID').AsInteger, ALaneNum);
+
+  if b1 then
+  begin
+    // Noodle pre-ceeds one to one sync. Requires Master/Detail in action.
+    if LocateTNoodleByTDSLaneNum(ALaneNum) then
+    begin
+      NoodleLaneNum := tblmNoodle.FieldByName('SCMLane').AsInteger;
+      SCMid := tblmNoodle.FieldByName('SCMID').AsInteger;
+      TDSid := tblmNoodle.FieldByName('TDSID').AsInteger;
+      // full test of all values before allowing assignment.
+      if (NoodleLaneNum <> 0) then
+      begin
+        if (SCM.qryHeat.FieldByName('HeatID').AsInteger = SCMid) and
+         (tblmHeat.FieldByName('HeatID').AsInteger = TDSid) then
+          // Switch to Noodle data..
+          ALaneNum := NoodleLaneNum;
+      end;
+    end;
+  end;
+  AEventType := SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
   b2 := SCM.LocateLaneNum(ALaneNum, AEventType);
   if (b1 and b2) then
   begin
@@ -901,6 +955,14 @@ begin
         end;
       end;
   end;
+
+  if AEventType = etINDV then
+    SCM.qryINDV.First
+  else if AEventType = etTEAM then
+    SCM.qryTEAM.First;
+
+//  tblmLane.First;  {Important - DO NOT relocate.}
+
   tblmLane.EnableControls;
   SCM.qryTEAM.EnableControls;
   SCM.qryINDV.EnableControls;
@@ -1021,25 +1083,12 @@ begin
           ADataSet.edit;
           try
             ADataSet.FieldByName('ActiveRT').AsInteger := Ord(artAutomatic);
-            // optional - use TimeDrops 'finalTime' for auto race-time.
-            if Assigned(settings) and (Settings.UseTDfinalTime = true) then
-            begin
-              if ADataSet.FieldByName('finalTime').IsNull then
-                ADataSet.FieldByName('RaceTime').Clear
-              else
-                ADataSet.FieldByName('RaceTime').AsVariant :=
-                ADataSet.FieldByName('finalTime').AsVariant;
-              ADataSet.fieldbyName('imgActiveRT').AsInteger := 8
-            end
-            else // default image assignment...
-            begin
-              if ADataSet.FieldByName('RaceTimeA').IsNull then
-                ADataSet.FieldByName('RaceTime').Clear
-              else
-                ADataSet.FieldByName('RaceTime').AsVariant :=
-                ADataSet.FieldByName('RaceTimeA').AsVariant;
-              ADataSet.fieldbyName('imgActiveRT').AsInteger := 2;
-            end;
+            if ADataSet.FieldByName('RaceTimeA').IsNull then
+              ADataSet.FieldByName('RaceTime').Clear
+            else
+              ADataSet.FieldByName('RaceTime').AsVariant :=
+              ADataSet.FieldByName('RaceTimeA').AsVariant;
+            ADataSet.fieldbyName('imgActiveRT').AsInteger := 2;
             ADataSet.post;
           except on E: Exception do
             begin
@@ -1048,6 +1097,27 @@ begin
             end;
           end;
         end;
+
+      artFinalTime:
+      begin
+          ADataSet.edit;
+          try
+            ADataSet.FieldByName('ActiveRT').AsInteger := Ord(artFinalTime);
+            // optional - use TimeDrops 'finalTime' for auto race-time.
+            if ADataSet.FieldByName('finalTime').IsNull then
+              ADataSet.FieldByName('RaceTime').Clear
+            else
+              ADataSet.FieldByName('RaceTime').AsVariant :=
+              ADataSet.FieldByName('finalTime').AsVariant;
+            ADataSet.fieldbyName('imgActiveRT').AsInteger := 8;
+            ADataSet.post;
+          except on E: Exception do
+            begin
+              ADataSet.Cancel; // Cancel the changes if an exception occurs
+              raise; // Re-raise the exception to propagate it further
+            end;
+          end;
+      end;
 
       artManual:
         begin
@@ -1080,25 +1150,25 @@ begin
         begin
           ADataSet.edit;
           ADataSet.FieldByName('ActiveRT').AsInteger := ORD(artSplit);
-          // optional - use TimeDrops 'padTime' for 'race-time'.
-          if Assigned(settings) and (Settings.UseTDpadTime = true) then
-          begin
-              if ADataSet.FieldByName('padTime').IsNull then
-                ADataSet.FieldByName('RaceTime').Clear
-              else
-                ADataSet.FieldByName('RaceTime').AsVariant :=
-                ADataSet.FieldByName('padTime').AsVariant;
-              ADataSet.fieldbyName('imgActiveRT').AsInteger := 9
-          end
-          else
-          begin
-            {TODO -oBSA -cGeneral : Find last split time and assign to RaceTime}
-            ADataSet.fieldbyName('imgActiveRT').AsInteger := 5;
-            ADataSet.FieldByName('RaceTime').Clear;
-          end;
-
+          {TODO -oBSA -cGeneral : Find last split time and assign to RaceTime}
+          ADataSet.fieldbyName('imgActiveRT').AsInteger := 5;
+          ADataSet.FieldByName('RaceTime').Clear;
           ADataSet.post;
         end;
+
+      artPadTime:
+      begin
+        ADataSet.edit;
+        ADataSet.FieldByName('ActiveRT').AsInteger := ORD(artPadTime);
+        // optional - use TimeDrops 'padTime' for 'race-time'.
+        if ADataSet.FieldByName('padTime').IsNull then
+          ADataSet.FieldByName('RaceTime').Clear
+        else
+          ADataSet.FieldByName('RaceTime').AsVariant :=
+          ADataSet.FieldByName('padTime').AsVariant;
+        ADataSet.fieldbyName('imgActiveRT').AsInteger := 9;
+        ADataSet.post;
+      end;
 
       artNone:
         begin
@@ -1195,7 +1265,20 @@ begin
     if art = High(scmActiveRT) then
       art := Low(scmActiveRT)
     else
+    begin
       art := Succ(art);
+      if art = artFinalTime then
+      begin
+        if Assigned(Settings) and (Settings.UseTDfinalTime = false)  then
+          art := Succ(art); // skip this action.
+      end;
+      if art = artPadTime then
+      begin
+        if Assigned(Settings) and (Settings.UseTDpadTime = false)  then
+          art := Succ(art); // skip this action.
+      end;
+    end;
+
   end
   else
   begin
@@ -1203,7 +1286,19 @@ begin
     if art = Low(scmActiveRT) then
       art := High(scmActiveRT)
     else
+    begin
       art := Pred(art);
+      if art = artFinalTime then
+      begin
+        if Assigned(Settings) and (Settings.UseTDfinalTime = false)  then
+          art := Pred(art); // skip this action.
+      end;
+      if art = artPadTime then
+      begin
+        if Assigned(Settings) and (Settings.UseTDpadTime = false)  then
+          art := Pred(art); // skip this action.
+      end;
+    end;
   end;
 
   try
@@ -1289,24 +1384,6 @@ begin
   result := true;
 end;
 
-(*
-procedure TTDS.WriteToBinary(AFileName:string);
-var
-s: string;
-begin
-  if Length(AFileName) > 0 then
-    // Assert that the end delimiter is attached
-    s := IncludeTrailingPathDelimiter(AFileName)
-  else
-    s := ''; // or handle this case if the path is mandatory
-
-  tblmSession.SaveToFile(s + 'DTMaster.fsBinary', sfXML);
-  tblmEvent.SaveToFile(s + 'DTEvent.fsBinary', sfXML);
-  tblmHeat.SaveToFile(s + 'DTHeat.fsBinary', sfXML);
-  tblmLane.SaveToFile(s + 'DTLane.fsBinary', sfXML);
-  tblmNoodle.SaveToFile(s + 'DTNoodle.fsBinary', sfXML);
-end;
-*)
 
 procedure TTDS.WriteToBinary(AFileName: string);
 var

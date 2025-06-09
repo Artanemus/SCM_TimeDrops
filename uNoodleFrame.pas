@@ -383,7 +383,6 @@ procedure TNoodleFrame.LoadNoodleData();
 var
   Noodle: TNoodle;
   SCMRectF, TDSRectF: TRectF;
-  indx: integer;
 begin
   if Assigned(FNoodles) then
   begin
@@ -431,9 +430,17 @@ begin
   begin
     if Assigned(FDragHandlePtr) then
     begin
+
       FDragState := ndsDraggingExistingHandle;
       FDragNoodle := HitNoodle; // Store the link being dragged.
-      HitNoodle.GetOtherHandle(FDragHandlePtr^, FDragAnchor);
+//      FDragNoodle.Assert(FNumberOfLanes);   { DEBUG }
+
+      if FDragHandlePtr.Bank = 0 then
+        FDragAnchor := FDragNoodle.GetHandle(1)
+      else
+        FDragAnchor := FDragNoodle.GetHandle(0);
+
+//      HitNoodle.GetOtherHandle(FDragHandlePtr^, FDragAnchor);
       // Assign Anchour Handle.
       SetSelectNoodle(HitNoodle); // Select the link visually.
       pbNoodles.Invalidate;
@@ -518,7 +525,10 @@ begin
           if not IsDuplicate then
           begin
             // Create the new link
-            Noodle := TNoodle.Create(FHotSpotAnchor.RectF, HotSpot.RectF);
+            if HotSpot.Bank = 0 then
+              Noodle := TNoodle.Create(HotSpot.RectF, FHotSpotAnchor.RectF)
+            else
+              Noodle := TNoodle.Create(FHotSpotAnchor.RectF, HotSpot.RectF);
             FNoodles.Add(Noodle);
 
             // Assign both handles to their correct banks and lanes
@@ -529,6 +539,8 @@ begin
             HandlePtr := Noodle.GetHandlePtr(HotSpot.Bank);
             HandlePtr.Bank := HotSpot.Bank;
             HandlePtr.Lane := HotSpot.Lane;
+
+//            Noodle.Assert(FNumberOfLanes);  { DEBUG }
 
             // Trigger an OnNoodleCreated event here - uNoodleData.
             if Assigned(FOnNoodleCreated) then FOnNoodleCreated(Self, Noodle);
@@ -576,6 +588,7 @@ begin
             FDragHandlePtr.Lane := HotSpot.Lane;
             // Trigger an OnNoodleCreated event here - uNoodleData.
             if Assigned(FOnNoodleUpdated) then FOnNoodleUpdated(Self, fDragNoodle);
+//            fDragNoodle.Assert(FNumberOfLanes);   { DEBUG }
           end;
 
           FDragState := ndsIdle;
@@ -643,7 +656,7 @@ begin
   Canvas.Brush.Style := bsClear;
   // Make background transparent (won't erase grids)
 
-  // draw the under lining HotSpots
+  // draw the HotSpots (circles)
   for HotSpot in FHotSpots do
   begin
     deflate := ((FDefaultRowHeight - IMG.vimglistDTGrid.Height) DIV 2);

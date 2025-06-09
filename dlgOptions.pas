@@ -254,8 +254,7 @@ begin
   bhintOptions.Title := 'finalTime vs AutoCalc';
   bhintOptions.Description := '''
   Checking this box results in TimeDrops' 'finalTime',
-  being used as the lane's race-time instead of SwimClubMeet's
-  auto-calculated race-time.
+  being available as the lane's race-time.
 
   Rules for 'Auto-Calc' are shown below in the info hint.
   Rules for 'finalTime' are undocumented.
@@ -268,8 +267,8 @@ procedure TOptions.vimginfo2MouseEnter(Sender: TObject);
 begin
   bhintOptions.Title := 'padTime vs Split-Time';
   bhintOptions.Description := '''
-  Checking this box will use TimeDrops' 'padTime' instead
-  of SwimClubMeet's calculated split time.' +
+  Checking this box results in TimeDrops' 'padTime' being
+  available as the lane's race-time.' +
                  '
   SwimClubMeet calculates split times by searching all 10
   stored splits for each lane, identifying the maximum split time.

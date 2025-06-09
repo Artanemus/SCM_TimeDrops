@@ -3,8 +3,8 @@ unit uNoodle;
 interface
 
 uses
-  System.Classes, Vcl.Controls, System.Types, System.SysUtils,
-  System.Math, Vcl.Graphics, Vcl.Forms, SCMDefines;
+  System.Classes, Vcl.Controls, System.Types, System.SysUtils, System.UITypes,
+  System.Math, Vcl.Graphics, Vcl.Forms, SCMDefines, vcl.Dialogs;
 
 type
   // Record to hold info about the connection point (or handle).
@@ -51,6 +51,8 @@ type
     // Function to check if a point is near this link's line or handles
     function IsPointOnRopeOrHandle(P: TPointF; out Handle: TNoodleHandle): Boolean; overload;
     function IsPointOnRopeOrHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean; overload;
+
+    procedure Assert(NumberOfLanes: Integer = 10); { DEBUG TOOL }
 
     property IsSelected: Boolean read FIsSelected write FIsSelected;
     property NDataID: integer read FNDataID write FNDataID ;
@@ -175,6 +177,29 @@ begin
   FIsSelected := False;
 end;
 
+
+procedure TNoodle.Assert(NumberOfLanes: Integer);   { DEBUG TOOL }
+var
+Handle: TNoodleHandle;
+begin
+  try
+    if (FNoodleHandles[0].Bank <> 0) or (FNoodleHandles[0].RectF.Left <> 0) or
+    (FNoodleHandles[0].Lane > NumberOfLanes) then
+    begin
+      Handle := FNoodleHandles[0];
+      FNoodleHandles[0] := FNoodleHandles[1];
+      FNoodleHandles[1] := Handle;
+      FNoodleHandles[0].Bank := 0;
+      FNoodleHandles[1].Bank := 1;
+    end;
+    if (FNoodleHandles[0].Bank <> 0) or (FNoodleHandles[0].RectF.Left <> 0)  or
+    (FNoodleHandles[0].Lane > NumberOfLanes) then
+      raise Exception.Create('Assert TNoodleHandle failed.') at @TNoodle.Assert;
+
+  except on E: Exception do
+    MessageDlg('Illegal TNoodleHandle bank assignment.', mtError, [mbOK], 0);
+  end;
+end;
 
 // --- TNoodle Implementation ---
 
