@@ -75,7 +75,7 @@ type
     fDataIsActive: Boolean;
     { Private declarations }
     fDBModel, fDBVersion, fDBMajor, fDBMinor: integer;
-    procedure AssertMasterDetail;
+//    procedure AssertMasterDetail;
   public
     fLoginTimeout: integer;  //---
     msgHandle: HWND;  // TForm.dtfrmExec ...   // Both DataModules
@@ -88,12 +88,14 @@ type
     // MISC SCM ROUTINES/FUNCTIONS
     function GetNumberOfHeats(AEventID: integer): integer;
     function GetRoundABBREV(AEventID: integer): string;
+    function GetEventType(aEventID: integer): scmEventType;
     // L O C A T E S   F O R   S W I M C L U B M E E T   D A T A.
     // WARNING : Master-Detail enabled...
     // .......................................................
     function LocateEventID(AEventID: integer): boolean;
     function LocateHeatID(AHeatID: integer): boolean;
-    function LocateLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean;
+    function LocateLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean; overload;
+    function LocateLaneNum(AHeatID: integer; ALaneNum: integer): boolean; overload;
     // Uses SessionStart TDateTime...
     function LocateNearestSessionID(aDate: TDateTime): integer;
     function LocateSessionID(ASessionID: integer): boolean;
@@ -123,6 +125,27 @@ uses
 {%CLASSGROUP 'Vcl.Controls.TControl'}
 
 {$R *.dfm}
+
+
+function TSCM.GetEventType(aEventID: integer): scmEventType;
+var
+  v: variant;
+  SQL: string;
+begin
+  result := etUnknown;
+    if not SCM.qryEvent.IsEmpty then
+    begin
+      SQL := 'SELECT [EventTypeID] FROM [SwimClubMeet].[dbo].[Event] ' +
+        'INNER JOIN Distance ON [Event].DistanceID = Distance.DistanceID ' +
+        'WHERE EventID = :ID';
+      v := SCM.scmConnection.ExecSQLScalar(SQL, [aEventID]);
+      if VarIsNull(v) or VarIsEmpty(v) or (v = 0) then exit;
+    end;
+    case v of
+      1: result := etINDV;
+      2: result := etTEAM;
+    end;
+end;
 
 procedure TSCM.ActivateDataSCM;
 begin
@@ -186,63 +209,65 @@ begin
   end;
 end;
 
-procedure TSCM.AssertMasterDetail;
-begin
-  if (fDataIsActive = false) then
+(*
+  procedure TSCM.AssertMasterDetail;
   begin
-    // should be ok to run this procedure with out a connection.
-    // assigning a master will result in query state = close.
-    // must be explicitly reopened. (ActivateDataSCM)
+    if (fDataIsActive = false) then
+    begin
+      // should be ok to run this procedure with out a connection.
+      // assigning a master will result in query state = close.
+      // must be explicitly reopened. (ActivateDataSCM)
 
-    // Master - index field.
-    qrySwimClub.IndexFieldNames := 'SwimClubID';
+      // Master - index field.
+      qrySwimClub.IndexFieldNames := 'SwimClubID';
 
-    // ASSERT Master - Detail
-    qrySession.MasterSource := dsSwimClub;
-    qrySession.MasterFields := 'SwimClubID';
-    qrySession.DetailFields := 'SwimClubID';
-    qrySession.IndexFieldNames := 'SwimClubID';
+      // ASSERT Master - Detail
+      qrySession.MasterSource := dsSwimClub;
+      qrySession.MasterFields := 'SwimClubID';
+      qrySession.DetailFields := 'SwimClubID';
+      qrySession.IndexFieldNames := 'SwimClubID';
 
-    qryEvent.MasterSource := dsSession;
-    qryEvent.MasterFields := 'SessionID';
-    qryEvent.DetailFields := 'SessionID';
-    qryEvent.IndexFieldNames := 'SessionID';
+      qryEvent.MasterSource := dsSession;
+      qryEvent.MasterFields := 'SessionID';
+      qryEvent.DetailFields := 'SessionID';
+      qryEvent.IndexFieldNames := 'SessionID';
 
-    qryDistance.MasterSource := dsEvent;
-    qryDistance.MasterFields := 'DistanceID';
-    qryDistance.DetailFields := 'DistanceID';
-    qryDistance.IndexFieldNames := 'DistanceID';
+      qryDistance.MasterSource := dsEvent;
+      qryDistance.MasterFields := 'DistanceID';
+      qryDistance.DetailFields := 'DistanceID';
+      qryDistance.IndexFieldNames := 'DistanceID';
 
-    qryStroke.MasterSource := dsEvent;
-    qryStroke.MasterFields := 'StrokeID';
-    qryStroke.DetailFields := 'StrokeID';
-    qryStroke.IndexFieldNames := 'StrokeID';
+      qryStroke.MasterSource := dsEvent;
+      qryStroke.MasterFields := 'StrokeID';
+      qryStroke.DetailFields := 'StrokeID';
+      qryStroke.IndexFieldNames := 'StrokeID';
 
-    qryHeat.MasterSource := dsEvent;
-    qryHeat.MasterFields := 'EventID';
-    qryHeat.DetailFields := 'EventID';
-    qryHeat.IndexFieldNames := 'EventID';
+      qryHeat.MasterSource := dsEvent;
+      qryHeat.MasterFields := 'EventID';
+      qryHeat.DetailFields := 'EventID';
+      qryHeat.IndexFieldNames := 'EventID';
 
-    qryINDV.MasterSource := dsHeat;
-    qryINDV.MasterFields := 'HeatID';
-    qryINDV.DetailFields := 'HeatID';
-    qryINDV.IndexFieldNames := 'HeatID';
+      qryINDV.MasterSource := dsHeat;
+      qryINDV.MasterFields := 'HeatID';
+      qryINDV.DetailFields := 'HeatID';
+      qryINDV.IndexFieldNames := 'HeatID';
 
-    qryTEAM.MasterSource := dsHeat;
-    qryTEAM.MasterFields := 'HeatID';
-    qryTEAM.DetailFields := 'HeatID';
-    qryTEAM.IndexFieldNames := 'HeatID';
+      qryTEAM.MasterSource := dsHeat;
+      qryTEAM.MasterFields := 'HeatID';
+      qryTEAM.DetailFields := 'HeatID';
+      qryTEAM.IndexFieldNames := 'HeatID';
 
-    qryTeamEntrant.MasterSource := dsTeam;
-    qryTeamEntrant.MasterFields := 'TeamID';
-    qryTeamEntrant.DetailFields := 'TeamID';
-    qryTeamEntrant.IndexFieldNames := 'TeamID';
+      qryTeamEntrant.MasterSource := dsTeam;
+      qryTeamEntrant.MasterFields := 'TeamID';
+      qryTeamEntrant.DetailFields := 'TeamID';
+      qryTeamEntrant.IndexFieldNames := 'TeamID';
+
+    end;
 
   end;
 
-end;
 
-procedure TSCM.BuildCSVEventData(AFileName: string);
+*)procedure TSCM.BuildCSVEventData(AFileName: string);
 var
   sl: TStringList;
   s, s2, s3: string;
@@ -482,13 +507,32 @@ begin
       result := dsHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
 end;
 
+function TSCM.LocateLaneNum(AHeatID, ALaneNum: integer): boolean;
+var
+  found: boolean;
+  LOptions: TLocateOptions;
+  EventType: scmEventType;
+begin
+  result := false;
+  found := true;
+  if not fDataIsActive then exit;
+  LOptions := [];
+  if SCM.qryHeat.FieldByName('HeatID').AsInteger <> AHeatID then
+    found := SCM.LocateHeatID(AHeatID);
+  if found then
+  begin
+    EventType := GetEventType(SCM.qryHeat.FieldByName('EventID').AsInteger);
+    found := LocateLaneNum(ALaneNum, EventType);
+  end;
+  result := found;
+end;
+
 function TSCM.LocateLaneNum(ALaneNum: integer; aEventType: scmEventType):
     boolean;
 var
   found: boolean;
   LOptions: TLocateOptions;
 begin
-  // IGNORES SYNC STATE...
   result := false;
   found := false;
   if not fDataIsActive then exit;
@@ -544,7 +588,10 @@ end;
 procedure TSCM.qryHeatAfterScroll(DataSet: TDataSet);
 begin
   if (msgHandle <> 0) then
+  begin
     PostMessage(msgHandle, SCM_UPDATEUI_SCM, 0,0);
+    PostMessage(msgHandle, SCM_UPDATE_NOODLES, 0,0);
+  end;
 end;
 
 procedure TSCM.ReadConnectionDef(const ConnectionName, ParamName: string;

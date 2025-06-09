@@ -29,113 +29,119 @@ uses
   Vcl.ExtDlgs, FireDAC.Stan.Param, Vcl.ComCtrls, Vcl.DBCtrls, tdReConstruct,
   Vcl.PlatformVclStylesActnCtrls, Vcl.WinXPanels, Vcl.WinXCtrls,
   System.Types, System.IOUtils, System.Math, DirectoryWatcher,
-  tdReConstructDlg, dmIMG;
-
+  tdReConstructDlg, dmIMG, uNoodleFrame;
 
 type
   TMain = class(TForm)
+    actBuildTDTables: TAction;
+    actnAbout: TAction;
+    actnClearAndScan: TAction;
+    actnClearGrid: TAction;
+    actnConnectToSCM: TAction;
+    actnExportMeetProgram: TAction;
+    actnLoadSession: TAction;
+    actnManager: TActionManager;
     actnMenuBar: TActionMainMenuBar;
-    tdsGrid: TDBAdvGrid;
+    actnPost: TAction;
+    actnPreferences: TAction;
+    actnPushResults: TAction;
+    actnReConstructTDResultFiles: TAction;
+    actnRefresh: TAction;
+    actnReportTD: TAction;
+    actnRestartDirectoryWatcher: TAction;
+    actnRptSCMEventBasic: TAction;
+    actnRptSCMEventDetailed: TAction;
+    actnSaveSession: TAction;
+    actnScanMeetsFolder: TAction;
+    actnSCMSession: TAction;
+    actnSelectSwimClub: TAction;
+    actnSyncSCM: TAction;
+    actnSyncTD: TAction;
+    actTDTableViewer: TAction;
+    act_FireDACExplorer: TAction;
     btnNextDTFile: TButton;
     btnNextEvent: TButton;
+    btnPickDTTreeView: TButton;
+    btnPickSCMTreeView: TButton;
     btnPrevDTFile: TButton;
     btnPrevEvent: TButton;
-    FileSaveDlgMeetProgram: TFileSaveDialog;
+    dbtxtDTFileName: TDBText;
+    FileOpenDlg: TFileOpenDialog;
+    FileSaveDlg: TFileSaveDialog;
     lblEventDetails: TLabel;
+    lblEventDetailsTD: TLabel;
     lblHeatNum: TLabel;
+    lblKeyBoardInfo: TLabel;
     lblMeters: TLabel;
-    PickDTFolderDlg: TFileOpenDialog;
+    lblMetersRelay: TLabel;
+    lblSessionStart: TLabel;
+    lblSwimClubName: TLabel;
+    lbl_scmGridOverlay: TLabel;
+    lbl_tdsGridOverlay: TLabel;
+    pnlNoodle: TPanel;
+    pnlTool1: TPanel;
+    pnlTool2: TPanel;
+    rpnlBody: TRelativePanel;
+    spbtnAutoPatch: TSpeedButton;
+    sbtnDirWatcher: TSpeedButton;
+    sbtnRefreshSCM: TSpeedButton;
     sbtnSyncDTtoSCM: TSpeedButton;
+    sbtnSyncSCMtoDT: TSpeedButton;
     scmGrid: TDBAdvGrid;
+    ShapeSpaceerSCM: TShape;
+    ShapeSpacer: TShape;
     spbtnPost: TSpeedButton;
+    stackpnlTool2: TStackPanel;
+    StatBar: TStatusBar;
+    TDPushResultFile: TFileOpenDialog;
+    tdsGrid: TDBAdvGrid;
+    Timer1: TTimer;
     vimgHeatNum: TVirtualImage;
     vimgHeatStatus: TVirtualImage;
     vimgRelayBug: TVirtualImage;
     vimgStrokeBug: TVirtualImage;
-    pBar: TProgressBar;
-    dbtxtDTFileName: TDBText;
-    pnlSCM: TPanel;
-    pnlTDS: TPanel;
-    rpnlBody: TRelativePanel;
-    pnlTool1: TPanel;
-    pnlTool2: TPanel;
-    stackpnlTool2: TStackPanel;
-    ShapeSpacer: TShape;
-    lblMetersRelay: TLabel;
-    lblSessionStart: TLabel;
-    btnPickSCMTreeView: TButton;
-    btnPickDTTreeView: TButton;
-    lblEventDetailsTD: TLabel;
-    TDPushResultFile: TFileOpenDialog;
-    sbtnAutoPatch: TSpeedButton;
-    sbtnSyncSCMtoDT: TSpeedButton;
-    sbtnRefreshSCM: TSpeedButton;
-    ShapeSpaceerSCM: TShape;
-    StatBar: TStatusBar;
-    Timer1: TTimer;
-    actnManager: TActionManager;
-    actnRefresh: TAction;
-    actnSelectSwimClub: TAction;
-    actnSCMSession: TAction;
-    actnExportMeetProgram: TAction;
-    actnReConstructTDResultFiles: TAction;
-    actnPreferences: TAction;
-    actnPushResults: TAction;
-    actnClearGrid: TAction;
-    actnSaveSession: TAction;
-    actnLoadSession: TAction;
-    actnAbout: TAction;
-    actnSyncTD: TAction;
-    actnPost: TAction;
-    actnRptSCMEventBasic: TAction;
-    actnRptSCMEventDetailed: TAction;
-    actnReportTD: TAction;
-    actnSyncSCM: TAction;
-    lblKeyBoardInfo: TLabel;
-    actnConnectToSCM: TAction;
-    lbl_scmGridOverlay: TLabel;
-    act_FireDACExplorer: TAction;
-    actBuildTDTables: TAction;
-    actTDTableViewer: TAction;
-    actnScanMeetsFolder: TAction;
-    lbl_tdsGridOverlay: TLabel;
-    actnRestartDirectoryWatcher: TAction;
-    sbtnDirWatcher: TSpeedButton;
-    actnClearAndScan: TAction;
-    lblSwimClubName: TLabel;
-    FileSaveDlg: TFileSaveDialog;
-    FileOpenDlg: TFileOpenDialog;
+    pnlSCMGrid: TPanel;
+    pnlTDSGrid: TPanel;
+    frameNoodles: TNoodleFrame;
+    actEnablePatches: TAction;
     procedure actBuildTDTablesExecute(Sender: TObject);
     procedure actBuildTDTablesUpdate(Sender: TObject);
+    procedure actEnablePatchesExecute(Sender: TObject);
+    procedure actEnablePatchesUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);
     procedure actnClearAndScanUpdate(Sender: TObject);
-    procedure actnExportMeetProgramExecute(Sender: TObject);
-    procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnClearGridExecute(Sender: TObject);
     procedure actnClearGridUpdate(Sender: TObject);
-    procedure actnPushResultsExecute(Sender: TObject);
     procedure actnConnectToSCMExecute(Sender: TObject);
     procedure actnConnectToSCMUpdate(Sender: TObject);
+    procedure actnExportMeetProgramExecute(Sender: TObject);
+    procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnLoadSessionExecute(Sender: TObject);
     procedure actnLoadSessionUpdate(Sender: TObject);
     procedure actnPostExecute(Sender: TObject);
     procedure actnPostUpdate(Sender: TObject);
     procedure actnPreferencesExecute(Sender: TObject);
+    procedure actnPushResultsExecute(Sender: TObject);
+    procedure actnPushResultsUpdate(Sender: TObject);
     procedure actnReConstructTDResultFilesExecute(Sender: TObject);
     procedure actnReConstructTDResultFilesUpdate(Sender: TObject);
     procedure actnRefreshExecute(Sender: TObject);
-    procedure actnSCMSessionExecute(Sender: TObject);
-    procedure actnSCMSessionUpdate(Sender: TObject);
-    procedure actnPushResultsUpdate(Sender: TObject);
-    procedure actnSelectSwimClubExecute(Sender: TObject);
-    procedure actnSelectSwimClubUpdate(Sender: TObject);
-    procedure actnSetDTMeetsFolderExecute(Sender: TObject);
-    procedure actnSyncTDExecute(Sender: TObject);
-    procedure actnSyncSCMExecute(Sender: TObject);
-    procedure actnSyncSCMUpdate(Sender: TObject);
-    procedure actnSyncTDUpdate(Sender: TObject);
+    procedure actnRestartDirectoryWatcherExecute(Sender: TObject);
+    procedure actnRestartDirectoryWatcherUpdate(Sender: TObject);
+    procedure actnRptSCMEventBasicExecute(Sender: TObject);
+    procedure actnRptSCMEventBasicUpdate(Sender: TObject);
+    procedure actnSaveSessionExecute(Sender: TObject);
+    procedure actnSaveSessionUpdate(Sender: TObject);
     procedure actnScanMeetsFolderExecute(Sender: TObject);
     procedure actnScanMeetsFolderUpdate(Sender: TObject);
+    procedure actnSCMSessionExecute(Sender: TObject);
+    procedure actnSCMSessionUpdate(Sender: TObject);
+    procedure actnSelectSwimClubExecute(Sender: TObject);
+    procedure actnSelectSwimClubUpdate(Sender: TObject);
+    procedure actnSyncSCMExecute(Sender: TObject);
+    procedure actnSyncSCMUpdate(Sender: TObject);
+    procedure actnSyncTDExecute(Sender: TObject);
+    procedure actnSyncTDUpdate(Sender: TObject);
     procedure actTDTableViewerExecute(Sender: TObject);
     procedure act_FireDACExplorerExecute(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
@@ -144,63 +150,52 @@ type
     procedure btnPickSCMTreeViewClick(Sender: TObject);
     procedure btnPrevDTFileClick(Sender: TObject);
     procedure btnPrevEventClick(Sender: TObject);
-    procedure tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormHide(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure actnRestartDirectoryWatcherExecute(Sender: TObject);
-    procedure actnRestartDirectoryWatcherUpdate(Sender: TObject);
-    procedure actnRptSCMEventBasicExecute(Sender: TObject);
-    procedure actnRptSCMEventBasicUpdate(Sender: TObject);
-    procedure actnSaveSessionExecute(Sender: TObject);
-    procedure actnSaveSessionUpdate(Sender: TObject);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
         string);
+    procedure tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
     procedure Timer1Timer(Sender: TObject);
 
   private
+  var
+    fClearAndScan_Done: Boolean;
     { Private declarations }
-    FConnection: TFDConnection;
-    fDolphinMeetsFolder: string;
     fDirectoryWatcher: TDirectoryWatcher;
-    { User preference: Connect to the SCM DB Server on boot. Default: FALSE }
-    fDoLoginOnBoot: boolean;
     { User preference: On boot-up, populated the TDS data tables with any
       'results' that may reside in the 'meets' folder. }
     fDoClearAndScanOnBoot: boolean;
-    fClearAndScan_Done: Boolean;
+    { User preference: Connect to the SCM DB Server on boot. Default: FALSE }
+    fDoLoginOnBoot: boolean;
 
-    procedure OnFileChanged(Sender: TObject; const FileName: string; Action: DWORD);
-
-    procedure LoadFromSettings; // JSON Program Settings
     procedure LoadSettings; // JSON Program Settings
-    procedure SaveToSettings; // JSON Program Settings
+    procedure OnFileChanged(Sender: TObject; const FileName: string; Action: DWORD);
     procedure UpdateCaption();
     procedure UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
         scmActiveRT);
-
-  const
-    AcceptedTimeKeeperDeviation = 0.3;
-
   protected
-    procedure MSG_UpdateUISCM(var Msg: TMessage); message SCM_UPDATEUI_SCM;
-    procedure MSG_UpdateUITDS(var Msg: TMessage); message SCM_UPDATEUI_TDS;
-    procedure MSG_Connect(var Msg: TMessage); message SCM_CONNECT;
+    procedure MSG_ClearAndScan(var Msg: TMessage); message SCM_CLEARANDSCAN_TIMEDROPS;
     // perform either RESCAN or CLEARANDRESCAN based on Msg.wParam
     // 1 = RESCAN, 2 = CLEARANDRESCAN (destrucive).
     // make silent based on Msg.lParam
     // 0 = verbose, 1 = silent.
     procedure MSG_ClearGrid(var Msg: TMessage); message SCM_CLEAR_TIMEDROPS;
-    procedure MSG_ClearAndScan(var Msg: TMessage); message SCM_CLEARANDSCAN_TIMEDROPS;
-    procedure MSG_ScanMeets(var Msg: TMessage); message SCM_SCAN_TIMEDROPS;
+    procedure MSG_Connect(var Msg: TMessage); message SCM_CONNECT;
     procedure MSG_PushResults(var Msg: TMessage); message SCM_PUSH_TIMEDROPS;
+    procedure MSG_ScanMeets(var Msg: TMessage); message SCM_SCAN_TIMEDROPS;
+    procedure MSG_UpdateUISCM(var Msg: TMessage); message SCM_UPDATEUI_SCM;
+    procedure MSG_UpdateUITDS(var Msg: TMessage); message SCM_UPDATEUI_TDS;
+    procedure MSG_UpdateUINOODLES(var Msg: TMessage); message SCM_UPDATE_NOODLES;
 
   public
-    { Public declarations }
-    procedure Prepare(AConnection: TFDConnection);
-    property DolphinFolder: string read fDolphinMeetsFolder write fDolphinMeetsFolder;
   end;
+
+  const
+    AcceptedTimeKeeperDeviation = 0.3;
 
 var
   Main: TMain;
@@ -239,6 +234,24 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
+procedure TMain.actEnablePatchesExecute(Sender: TObject);
+begin
+  // toggle - enable/disable patching.
+  TAction(Sender).Checked := not(TAction(Sender).Checked);
+end;
+
+procedure TMain.actEnablePatchesUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
+end;
+
 procedure TMain.actnClearAndScanExecute(Sender: TObject);
 begin
   actnClearGridExecute(actnClearGrid);
@@ -267,14 +280,8 @@ begin
     // Because this proc is destructive - confirmation is required.
     mr := MessageDlg('Do you want to EMPTY TimeDrop''s' + sLineBreak + 'data tables and CLEAR the grid? ',
       mtConfirmation, [mbYes, mbNo], 0, mbNo);
-
-  { IsPositiveResult returns true if AModalResult is mrYes, mrOk,
-    mrYesToAll or mrAll, false otherwise }
   if IsPositiveResult(mr) then
   begin
-    // Shut down file system watcher...
-//    StopWatcher(fDirectoryWatcher);
-
     // Test DT directory exists...
     if DirectoryExists(Settings.MeetsFolder) then
     begin
@@ -295,8 +302,6 @@ begin
       end;
     end;
   end;
-
-//  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
 end;
 
 procedure TMain.actnClearGridUpdate(Sender: TObject);
@@ -314,9 +319,9 @@ end;
 procedure TMain.actnConnectToSCMExecute(Sender: TObject);
 var
   aLoginDlg: TLogin;  // 24/04/2020 uses simple INI access
+  NumOfLanes: integer;
 begin
   fDoLoginOnBoot := false; // Do Once...
-
   // -----------------------------------------------------------
   // 02/05/2025 connect - %AppData%\Artanemus\SCM\FDConnectionDefs.ini
   // -----------------------------------------------------------
@@ -339,7 +344,17 @@ begin
     TAction(Sender).Caption := 'Connect to the SCM database...';
   end;
 
-//  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0 , 0 ); // UPDATE UI
+  if SCM.DataIsActive then
+  begin
+    NumOfLanes := SCM.qrySwimClub.FieldByName('NumOfLanes').AsInteger;
+    // NOTE: TimeDrops maxium of ten lanes but some pools have 10 lanes.
+    if NumOfLanes in [1..12] then
+    begin
+      if frameNoodles.NumberOflanes <> NumOfLanes then
+        frameNoodles.NumberOflanes := NumOfLanes;
+    end;
+  end;
+
 end;
 
 procedure TMain.actnConnectToSCMUpdate(Sender: TObject);
@@ -412,32 +427,26 @@ begin
     if (TAction(Sender).Enabled = true) then
       TAction(Sender).Enabled := false;
     end;
-
 end;
 
 procedure TMain.actnLoadSessionExecute(Sender: TObject);
 begin
-  // open file explorer
-  // Assign default folder - else use components persistent data.
+  // file explorer init
   if Assigned(Settings) then
   begin
     if DirectoryExists(Settings.AppDataFolder) then
         FileOpenDlg.DefaultFolder := Settings.AppDataFolder;
   end;
-  //  FileOpenDlg.FileName := '';  // ignore last selection.
-  // open TFileSaveDlg to select folder to save too.
+  // open - select folder to save too.
   if FileOpenDlg.Execute then
   begin
-    // Assert file extension?...
     try
       tdsGrid.BeginUpdate;
       TDS.ReadFromBinary(FileOpenDlg.FileName);
     finally
-
       tdsGrid.EndUpdate;
     end;
   end;
-
 end;
 
 procedure TMain.actnLoadSessionUpdate(Sender: TObject);
@@ -452,7 +461,6 @@ begin
     if TAction(Sender).Enabled = true then
       TAction(Sender).Enabled := false;
   end;
-
 end;
 
 procedure TMain.actnPostExecute(Sender: TObject);
@@ -468,7 +476,6 @@ begin
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
     exit;
   end;
-
   // Establish if SCM AND DT are syncronized.
   aTDSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
   aTDEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
@@ -489,7 +496,6 @@ begin
       exit;
     end;
   end;
-
   // dialogue to pick 'selected' or 'all'.
   dlg := TPostData.Create(Self);
   mr := dlg.ShowModal;
@@ -528,9 +534,7 @@ begin
     StatBar.SimpleText := 'The POST was aborted.';
     Timer1.Enabled := true;
   end;
-
 end;
-
 
 procedure TMain.actnPostUpdate(Sender: TObject);
 begin
@@ -561,8 +565,7 @@ begin
     TDS.tblmHeat.ApplyMaster;
     TDS.tblmLane.ApplyMaster;
     tdsGrid.EndUpdate;
-    // Update lblEventDetailsTD.
-    // paint cell icons into grid
+    // Update lblEventDetailsTD. Paint cell icons into grid.
     PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
     end;
   dlg.Free;
@@ -620,7 +623,6 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
-
 end;
 
 procedure TMain.actnReConstructTDResultFilesExecute(Sender: TObject);
@@ -648,7 +650,6 @@ begin
       PChar('Re-Construct & Export TD Results'), MB_ICONINFORMATION or MB_OK);
   end;
   dlg.Free;
-
 end;
 
 procedure TMain.actnReConstructTDResultFilesUpdate(Sender: TObject);
@@ -669,7 +670,6 @@ begin
   end
   else
       TAction(Sender).Enabled := false;
-
 end;
 
 procedure TMain.actnRefreshExecute(Sender: TObject);
@@ -679,14 +679,12 @@ begin
   SCMGrid.EndUpdate;
   StatBar.SimpleText := 'Refresh done.'; // not painting text?
   Timer1.Enabled := true;
-
 end;
 
 procedure TMain.actnRestartDirectoryWatcherExecute(Sender: TObject);
 begin
   DirectoryWatcher.StopWatcher(fDirectoryWatcher);
   DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
-
 end;
 
 procedure TMain.actnRestartDirectoryWatcherUpdate(Sender: TObject);
@@ -695,18 +693,15 @@ begin
     actnRestartDirectoryWatcher.ImageName := 'VisibilityOn'
   else
     actnRestartDirectoryWatcher.ImageName := 'VisibilityOff';
-
 end;
 
 procedure TMain.actnRptSCMEventBasicExecute(Sender: TObject);
 var
-rpt: TReportsSCM;
+  rpt: TReportsSCM;
 begin
   try
-    rpt := TReportsSCM.Create(Self);
-  except
-    on E: Exception do
-    exit;
+    rpt := TReportsSCM.Create(self);
+  except on E: Exception do exit;
   end;
   rpt.RptExecute;
   FreeAndNil(rpt);
@@ -721,8 +716,7 @@ begin
   end
   else
   begin
-    if TAction(Sender).Enabled = true then
-      TAction(Sender).Enabled := false;
+    if TAction(Sender).Enabled = true then TAction(Sender).Enabled := false;
   end;
 end;
 
@@ -759,32 +753,81 @@ begin
   end;
 end;
 
-procedure TMain.actnSelectSwimClubExecute(Sender: TObject);
-begin
-  (*
+procedure TMain.actnScanMeetsFolderExecute(Sender: TObject);
 var
-  dlg: TSwimClubPicker;
   mr: TModalResult;
+  LList: TStringDynArray;
+  dlg : TScanOptions;
+  I: integer;
+  LSearchOption: TSearchOption;
+  WildCardStr: String;
 begin
-    dlg := TSwimClubPicker.Create(Self);
-    dlg.rtnSwimClubID := 0;
-    // the picker will locate to the given session id.
-    if AppData.qrySwimClub.Active and not AppData.qrySwimClub.IsEmpty then
-    begin
-      dlg.rtnSwimClubID := AppData.qrySwimClub.FieldByName('SwimClubID').AsInteger;
-    end;
+  // Do not do recursive extract into subfolders
+  LSearchOption := TSearchOption.soTopDirectoryOnly;
+  WildCardStr := '';
 
+  if (not fClearAndScan_Done) or (fDoClearAndScanOnBoot) then
+  begin
+    mr := mrOK;
+    WildCardStr := 'Session*.JSON';
+  end
+  else
+  begin
+    dlg := TScanOptions.Create(Self);
     mr := dlg.ShowModal;
-    if IsPositiveResult(mr) and (dlg.rtnSwimClubID > 0) then
+    if dlg.rgrpScanOptions.ItemIndex = 0 then
+      WildCardStr := 'Session*.JSON'
+    else
+      WildCardStr := 'Session' + dlg.edtSessionID.Text + '*.JSON';
+    dlg.free;
+  end;
+
+  if IsPositiveResult(mr) then
+  begin
+    // Test DT directory exists...
+    if DirectoryExists(Settings.MeetsFolder) then
     begin
-      AppData.MSG_Handle := 0;
-      AppData.LocateSCMSwimClubID(dlg.rtnSwimClubID);
-      AppData.MSG_Handle := Self.Handle;
+      if DirHasResultFiles(Settings.MeetsFolder) then
+      begin
+        try
+          // For files use GetFiles method
+          LList := TDirectory.GetFiles(Settings.MeetsFolder, WildCardStr, LSearchOption);
+        except
+          // Catch the possible exceptions
+        end;
+
+        if Length(LList) > 0 then
+        begin
+          TDS.DisableAllTDControls;
+          tdsGrid.BeginUpdate;
+          try
+            // NOTE: ProcessFile.
+            for I := 0 to Length(LList) - 1 do
+            begin
+              ProcessFile(LList[i]);
+            end;
+          finally
+            TDS.EnableAllTDControls;
+            tdsGrid.EndUpdate;
+          end;
+        end;
+        fClearAndScan_Done :=  true;
+        PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0); // Update UI.
+      end;
     end;
-    dlg.Free;
-    UpdateCaption;
-    PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
-    *)
+  end;
+end;
+
+procedure TMain.actnScanMeetsFolderUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnSCMSessionExecute(Sender: TObject);
@@ -828,6 +871,34 @@ begin
   end;
 end;
 
+procedure TMain.actnSelectSwimClubExecute(Sender: TObject);
+begin
+  (*
+var
+  dlg: TSwimClubPicker;
+  mr: TModalResult;
+begin
+    dlg := TSwimClubPicker.Create(Self);
+    dlg.rtnSwimClubID := 0;
+    // the picker will locate to the given session id.
+    if AppData.qrySwimClub.Active and not AppData.qrySwimClub.IsEmpty then
+    begin
+      dlg.rtnSwimClubID := AppData.qrySwimClub.FieldByName('SwimClubID').AsInteger;
+    end;
+
+    mr := dlg.ShowModal;
+    if IsPositiveResult(mr) and (dlg.rtnSwimClubID > 0) then
+    begin
+      AppData.MSG_Handle := 0;
+      AppData.LocateSCMSwimClubID(dlg.rtnSwimClubID);
+      AppData.MSG_Handle := Self.Handle;
+    end;
+    dlg.Free;
+    UpdateCaption;
+    PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
+    *)
+end;
+
 procedure TMain.actnSelectSwimClubUpdate(Sender: TObject);
 begin
   if (Assigned(SCM)) and (SCM.DataIsActive = true) then
@@ -838,19 +909,6 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
-end;
-
-procedure TMain.actnSetDTMeetsFolderExecute(Sender: TObject);
-var
-  fn: TFileName;
-begin
-  if PickDTFolderDlg.Execute then
-    fn := PickDTFolderDlg.FileName
-  else
-    Exit; // User cancelled.
-  // Make the path persistent in JSON.
-  fDolphinMeetsFolder := fn;
-  // SavePreferencesToJSON.
 end;
 
 procedure TMain.actnSyncSCMExecute(Sender: TObject);
@@ -936,89 +994,6 @@ procedure TMain.actnSyncTDUpdate(Sender: TObject);
 begin
   if (Assigned(SCM)) and (Assigned(TDS)) and (SCM.DataIsActive = true)
     and (TDS.DataIsActive = true)  then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-    if TAction(Sender).Enabled then
-      TAction(Sender).Enabled := false;
-end;
-
-procedure TMain.actnScanMeetsFolderExecute(Sender: TObject);
-var
-  mr: TModalResult;
-  LList: TStringDynArray;
-  dlg : TScanOptions;
-  I: integer;
-  LSearchOption: TSearchOption;
-  WildCardStr: String;
-begin
-  // Do not do recursive extract into subfolders
-  LSearchOption := TSearchOption.soTopDirectoryOnly;
-  WildCardStr := '';
-
-  if (not fClearAndScan_Done) or (fDoClearAndScanOnBoot) then
-  begin
-    mr := mrOK;
-    WildCardStr := 'Session*.JSON';
-  end
-  else
-  begin
-    dlg := TScanOptions.Create(Self);
-    mr := dlg.ShowModal;
-    if dlg.rgrpScanOptions.ItemIndex = 0 then
-      WildCardStr := 'Session*.JSON'
-    else
-      WildCardStr := 'Session' + dlg.edtSessionID.Text + '*.JSON';
-    dlg.free;
-  end;
-
-  if IsPositiveResult(mr) then
-  begin
-    // Shut down file system watcher...
-//    DirectoryWatcher.StopWatcher(fDirectoryWatcher);
-
-    // Test DT directory exists...
-    if DirectoryExists(Settings.MeetsFolder) then
-    begin
-      if DirHasResultFiles(Settings.MeetsFolder) then
-      begin
-        try
-          // For files use GetFiles method
-          LList := TDirectory.GetFiles(Settings.MeetsFolder, WildCardStr, LSearchOption);
-        except
-          // Catch the possible exceptions
-        end;
-
-        if Length(LList) > 0 then
-        begin
-          TDS.DisableAllTDControls;
-          tdsGrid.BeginUpdate;
-          try
-            // NOTE: ProcessFile.
-            for I := 0 to Length(LList) - 1 do
-            begin
-              ProcessFile(LList[i]);
-            end;
-          finally
-            TDS.EnableAllTDControls;
-            tdsGrid.EndUpdate;
-          end;
-        end;
-        fClearAndScan_Done :=  true;
-        PostMessage(self.Handle, SCM_UPDATEUI_TDS, 0, 0); // Update UI.
-      end;
-    end;
-  end;
-
-//  DirectoryWatcher.StartWatcher(fDirectoryWatcher, OnFileChanged);
-
-  end;
-
-procedure TMain.actnScanMeetsFolderUpdate(Sender: TObject);
-begin
-  if Assigned(TDS) and TDS.DataIsActive then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -1377,6 +1352,10 @@ begin
   // Update UI controls ...
   // paint cell icons into grid.
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+
+  // Update noodles
+  if Assigned(NoodleFrame) then
+    PostMessage(NoodleFrame.Handle, SCM_UPDATE_NOODLES, 0, 0);
 end;
 
 procedure TMain.btnPrevEventClick(Sender: TObject);
@@ -1413,8 +1392,10 @@ begin
         SCM.dsHeat.DataSet.prior;
       end;
     end;
+    // A scroll event in qryHeat may occur and message is posted twice.
     PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
 end;
+
 
 procedure TMain.FormCreate(Sender: TObject);
 var
@@ -1499,6 +1480,12 @@ begin
       IMG := TIMG.Create(Self);
     except on E: Exception do
     end;
+  end;
+
+  if Assigned(frameNoodles) then
+  begin
+    frameNoodles.scmGrid := Self.scmGrid;
+    frameNoodles.tdsGrid := Self.tdsGrid;
   end;
 
   {
@@ -1586,6 +1573,13 @@ begin
   PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
 
+  // Allow the form to receive KeyDown events
+  Self.KeyPreview := True;
+
+  // if an action is assigned to a speed button - the image disappears!
+  spbtnPost.ImageIndex := 13;
+  spbtnAutoPatch.ImageIndex := 14;
+
 end;
 
 procedure TMain.FormDestroy(Sender: TObject);
@@ -1615,12 +1609,10 @@ gracefully without causing the application to hang.
   end;
 
   if Assigned(Settings) then
-  begin
-    SaveToSettings;
-    if Assigned(TDS) then TDS.MSG_Handle := 0;
-    if Assigned(SCM) then SCM.MSG_Handle := 0;
     FreeAndNil(Settings);
-  end;
+
+  if Assigned(TDS) then TDS.MSG_Handle := 0;
+  if Assigned(SCM) then SCM.MSG_Handle := 0;
 
 end;
 
@@ -1628,6 +1620,27 @@ procedure TMain.FormHide(Sender: TObject);
 begin
   if Assigned(TDS) then TDS.MSG_Handle := 0;
   if Assigned(SCM) then SCM.MSG_Handle := 0;
+end;
+
+procedure TMain.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key = VK_DELETE then
+  begin
+    if Assigned(frameNoodles) then
+    begin
+      if frameNoodles.SelectedNoodle <> nil then
+      begin
+        frameNoodles.actDeleteNoodle.Execute;
+        Key := 0; // Mark key as handled.
+      end;
+    end;
+  end;
+end;
+
+procedure TMain.FormResize(Sender: TObject);
+begin
+//  PaintBoxNoodles.Invalidate;
+//   UpdatePaintBoxBounds; // Reposition paintbox when form resizes
 end;
 
 procedure TMain.FormShow(Sender: TObject);
@@ -1669,12 +1682,6 @@ begin
   else
     // Assert UI display is up-to-date.
     PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0 );
-
-end;
-
-procedure TMain.LoadFromSettings;
-begin
-  fDolphinMeetsFolder := Settings.MeetsFolder;
 end;
 
 procedure TMain.LoadSettings;
@@ -1685,7 +1692,20 @@ begin
     Settings.SaveToFile();
   end;
   Settings.LoadFromFile();
-  LoadFromSettings();
+end;
+
+procedure TMain.MSG_ClearAndScan(var Msg: TMessage);
+begin
+  // Destructive - call on boot.
+  if actnClearAndScan.Enabled and (not fClearAndScan_Done) then
+    actnClearAndScanExecute(Self);
+end;
+
+procedure TMain.MSG_ClearGrid(var Msg: TMessage);
+begin
+  // Destructive - call on boot.
+  if actnClearGrid.Enabled then
+    actnClearGridExecute(Self);
 end;
 
 procedure TMain.MSG_Connect(var Msg: TMessage);
@@ -1708,18 +1728,23 @@ begin
     actnScanMeetsFolderExecute(Self);
 end;
 
-procedure TMain.MSG_ClearGrid(var Msg: TMessage);
+procedure TMain.MSG_UpdateUINOODLES(var Msg: TMessage);
 begin
-  // Destructive - call on boot.
-  if actnClearGrid.Enabled then
-    actnClearGridExecute(Self);
-end;
-
-procedure TMain.MSG_ClearAndScan(var Msg: TMessage);
-begin
-  // Destructive - call on boot.
-  if actnClearAndScan.Enabled and (not fClearAndScan_Done) then
-    actnClearAndScanExecute(Self);
+  if Assigned(frameNoodles) then
+  begin
+    frameNoodles.ClearNoodles;
+    //  frameNoodles.pbNoodles.Invalidate;
+    if Assigned(TDS) and TDS.DataIsActive then
+    begin
+      // tblmHeat has scrolled and noodles need to be re-draw
+      if not (TDS.tblmNoodle.IsEmpty) then
+      begin
+        frameNoodles.LoadNoodleData();
+      end;
+    end;
+  end;
+  frameNoodles.Invalidate;
+  frameNoodles.pbNoodles.Invalidate;
 end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
@@ -2071,6 +2096,13 @@ begin
           UpdateCellIcons(ADataSet, J, ActiveRT);
         end;
 
+        // TIME DROPS AUTOMATIC RACETIME.
+        artFinalTime:
+        begin
+          TDS.SetActiveRT(ADataSet, artFinalTime);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
+
         // M A N U A L .
         artManual:
         begin
@@ -2088,6 +2120,12 @@ begin
         artSplit:
         begin
           TDS.SetActiveRT(ADataSet, artSplit);
+          UpdateCellIcons(ADataSet, J, ActiveRT);
+        end;
+
+        artPadTime:
+        begin
+          TDS.SetActiveRT(ADataSet, artPadTime);
           UpdateCellIcons(ADataSet, J, ActiveRT);
         end;
 
@@ -2139,18 +2177,6 @@ begin
   end;
 end;
 
-procedure TMain.Prepare(AConnection: TFDConnection);
-begin
-  FConnection := AConnection;
-  Caption := 'SwimClubMeet - Dolphin Timing. ';
-end;
-
-procedure TMain.SaveToSettings;
-begin
-  Settings.MeetsFolder := fDolphinMeetsFolder;
-  Settings.SaveToFile();
-end;
-
 procedure TMain.scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var
   Value: string);
 begin
@@ -2181,6 +2207,7 @@ begin
   end;
 end;
 
+
 procedure TMain.tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
 var
   Grid: TDBAdvGrid;
@@ -2196,118 +2223,124 @@ begin
 
   if (ARow >= tdsGrid.FixedRows) then
   begin
-    case ACol of
-      7: // C O L U M N   E N T E R   U S E R   R A C E T I M E  .
+    if ACol = tdsGrid.ColumnByName['RT'].Index then // RaceTime
+    begin
+      // C O L U M N   E N T E R   U S E R   R A C E T I M E  .
+      // 2025/04/16 :: The ALT key isn't required.
+      ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+      if (ActiveRT = artUser) then // Enter a user race-time.
+      begin
+        grid.BeginUpdate;
+        // create the 'Enter Race-Time' dialogue.
+        dlg := TUserRaceTime.Create(Self);
+        // Assign : Current displayed racetime.
+        dlg.RaceTime := ADataSet.FieldByName('RaceTime').AsDateTime;
+        // Assign : Store user racetime.
+        dlg.RaceTimeUser := ADataSet.FieldByName('RaceTimeUser').AsDateTime;
+        mr := dlg.ShowModal;
+        if IsPositiveResult(mr) then
         begin
-          // 2025/04/16 :: The ALT key isn't required.
-          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
-          if (ActiveRT = artUser) then // Enter a user race-time.
-          begin
-            grid.BeginUpdate;
-            // create the 'Enter Race-Time' dialogue.
-            dlg := TUserRaceTime.Create(Self);
-            // Assign : Current displayed racetime.
-            dlg.RaceTime := ADataSet.FieldByName('RaceTime').AsDateTime;
-            // Assign : Store user racetime.
-            dlg.RaceTimeUser := ADataSet.FieldByName('RaceTimeUser').AsDateTime;
-            mr := dlg.ShowModal;
-            if IsPositiveResult(mr) then
+          t := dlg.RaceTimeUser;
+          ADataSet.Edit;
+          try
             begin
-              t := dlg.RaceTimeUser;
-              ADataSet.Edit;
-              try
-                begin
-                  if (t = 0) then
-                    ADataSet.FieldByName('RaceTime').Clear
-                  else
-                    ADataSet.FieldByName('RaceTime').AsDateTime := t;
-                  ADataSet.FieldByName('RaceTimeUser').AsDateTime := t;
-                  ADataSet.Post;
-                end;
-              except on E: Exception do
-                ADataSet.Cancel;
-              end;
+              if (t = 0) then
+                ADataSet.FieldByName('RaceTime').Clear
+              else
+                ADataSet.FieldByName('RaceTime').AsDateTime := t;
+              ADataSet.FieldByName('RaceTimeUser').AsDateTime := t;
+              ADataSet.Post;
             end;
-            dlg.Free;
-            // if routine 'POST selected' is immediately called after the
-            // above change in user's racetime - the grid reports
-            // SelectedRowCount = 0. Solution :: re-select the row.
-            grid.SelectRows(ARow,1); // REQUIRED.
-            grid.EndUpdate;
-
-            {TODO -oBSA -cGeneral : Row still needs a repaint!
-            grid.repaintRow(ARow);  NOT WORKING...
-            grid.ClearRowSelect;
-            grid.invalidate;  }
-
+          except on E: Exception do
+            ADataSet.Cancel;
           end;
         end;
-      6: // C O L U M N   T O G G L E   A C T I V E - R T .
+        dlg.Free;
+        // if routine 'POST selected' is immediately called after the
+        // above change in user's racetime - the grid reports
+        // SelectedRowCount = 0. Solution :: re-select the row.
+
+//        grid.SelectRows(ARow,1); // REQUIRED.
+        grid.EndUpdate;
+
+        {TODO -oBSA -cGeneral : Row still needs a repaint!
+        grid.repaintRow(ARow);  NOT WORKING...
+        grid.ClearRowSelect;
+        grid.invalidate;  }
+
+      end;
+    end;
+
+    if ACol = tdsGrid.ColumnByName['ActiveRT'].Index then
+    begin
+      // C O L U M N   T O G G L E   A C T I V E - R T .
+      grid.BeginUpdate;
+      { ALT KEY is active :: Toggle tblEntrant.ActiveRT}
+      if (GetKeyState(VK_MENU) < 0) then
+        // toggle backwards
+        ActiveRT := TDS.ToggleActiveRT(ADataSet, 1)
+      else
+        // toggle forward (default)
+        ActiveRT := TDS.ToggleActiveRT(ADataSet);
+      { Modifies tblEntrant: ActiveRT, RaceTime, imgActiveRT }
+      TDS.SetActiveRT(ADataSet, ActiveRT);
+      case ActiveRT of
+        artAutomatic, artFinalTime:
         begin
-          grid.BeginUpdate;
-          { ALT KEY is active :: Toggle tblEntrant.ActiveRT}
-          if (GetKeyState(VK_MENU) < 0) then
-            // toggle backwards
-            ActiveRT := TDS.ToggleActiveRT(ADataSet, 1)
-          else
-            // toggle forward (default)
-            ActiveRT := TDS.ToggleActiveRT(ADataSet);
-          { Modifies tblEntrant: ActiveRT, RaceTime, imgActiveRT }
-          TDS.SetActiveRT(ADataSet, ActiveRT);
-          case ActiveRT of
-            artAutomatic:
-            begin
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artManual:
-            begin
-              // The RaceTime needs to be recalculated...
-              TDS.CalcRaceTimeM(ADataSet);
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artUser:
-            begin
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-            artSplit:
-            begin
-              // The RaceTime needs to be recalculated...
-              TDS.CalcRTSplitTime(ADataSet);
-              UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            end;
-
-            artNone:
-               UpdateCellIcons(ADataSet, ARow, ActiveRT);
-          end;
-          grid.EndUpdate;
+          UpdateCellIcons(ADataSet, ARow, ActiveRT);
         end;
-      3, 4, 5:
+        artManual:
         begin
-
-          if ADataSet.FieldByName('LaneIsEmpty').AsBoolean then exit;
-
-          ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
-          // Must be artmanual for the user to toggle watch-time state.
-          if ActiveRT <> artManual then exit;
-
-          // the ALT key is required to perform toggle.
-          if (GetKeyState(VK_MENU) < 0) then
-          begin
-            s := 'Time' + IntToStr(ACol - 2);
-            // Can toggle an empty TimeKeeper's stopwatch time...
-            if (ADataSet.FieldByName(s).IsNull) then exit;
-            grid.BeginUpdate;
-            // modify TimeKeeper's stopwatch state.
-            // idx in [1..3]. Asserts : dtTimeKeeperMode = dtManual.
-            TDS.ToggleWatchTime(ADataSet, (Acol - 2), ActiveRT);
-            UpdateCellIcons(ADataSet, ARow, ActiveRT);
-            // The RaceTime needs to be recalculated...
-            TDS.CalcRaceTimeM(ADataset);
-            grid.EndUpdate;
-          end;
+          // The RaceTime needs to be recalculated...
+          TDS.CalcRaceTimeM(ADataSet);
+          UpdateCellIcons(ADataSet, ARow, ActiveRT);
         end;
+        artUser, artPadTime:
+        begin
+          UpdateCellIcons(ADataSet, ARow, ActiveRT);
+        end;
+        artSplit:
+        begin
+          // The RaceTime needs to be recalculated...
+          TDS.CalcRTSplitTime(ADataSet);
+          UpdateCellIcons(ADataSet, ARow, ActiveRT);
+        end;
+        artNone:
+           UpdateCellIcons(ADataSet, ARow, ActiveRT);
+      end;
+      grid.EndUpdate;
+    end;
+
+    if (ACol = tdsGrid.ColumnByName['T1'].Index)
+      or (ACol = tdsGrid.ColumnByName['T2'].Index)
+        or (ACol = tdsGrid.ColumnByName['T3'].Index) then
+    begin
+      if ADataSet.FieldByName('LaneIsEmpty').AsBoolean then exit;
+      ActiveRT := scmActiveRT(ADataSet.FieldByName('ActiveRT').AsInteger);
+      // Must be artmanual for the user to toggle watch-time state.
+      if ActiveRT <> artManual then exit;
+      // the ALT key is required to perform toggle.
+      if (GetKeyState(VK_MENU) < 0) then
+      begin
+        s := tdsGrid.Columns[ACol].FieldName; // Time1, Time2, Time3
+        // Can toggle an empty TimeKeeper's stopwatch time...
+        if (ADataSet.FieldByName(s).IsNull) then exit;
+        grid.BeginUpdate;
+        // modify TimeKeeper's stopwatch state.
+        // idx in [1..3]. Asserts : dtTimeKeeperMode = dtManual.
+        {TODO -oBSA -cGeneral : Obtain an index either by using name suffix
+          or peek at Tag value for ACol ?? - which ever is clearer and concise.
+         TDS.ToggleWatchTime(ADataSet, (Acol - 1), ActiveRT);
+          }
+        TDS.ToggleWatchTime(ADataSet, tdsGrid.Columns[Acol].Tag, ActiveRT);
+        UpdateCellIcons(ADataSet, ARow, ActiveRT);
+        // The RaceTime needs to be recalculated...
+        TDS.CalcRaceTimeM(ADataset);
+        grid.EndUpdate;
+      end;
     end;
   end;
+
 end;
 
 procedure TMain.Timer1Timer(Sender: TObject);
@@ -2342,7 +2375,7 @@ end;
 procedure TMain.UpdateCellIcons(ADataset: TDataSet; ARow: Integer; AActiveRT:
     scmActiveRT);
 var
-I: integer;
+I, indx: integer;
 s: string;
 b, b2: boolean;
 begin
@@ -2351,33 +2384,34 @@ begin
 
   tdsGrid.BeginUpdate;
   // Clear out - point to cell icon
-  tdsGrid.RemoveImageIdx(7, ARow);
+  indx := tdsGrid.ColumnByName['ActiveRT'].Index;
+  tdsGrid.RemoveImageIdx(indx, ARow);
 
   case AActiveRT of
     artAutomatic:
     begin
-      // Update watch time : cell's icon.
-      for I := 3 to 5 do
+      // Update watch time : cell's icon.  for I := 2 to 4 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(I, ARow);
-        s := 'Time' + IntToStr(I - 2);
+        s := tdsGrid.Columns[I].FieldName; // Time1, Time2, Time3
         if ADataSet.FieldByName(s).IsNull then
           continue
         else
         begin
-          s := 'T' + IntToStr(I - 2) + 'A';
+          s := tdsGrid.Columns[I].Name + 'A'; // T1A, T2A, T3A
           b := ADataSet.FieldByName(s).AsBoolean;
           // Empty, zero or bad race-time - display CROSS in BOX.
           if (b = false) then
           begin
-              tdsGrid.AddImageIdx(I, ARow, 5, TCellHAlign.haFull,
+            tdsGrid.AddImageIdx(I, ARow, 5, TCellHAlign.haFull,
                 TCellVAlign.vaFull);
           end;
           { watch-time 1 :
               If the time is valid but the deviation between min and mid_
               is not acceptable then ...
           }
-          if (I = 3)  then
+          if (I = tdsGrid.ColumnByName['T1'].Index)  then
           begin
             s := 'TDev1';
             b2 := ADataSet.FieldByName(s).AsBoolean;
@@ -2392,7 +2426,7 @@ begin
               If the time is valid but the deviation between mid and max
               is not acceptable then ...
           }
-          if (I = 5)  then
+          if (I = tdsGrid.ColumnByName['T3'].Index)  then
           begin
             s := 'TDev2';
             b2 := ADataSet.FieldByName(s).AsBoolean;
@@ -2408,17 +2442,25 @@ begin
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'AUTO';
 
     end;
+
+    artFinalTime:
+    begin
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
+        tdsGrid.RemoveImageIdx(I, ARow);
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'FINALTIME';
+    end;
+
     artManual:
     begin
-      for I := 3 to 5 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(I, ARow);
-        s := 'Time' + IntToStr(I - 2);
+        s := tdsGrid.Columns[I].FieldName; // Time1, Time2, Time3
         if ADataSet.FieldByName(s).IsNull then
           continue
         else
           begin
-            s := 'T' + IntToStr(I - 2) + 'M';
+            s := tdsGrid.Columns[I].Name + 'M'; // T1M, T2M, T3M
             b := ADataSet.FieldByName(s).AsBoolean;
             // Empty, zero or illegal watch time - display CROSS in BOX.
             if (not b) then
@@ -2430,38 +2472,35 @@ begin
       end;
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'MANUAL';
     end;
+
     artUser:
     begin
-      for I := 3 to 5 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(i, ARow);
-      { s := 'Time' + IntToStr(I - 2);
-        if ADataSet.FieldByName(s).IsNull then
-        continue;
-        tdsGrid.AddImageIdx(I, ARow, 7, TCellHAlign.haFull,
-        TCellVAlign.vaFull); }
       end;
-      // USER MODE : display - cell pointer
-      // tdsGrid.AddImageIdx(7, ARow, 9, TCellHAlign.haAfterText, TCellVAlign.vaTop);
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'EDIT RT';
     end;
+
     artSplit:
     begin
-      for I := 3 to 5 do
-      begin
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
         tdsGrid.RemoveImageIdx(I, ARow);
-        // display small blue bug.
-//        tdsGrid.AddImageIdx(I, ARow, 11, TCellHAlign.haFull,
-//            TCellVAlign.vaFull);
-      end;
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'SPLIT';
     end;
+
+    artPadTime:
+    begin
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
+        tdsGrid.RemoveImageIdx(I, ARow);
+      tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'PADTIME';
+    end;
+
     artNone:
     begin
-      for I := 3 to 5 do
+      for I := tdsGrid.ColumnByName['T1'].Index to tdsGrid.ColumnByName['T3'].Index do
       begin
         tdsGrid.RemoveImageIdx(I, ARow);
-        // display red cross.
         tdsGrid.AddImageIdx(I, ARow, 8, TCellHAlign.haFull,
             TCellVAlign.vaFull);
       tdsGrid.ColumnByFieldName['imgActiveRT'].Header := 'NONE';
@@ -2478,49 +2517,5 @@ end;
 
 
 
-
-
-
-
-
-
-(*
-CONST
-    {MSG_CONFIRM_RECONSTRUCT =
-        'This uses the data in the current session to build Time-Drops %s files.' +
-            sLineBreak +
-                'Files are saved to the reconstruct folder specified in preferences.' +
-                    sLineBreak +
-                        'Do you want to perform the reconstruct?';
-                        }
-  {  MSG_RECONSTRUCT_COMPLETE = 'Re-construct and export of %s files is complete.';
-  }
-
-procedure TMain.ReconstructAndExportFiles(fileExtension: string; messageText:
-  string);
-var
-  mr: TModalResult;
-begin
-  if AppData.qrysession.Active then
-  begin
-    mr := MessageBox(0,
-      PChar(Format(MSG_CONFIRM_RECONSTRUCT, [fileExtension])),
-      PChar(Format(CAPTION_RECONSTRUCT, [fileExtension])), MB_ICONQUESTION or
-      MB_YESNO);
-    if isPositiveResult(mr) then
-    begin
-      scmGrid.BeginUpdate;
-      scmGrid.DataSource.DataSet.DisableControls;
-      ReConstructSession(AppData.qrySession.FieldByName('SessionID').AsInteger);
-      scmGrid.DataSource.DataSet.EnableControls;
-      scmGrid.EndUpdate;
-      MessageBox(0,
-        PChar(Format(MSG_RECONSTRUCT_COMPLETE, [fileExtension])),
-        PChar(Format(CAPTION_RECONSTRUCT, [fileExtension])), MB_ICONINFORMATION
-          or MB_OK);
-    end;
-  end;
-end;
-*)
 
 end.

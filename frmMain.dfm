@@ -4,7 +4,7 @@ object Main: TMain
   BorderStyle = bsSingle
   Caption = 'SwimClubMeet - TimeDrops'
   ClientHeight = 833
-  ClientWidth = 1444
+  ClientWidth = 1460
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -8972,12 +8972,14 @@ object Main: TMain
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnHide = FormHide
+  OnKeyDown = FormKeyDown
+  OnResize = FormResize
   OnShow = FormShow
   TextHeight = 21
   object actnMenuBar: TActionMainMenuBar
     Left = 0
     Top = 0
-    Width = 1444
+    Width = 1460
     Height = 27
     UseSystemFont = False
     ActionManager = actnManager
@@ -8997,7 +8999,7 @@ object Main: TMain
   object rpnlBody: TRelativePanel
     Left = 0
     Top = 27
-    Width = 1444
+    Width = 1460
     Height = 771
     ControlCollection = <
       item
@@ -9010,24 +9012,14 @@ object Main: TMain
         AlignVerticalCenterWithPanel = False
       end
       item
-        Control = pnlSCM
+        Control = pnlNoodle
         AlignBottomWithPanel = True
         AlignHorizontalCenterWithPanel = False
         AlignLeftWithPanel = False
         AlignRightWithPanel = False
         AlignTopWithPanel = True
         AlignVerticalCenterWithPanel = False
-        RightOf = pnlTool1
-      end
-      item
-        Control = pnlTDS
-        AlignBottomWithPanel = True
-        AlignHorizontalCenterWithPanel = False
-        AlignLeftWithPanel = False
-        AlignRightWithPanel = False
-        AlignTopWithPanel = True
-        AlignVerticalCenterWithPanel = False
-        RightOf = pnlSCM
+        RightOf = pnlSCMGrid
       end
       item
         Control = pnlTool2
@@ -9037,13 +9029,33 @@ object Main: TMain
         AlignRightWithPanel = False
         AlignTopWithPanel = True
         AlignVerticalCenterWithPanel = False
-        RightOf = pnlTDS
+        RightOf = pnlTDSGrid
+      end
+      item
+        Control = pnlSCMGrid
+        AlignBottomWithPanel = False
+        AlignHorizontalCenterWithPanel = False
+        AlignLeftWithPanel = False
+        AlignRightWithPanel = False
+        AlignTopWithPanel = False
+        AlignVerticalCenterWithPanel = False
+        RightOf = pnlTool1
+      end
+      item
+        Control = pnlTDSGrid
+        AlignBottomWithPanel = False
+        AlignHorizontalCenterWithPanel = False
+        AlignLeftWithPanel = False
+        AlignRightWithPanel = False
+        AlignTopWithPanel = False
+        AlignVerticalCenterWithPanel = False
+        RightOf = pnlNoodle
       end>
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
     DesignSize = (
-      1444
+      1460
       771)
     object pnlTool1: TPanel
       AlignWithMargins = True
@@ -9215,31 +9227,149 @@ object Main: TMain
         Brush.Color = clTomato
       end
     end
-    object pnlSCM: TPanel
+    object pnlNoodle: TPanel
       AlignWithMargins = True
-      Left = 153
+      Left = 623
       Top = 3
-      Width = 525
+      Width = 150
       Height = 765
       BevelOuter = bvNone
-      Color = 5988209
       ParentBackground = False
       TabOrder = 1
+      inline frameNoodles: TNoodleFrame
+        Left = 0
+        Top = 152
+        Width = 150
+        Height = 521
+        TabOrder = 0
+        ExplicitTop = 152
+        inherited pbNoodles: TPaintBox
+          ExplicitWidth = 150
+          ExplicitHeight = 520
+        end
+      end
+    end
+    object pnlTool2: TPanel
+      AlignWithMargins = True
+      Left = 1306
+      Top = 3
+      Width = 144
+      Height = 765
+      Anchors = []
+      BevelOuter = bvNone
+      Color = clDimgray
+      ParentBackground = False
+      TabOrder = 2
+      object stackpnlTool2: TStackPanel
+        Left = 0
+        Top = 84
+        Width = 144
+        Height = 269
+        BevelOuter = bvNone
+        ControlCollection = <
+          item
+            Control = sbtnDirWatcher
+          end
+          item
+            Control = sbtnSyncDTtoSCM
+            HorizontalPositioning = sphpLeft
+          end
+          item
+            Control = spbtnPost
+            HorizontalPositioning = sphpLeft
+          end
+          item
+            Control = spbtnAutoPatch
+            HorizontalPositioning = sphpLeft
+          end
+          item
+            Control = ShapeSpacer
+          end>
+        HorizontalPositioning = sphpCenter
+        Spacing = 4
+        TabOrder = 0
+        object sbtnDirWatcher: TSpeedButton
+          Left = 8
+          Top = 0
+          Width = 128
+          Height = 41
+          Hint = 'Indicates the status of the Directory Watcher.'
+          AllowAllUp = True
+          GroupIndex = 1
+          ImageIndex = 18
+          ImageName = 'VisibilityOn'
+          Images = IMG.vimglistMenu
+          Enabled = False
+          ParentShowHint = False
+          ShowHint = True
+        end
+        object sbtnSyncDTtoSCM: TSpeedButton
+          Left = 0
+          Top = 45
+          Width = 128
+          Height = 41
+          Hint = 'Syncronize Time Drops to SCM.'
+          Caption = 'SYNC TO SCM'
+          Images = IMG.vimglistMenu
+          ParentShowHint = False
+          ShowHint = True
+          OnClick = actnSyncTDExecute
+        end
+        object spbtnPost: TSpeedButton
+          Left = 0
+          Top = 90
+          Width = 128
+          Height = 41
+          Action = actnPost
+          Images = IMG.vimglistMenu
+          ParentShowHint = False
+          ShowHint = True
+        end
+        object spbtnAutoPatch: TSpeedButton
+          Left = 0
+          Top = 135
+          Width = 128
+          Height = 41
+          Action = actEnablePatches
+          Images = IMG.vimglistMenu
+          ParentShowHint = False
+          ShowHint = True
+        end
+        object ShapeSpacer: TShape
+          AlignWithMargins = True
+          Left = 11
+          Top = 186
+          Width = 121
+          Height = 4
+          Margins.Top = 6
+          Margins.Bottom = 6
+          Brush.Color = clTomato
+        end
+      end
+    end
+    object pnlSCMGrid: TPanel
+      Left = 150
+      Top = 0
+      Width = 470
+      Height = 765
+      BevelOuter = bvNone
+      TabOrder = 3
       object lblEventDetails: TLabel
         Left = 0
         Top = 28
-        Width = 497
-        Height = 64
+        Width = 470
+        Height = 62
         Hint = 
           'Session : Event : Distance+Stroke : Heat.'#13#10'2nd line - Event Desc' +
           'ription. '
+        Align = alTop
         Alignment = taCenter
         AutoSize = False
         Caption = 'EVENT 1 : 50M Freestyle'#13#10'Boys under 10y'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
-        Font.Height = -19
-        Font.Name = 'Segoe UI Semibold'
+        Font.Height = -17
+        Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
         ParentShowHint = False
@@ -9250,17 +9380,19 @@ object Main: TMain
       object lblSwimClubName: TLabel
         Left = 0
         Top = 0
-        Width = 497
+        Width = 470
         Height = 28
+        Align = alTop
         Alignment = taCenter
         AutoSize = False
         Caption = 'Swimming Club'
         Layout = tlCenter
+        ExplicitTop = 6
       end
       object btnNextEvent: TButton
         Left = 0
-        Top = 683
-        Width = 498
+        Top = 681
+        Width = 467
         Height = 50
         Hint = 
           'LMB Move to next record (heat, event, session)'#13#10'CNTRL+LMB Move t' +
@@ -9271,10 +9403,27 @@ object Main: TMain
         TabOrder = 0
         OnClick = btnNextEventClick
       end
+      object btnPickSCMTreeView: TButton
+        Left = 409
+        Top = 96
+        Width = 58
+        Height = 50
+        Hint = 
+          'Tree-View. Quick access and browse for event and heat.'#13#10'Also dis' +
+          'plays event and heat status. (Open, raced, closed.)'
+        DisabledImages = IMG.vimglistDTEvent
+        ImageIndex = 10
+        ImageName = 'TreeView_W'
+        Images = IMG.vimglistDTEvent
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 1
+        OnClick = btnPickSCMTreeViewClick
+      end
       object btnPrevEvent: TButton
-        Left = 0
-        Top = 98
-        Width = 434
+        Left = 3
+        Top = 96
+        Width = 401
         Height = 50
         Hint = 
           'LMB Move to previous record (heat, event, session)'#13#10'CNTRL+LMB Mo' +
@@ -9282,20 +9431,20 @@ object Main: TMain
         Caption = 'PREVIOUS'
         ParentShowHint = False
         ShowHint = True
-        TabOrder = 1
+        TabOrder = 2
         OnClick = btnPrevEventClick
       end
       object scmGrid: TDBAdvGrid
         Left = 0
-        Top = 154
-        Width = 498
+        Top = 152
+        Width = 467
         Height = 523
         Cursor = crDefault
         BevelInner = bvNone
         BevelKind = bkFlat
         BevelOuter = bvNone
         Color = 6445643
-        ColCount = 7
+        ColCount = 6
         Ctl3D = True
         DefaultRowHeight = 46
         DrawingStyle = gdsClassic
@@ -9312,7 +9461,7 @@ object Main: TMain
         ParentCtl3D = False
         ParentFont = False
         ScrollBars = ssVertical
-        TabOrder = 2
+        TabOrder = 3
         StyleElements = [seFont, seBorder]
         HoverRowCells = [hcNormal, hcSelected]
         OnGetDisplText = scmGridGetDisplText
@@ -9595,35 +9744,6 @@ object Main: TMain
             PrintFont.Name = 'Segoe UI'
             PrintFont.Style = []
             Width = 90
-          end
-          item
-            Borders = []
-            BorderPen.Color = clSilver
-            ButtonHeight = 18
-            CheckFalse = 'N'
-            CheckTrue = 'Y'
-            Color = 6445643
-            DataImageField = True
-            FieldName = 'imgPatch'
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clWindow
-            Font.Height = -16
-            Font.Name = 'Segoe UI'
-            Font.Style = []
-            Header = ' '
-            HeaderFont.Charset = DEFAULT_CHARSET
-            HeaderFont.Color = clWindow
-            HeaderFont.Height = -16
-            HeaderFont.Name = 'Segoe UI'
-            HeaderFont.Style = []
-            Images = IMG.vimglistDTGrid
-            PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
-            PrintFont.Charset = DEFAULT_CHARSET
-            PrintFont.Color = clBlack
-            PrintFont.Height = -16
-            PrintFont.Name = 'Segoe UI'
-            PrintFont.Style = []
-            Width = 34
           end>
         DataSource = SCM.dsINDV
         InvalidPicture.Data = {
@@ -9769,8 +9889,7 @@ object Main: TMain
           0
           0
           300
-          90
-          34)
+          90)
         RowHeights = (
           34
           46
@@ -9780,7 +9899,7 @@ object Main: TMain
         object lbl_scmGridOverlay: TLabel
           Left = 0
           Top = 384
-          Width = 494
+          Width = 463
           Height = 135
           Align = alBottom
           Alignment = taCenter
@@ -9796,74 +9915,63 @@ object Main: TMain
           ParentFont = False
           WordWrap = True
           StyleElements = [seClient, seBorder]
+          ExplicitWidth = 494
         end
       end
-      object btnPickSCMTreeView: TButton
-        Left = 440
-        Top = 98
-        Width = 58
-        Height = 50
-        Hint = 
-          'Tree-View. Quick access and browse for event and heat.'#13#10'Also dis' +
-          'plays event and heat status. (Open, raced, closed.)'
-        DisabledImages = IMG.vimglistDTEvent
-        ImageIndex = 10
-        ImageName = 'TreeView_W'
-        Images = IMG.vimglistDTEvent
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 3
-        OnClick = btnPickSCMTreeViewClick
-      end
     end
-    object pnlTDS: TPanel
-      AlignWithMargins = True
-      Left = 684
-      Top = 3
-      Width = 613
+    object pnlTDSGrid: TPanel
+      Left = 776
+      Top = 0
+      Width = 527
       Height = 765
       BevelOuter = bvNone
-      ParentBackground = False
-      TabOrder = 2
+      TabOrder = 4
       object dbtxtDTFileName: TDBText
-        Left = 16
-        Top = 19
-        Width = 553
+        Left = 0
+        Top = 0
+        Width = 527
         Height = 31
+        Align = alTop
         Alignment = taCenter
         DataField = 'FileName'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
-        Font.Height = -19
-        Font.Name = 'Segoe UI Semibold'
+        Font.Height = -16
+        Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
+        ExplicitTop = 17
+        ExplicitWidth = 521
       end
       object lblEventDetailsTD: TLabel
-        Left = 16
-        Top = 42
-        Width = 597
-        Height = 36
+        Left = 0
+        Top = 31
+        Width = 527
+        Height = 27
         Hint = 
           'Dolphin Timing Filename. (DO3, DO4)'#13#10'2nd line - Session : Event ' +
           ':: Heat.'
+        Align = alTop
         Alignment = taCenter
         AutoSize = False
         Caption = 'Session - Event - Heat'
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
-        Font.Height = -19
+        Font.Height = -17
         Font.Name = 'Segoe UI'
         Font.Style = []
         ParentFont = False
         ParentShowHint = False
         ShowHint = True
         Layout = tlCenter
+        ExplicitLeft = 15
+        ExplicitTop = 40
+        ExplicitWidth = 506
       end
       object lblKeyBoardInfo: TLabel
-        Left = 16
-        Top = 72
-        Width = 597
+        Left = 0
+        Top = 73
+        Width = 521
         Height = 17
         Alignment = taCenter
         AutoSize = False
@@ -9877,24 +9985,10 @@ object Main: TMain
         Font.Style = []
         ParentFont = False
       end
-      object btnPrevDTFile: TButton
-        Left = 15
-        Top = 99
-        Width = 534
-        Height = 49
-        Hint = 
-          'LMB Move to previous record (heat, event, session)'#13#10'CNTRL+LMB Mo' +
-          've to previous EVENT.'#13#10'SHIFT+CNTRL+LMB Move to previous SESSION.'
-        Caption = 'PREVIOUS'
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 1
-        OnClick = btnPrevDTFileClick
-      end
       object btnNextDTFile: TButton
-        Left = 16
-        Top = 683
-        Width = 597
+        Left = 0
+        Top = 679
+        Width = 521
         Height = 50
         Hint = 
           'LMB Move to next record (heat, event, session)'#13#10'CNTRL+LMB Move t' +
@@ -9905,17 +9999,46 @@ object Main: TMain
         TabOrder = 0
         OnClick = btnNextDTFileClick
       end
+      object btnPickDTTreeView: TButton
+        Left = 461
+        Top = 96
+        Width = 58
+        Height = 50
+        Hint = 'Tree-View. Quick access and browse for session, event and heat.'
+        DisabledImages = IMG.vimglistDTEvent
+        ImageIndex = 10
+        ImageName = 'TreeView_W'
+        Images = IMG.vimglistDTEvent
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 1
+        OnClick = btnPickDTTreeViewClick
+      end
+      object btnPrevDTFile: TButton
+        Left = 0
+        Top = 97
+        Width = 455
+        Height = 49
+        Hint = 
+          'LMB Move to previous record (heat, event, session)'#13#10'CNTRL+LMB Mo' +
+          've to previous EVENT.'#13#10'SHIFT+CNTRL+LMB Move to previous SESSION.'
+        Caption = 'PREVIOUS'
+        ParentShowHint = False
+        ShowHint = True
+        TabOrder = 2
+        OnClick = btnPrevDTFileClick
+      end
       object tdsGrid: TDBAdvGrid
-        Left = 16
-        Top = 154
-        Width = 597
+        Left = 3
+        Top = 152
+        Width = 518
         Height = 523
         Cursor = crDefault
         BevelInner = bvNone
         BevelKind = bkFlat
         BevelOuter = bvNone
         Color = 6445643
-        ColCount = 8
+        ColCount = 7
         Ctl3D = True
         DefaultRowHeight = 46
         DrawingStyle = gdsClassic
@@ -9932,7 +10055,7 @@ object Main: TMain
         ParentCtl3D = False
         ParentFont = False
         ScrollBars = ssVertical
-        TabOrder = 2
+        TabOrder = 3
         StyleElements = [seFont, seBorder]
         HoverRowCells = [hcNormal, hcSelected]
         OnClickCell = tdsGridClickCell
@@ -10072,6 +10195,7 @@ object Main: TMain
             HeaderFont.Height = -12
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
+            Name = 'Nav'
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
@@ -10079,36 +10203,6 @@ object Main: TMain
             PrintFont.Name = 'Segoe UI'
             PrintFont.Style = []
             Width = 20
-          end
-          item
-            Alignment = taRightJustify
-            Borders = []
-            BorderPen.Color = clSilver
-            ButtonHeight = 18
-            CheckFalse = 'N'
-            CheckTrue = 'Y'
-            Color = 6445643
-            DataImageField = True
-            FieldName = 'imgPatch'
-            Font.Charset = DEFAULT_CHARSET
-            Font.Color = clWindow
-            Font.Height = -16
-            Font.Name = 'Segoe UI'
-            Font.Style = []
-            Header = ' '
-            HeaderFont.Charset = DEFAULT_CHARSET
-            HeaderFont.Color = clWindow
-            HeaderFont.Height = -16
-            HeaderFont.Name = 'Segoe UI'
-            HeaderFont.Style = []
-            Images = IMG.vimglistDTGrid
-            PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
-            PrintFont.Charset = DEFAULT_CHARSET
-            PrintFont.Color = clWindowText
-            PrintFont.Height = -12
-            PrintFont.Name = 'Segoe UI'
-            PrintFont.Style = []
-            Width = 34
           end
           item
             Alignment = taCenter
@@ -10130,6 +10224,7 @@ object Main: TMain
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
             HeaderAlignment = taCenter
+            Name = 'Lane'
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
@@ -10158,12 +10253,14 @@ object Main: TMain
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
             HeaderAlignment = taCenter
+            Name = 'T1'
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
             PrintFont.Height = -12
             PrintFont.Name = 'Segoe UI'
             PrintFont.Style = []
+            Tag = 1
             Width = 94
           end
           item
@@ -10186,12 +10283,14 @@ object Main: TMain
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
             HeaderAlignment = taCenter
+            Name = 'T2'
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
             PrintFont.Height = -12
             PrintFont.Name = 'Segoe UI'
             PrintFont.Style = []
+            Tag = 2
             Width = 94
           end
           item
@@ -10214,12 +10313,14 @@ object Main: TMain
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
             HeaderAlignment = taCenter
+            Name = 'T3'
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
             PrintFont.Height = -12
             PrintFont.Name = 'Segoe UI'
             PrintFont.Style = []
+            Tag = 3
             Width = 94
           end
           item
@@ -10245,6 +10346,7 @@ object Main: TMain
             HeaderFont.Style = []
             HeaderAlignment = taCenter
             Images = IMG.vimglistDTGrid
+            Name = 'ActiveRT'
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
@@ -10273,13 +10375,14 @@ object Main: TMain
             HeaderFont.Name = 'Segoe UI'
             HeaderFont.Style = []
             HeaderAlignment = taCenter
+            Name = 'RT'
             PrintBorders = [cbTop, cbLeft, cbRight, cbBottom]
             PrintFont.Charset = DEFAULT_CHARSET
             PrintFont.Color = clWindowText
             PrintFont.Height = -16
             PrintFont.Name = 'Segoe UI'
             PrintFont.Style = []
-            Width = 120
+            Width = 94
           end>
         DataSource = TDS.dsmLane
         InvalidPicture.Data = {
@@ -10421,27 +10524,26 @@ object Main: TMain
         ShowUnicode = False
         ColWidths = (
           20
-          34
           44
           94
           94
           94
           64
-          120)
+          94)
         RowHeights = (
           34
           46)
         object lbl_tdsGridOverlay: TLabel
           Left = 0
           Top = 384
-          Width = 593
+          Width = 514
           Height = 135
           Align = alBottom
           Alignment = taCenter
           AutoSize = False
           Caption = 
             'BIG LETTERS IN THE GRID OVERLAY'#13#10'THREE LINES OF TEXT'#13#10'Reports th' +
-            'e state of the tabel data.'
+            'e state of the TDS data.'
           Font.Charset = DEFAULT_CHARSET
           Font.Color = clCoral
           Font.Height = -21
@@ -10453,144 +10555,12 @@ object Main: TMain
           ExplicitWidth = 494
         end
       end
-      object pBar: TProgressBar
-        Left = 15
-        Top = 739
-        Width = 598
-        Height = 9
-        Position = 50
-        BarColor = clChartreuse
-        BackgroundColor = clBtnText
-        Step = 2
-        TabOrder = 3
-        Visible = False
-        StyleElements = []
-      end
-      object btnPickDTTreeView: TButton
-        Left = 555
-        Top = 98
-        Width = 58
-        Height = 50
-        Hint = 'Tree-View. Quick access and browse for session, event and heat.'
-        DisabledImages = IMG.vimglistDTEvent
-        ImageIndex = 10
-        ImageName = 'TreeView_W'
-        Images = IMG.vimglistDTEvent
-        ParentShowHint = False
-        ShowHint = True
-        TabOrder = 4
-        OnClick = btnPickDTTreeViewClick
-      end
-    end
-    object pnlTool2: TPanel
-      AlignWithMargins = True
-      Left = 1303
-      Top = 3
-      Width = 144
-      Height = 765
-      Anchors = []
-      BevelOuter = bvNone
-      Color = clDimgray
-      ParentBackground = False
-      TabOrder = 3
-      object stackpnlTool2: TStackPanel
-        Left = 0
-        Top = 84
-        Width = 144
-        Height = 269
-        BevelOuter = bvNone
-        ControlCollection = <
-          item
-            Control = sbtnDirWatcher
-          end
-          item
-            Control = sbtnSyncDTtoSCM
-            HorizontalPositioning = sphpLeft
-          end
-          item
-            Control = spbtnPost
-            HorizontalPositioning = sphpLeft
-          end
-          item
-            Control = sbtnAutoPatch
-            HorizontalPositioning = sphpLeft
-          end
-          item
-            Control = ShapeSpacer
-          end>
-        HorizontalPositioning = sphpCenter
-        Spacing = 4
-        TabOrder = 0
-        object sbtnDirWatcher: TSpeedButton
-          Left = 8
-          Top = 0
-          Width = 128
-          Height = 41
-          Hint = 'Indicates the status of the Directory Watcher.'
-          AllowAllUp = True
-          GroupIndex = 1
-          ImageIndex = 18
-          ImageName = 'VisibilityOn'
-          Images = IMG.vimglistMenu
-          Enabled = False
-          ParentShowHint = False
-          ShowHint = True
-        end
-        object sbtnSyncDTtoSCM: TSpeedButton
-          Left = 0
-          Top = 45
-          Width = 128
-          Height = 41
-          Hint = 'Syncronize Time Drops to SCM.'
-          Caption = 'SYNC TO SCM'
-          Images = IMG.vimglistMenu
-          ParentShowHint = False
-          ShowHint = True
-          OnClick = actnSyncTDExecute
-        end
-        object spbtnPost: TSpeedButton
-          Left = 0
-          Top = 90
-          Width = 128
-          Height = 41
-          Hint = 'Post the TD '#39'Race-Times'#39' to the SCM heat.'
-          Caption = 'POST'
-          Images = IMG.vimglistMenu
-          ParentShowHint = False
-          ShowHint = True
-          OnClick = actnPostExecute
-        end
-        object sbtnAutoPatch: TSpeedButton
-          Left = 0
-          Top = 135
-          Width = 128
-          Height = 41
-          Hint = 'Auto-Patch lanes and enable manual patching.'
-          Caption = 'PATCH'
-          ImageIndex = 14
-          ImageName = 'AutoPatch'
-          Images = IMG.vimglistMenu
-          Enabled = False
-          ParentShowHint = False
-          ShowHint = True
-        end
-        object ShapeSpacer: TShape
-          AlignWithMargins = True
-          Left = 11
-          Top = 186
-          Width = 121
-          Height = 4
-          Margins.Top = 6
-          Margins.Bottom = 6
-          Brush.Color = clTomato
-        end
-      end
     end
   end
   object StatBar: TStatusBar
     Left = 0
     Top = 798
-    Width = 1444
+    Width = 1460
     Height = 35
     Hint = 'Check here for information, messages and warnings.'
     Panels = <>
@@ -10599,35 +10569,6 @@ object Main: TMain
     SimplePanel = True
     SimpleText = 'Check here for information and messages.'
     StyleElements = [seClient, seBorder]
-  end
-  object FileSaveDlgMeetProgram: TFileSaveDialog
-    DefaultExtension = '.json'
-    DefaultFolder = 'c:\TimeDrops\Meets'
-    FavoriteLinks = <>
-    FileTypes = <
-      item
-        DisplayName = 'JSON  (*.json)'
-        FileMask = '*.json'
-      end
-      item
-        DisplayName = 'Any file type (*.*)'
-        FileMask = '*.*'
-      end>
-    OkButtonLabel = 'Save TD Meet Program file'
-    Options = []
-    Title = 'Create a Time Drops '#39'Meet Program'#39' file.'
-    Left = 984
-    Top = 480
-  end
-  object PickDTFolderDlg: TFileOpenDialog
-    DefaultFolder = 'c:\Dolphin\Meets'
-    FavoriteLinks = <>
-    FileTypes = <>
-    OkButtonLabel = 'Select DT folder'
-    Options = [fdoPickFolders]
-    Title = 'Select the Dolphin Timing folder.'
-    Left = 984
-    Top = 424
   end
   object TDPushResultFile: TFileOpenDialog
     DefaultExtension = '.JSON'
@@ -10646,8 +10587,8 @@ object Main: TMain
     OkButtonLabel = 'PUSH'
     Options = [fdoStrictFileTypes, fdoAllowMultiSelect, fdoPathMustExist, fdoFileMustExist]
     Title = 'Push TimeDrops '#39'results'#39' files to grid...'
-    Left = 759
-    Top = 420
+    Left = 56
+    Top = 416
   end
   object Timer1: TTimer
     Enabled = False
@@ -11046,6 +10987,15 @@ object Main: TMain
       OnExecute = actnRestartDirectoryWatcherExecute
       OnUpdate = actnRestartDirectoryWatcherUpdate
     end
+    object actEnablePatches: TAction
+      Category = 'TimeDrops'
+      Caption = 'PATCH'
+      Checked = True
+      ImageIndex = 14
+      ImageName = 'AutoPatch'
+      OnExecute = actEnablePatchesExecute
+      OnUpdate = actEnablePatchesUpdate
+    end
   end
   object FileSaveDlg: TFileSaveDialog
     DefaultExtension = '.zip'
@@ -11063,8 +11013,8 @@ object Main: TMain
     OkButtonLabel = 'Save'
     Options = []
     Title = 'Save the SwimClubMeet TimeDrops session...'
-    Left = 756
-    Top = 288
+    Left = 56
+    Top = 472
   end
   object FileOpenDlg: TFileOpenDialog
     DefaultExtension = '.zip'
@@ -11082,7 +11032,7 @@ object Main: TMain
     OkButtonLabel = 'Open'
     Options = [fdoFileMustExist]
     Title = 'Open the SwimClubMeet TimeDrops session...'
-    Left = 756
-    Top = 352
+    Left = 56
+    Top = 536
   end
 end

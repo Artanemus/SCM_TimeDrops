@@ -34,7 +34,11 @@ uses
   dmSCM in 'dmSCM.pas' {SCM: TDataModule},
   dmTDS in 'dmTDS.pas' {TDS: TDataModule},
   dlgScanOptions in 'dlgScanOptions.pas' {ScanOptions},
-  rptReportsSCM in 'rptReportsSCM.pas' {ReportsSCM: TDataModule};
+  rptReportsSCM in 'rptReportsSCM.pas' {ReportsSCM: TDataModule},
+  uNoodle in 'uNoodle.pas',
+  TransparentPanel in 'TransparentPanel.pas',
+  uNoodleFrame in 'uNoodleFrame.pas' {NoodleFrame: TFrame},
+  uNoodleData in 'uNoodleData.pas';
 
 {$R *.res}
 
