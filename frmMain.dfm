@@ -9236,6 +9236,23 @@ object Main: TMain
       BevelOuter = bvNone
       ParentBackground = False
       TabOrder = 1
+      object sbtnAutoSync: TSpeedButton
+        Left = 0
+        Top = 679
+        Width = 150
+        Height = 41
+        Hint = 'Syncronize Time Drops to SCM.'
+        AllowAllUp = True
+        GroupIndex = 12
+        Down = True
+        Caption = 'AUTO SYNC'
+        ImageIndex = 19
+        ImageName = 'AutoSyncGrids'
+        Images = IMG.vimglistMenu
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = sbtnAutoSyncClick
+      end
       inline frameNoodles: TNoodleFrame
         Left = 0
         Top = 152
@@ -9321,6 +9338,7 @@ object Main: TMain
           Width = 128
           Height = 41
           Action = actnPost
+          GroupIndex = 11
           Images = IMG.vimglistMenu
           ParentShowHint = False
           ShowHint = True
@@ -9331,6 +9349,9 @@ object Main: TMain
           Width = 128
           Height = 41
           Action = actEnablePatches
+          AllowAllUp = True
+          GroupIndex = 10
+          Down = True
           Images = IMG.vimglistMenu
           ParentShowHint = False
           ShowHint = True
@@ -10016,7 +10037,7 @@ object Main: TMain
       end
       object btnPrevDTFile: TButton
         Left = 0
-        Top = 97
+        Top = 96
         Width = 455
         Height = 49
         Hint = 

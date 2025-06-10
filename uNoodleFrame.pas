@@ -387,27 +387,31 @@ begin
   if Assigned(FNoodles) then
   begin
     FNoodles.Clear; // Owner of objects - Deletes all items from the list.
-    if TDS.DataIsActive and SCM.DataIsActive then
+    FSelectedNoodle := nil; // no noodle is selected.
+    FDragState := ndsIdle;
+    if not(TDS.DataIsActive) or (TDS.tblmNoodle.IsEmpty) then
     begin
-      // Also iterate just in case state is inconsistent
-      while not TDS.tblmNoodle.Eof do
-      begin
-        // locate rect at bank, lane,
-        SCMRectF := GetHotSpotRectF(0,
-          TDS.tblmNoodle.FieldByName('SCMLane').AsInteger);
-        TDSRectF := GetHotSpotRectF(1,
-          TDS.tblmNoodle.FieldByName('TDSLane').AsInteger);
-        Noodle := TNoodle.Create(SCMRectF, TDSRectF);
-          // fills in each handle's TRectF and bank.
-        NoodleData.AssignNDataToNoodle(Noodle);
-          // fills in each Handle's HeatID and lane.
-        FNoodles.Add(Noodle); // place noodle into list
-        TDS.tblmNoodle.Next;
-      end;
+      pbNoodles.Invalidate; // Redraw final state
+      exit;
+    end;
+
+    // Also iterate just in case state is inconsistent
+    TDS.tblmNoodle.first;
+    while not TDS.tblmNoodle.Eof do
+    begin
+      // locate rect at bank, lane,
+      SCMRectF := GetHotSpotRectF(0,
+        TDS.tblmNoodle.FieldByName('SCMLane').AsInteger);
+      TDSRectF := GetHotSpotRectF(1,
+        TDS.tblmNoodle.FieldByName('TDSLane').AsInteger);
+      Noodle := TNoodle.Create(SCMRectF, TDSRectF);
+        // fills in each handle's TRectF and bank.
+      NoodleData.AssignNDataToNoodle(Noodle);
+        // fills in each Handle's HeatID and lane.
+      FNoodles.Add(Noodle); // place noodle into list
+      TDS.tblmNoodle.Next;
     end;
   end;
-  FSelectedNoodle := nil; // no noodle is selected.
-  FDragState := ndsIdle;
   pbNoodles.Invalidate; // Redraw final state
 end;
 

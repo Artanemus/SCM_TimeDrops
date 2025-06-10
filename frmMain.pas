@@ -104,6 +104,7 @@ type
     pnlTDSGrid: TPanel;
     frameNoodles: TNoodleFrame;
     actEnablePatches: TAction;
+    sbtnAutoSync: TSpeedButton;
     procedure actBuildTDTablesExecute(Sender: TObject);
     procedure actBuildTDTablesUpdate(Sender: TObject);
     procedure actEnablePatchesExecute(Sender: TObject);
@@ -156,6 +157,7 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure sbtnAutoSyncClick(Sender: TObject);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
         string);
     procedure tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
@@ -238,6 +240,11 @@ procedure TMain.actEnablePatchesExecute(Sender: TObject);
 begin
   // toggle - enable/disable patching.
   TAction(Sender).Checked := not(TAction(Sender).Checked);
+
+  if TAction(Sender).Checked then
+    spbtnAutoPatch.ImageIndex := 14
+  else
+    spbtnAutoPatch.ImageIndex := 20;
 end;
 
 procedure TMain.actEnablePatchesUpdate(Sender: TObject);
@@ -250,6 +257,12 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
+
+  if TAction(Sender).Checked then
+    spbtnAutoPatch.ImageIndex := 14
+  else
+    spbtnAutoPatch.ImageIndex := 20;
+
 end;
 
 procedure TMain.actnClearAndScanExecute(Sender: TObject);
@@ -1125,6 +1138,8 @@ begin
   // Update lblEventDetailsTD.
   // paint cell icons into grid
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+  if Assigned(NoodleFrame) then
+    PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
 end;
 
 procedure TMain.btnNextEventClick(Sender: TObject);
@@ -1165,6 +1180,8 @@ begin
     end;
   end;
   PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+  if Assigned(NoodleFrame) then
+    PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
 end;
 
 procedure TMain.btnPickDTTreeViewClick(Sender: TObject);
@@ -1244,6 +1261,11 @@ begin
       TDS.dsmHeat.DataSet.EnableControls;
       TDS.dsmLane.DataSet.EnableControls;
       PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+      if Assigned(NoodleFrame) then
+      begin
+        TDS.tblmNoodle.ApplyMaster;
+        PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
+      end;
     end;
   end;
 
@@ -1298,6 +1320,11 @@ begin
       SCM.dsHeat.DataSet.EnableControls;
       // Update UI controls ...
       PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+      if Assigned(NoodleFrame) then
+      begin
+        TDS.tblmNoodle.ApplyMaster;
+        PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
+      end;
     end;
   end;
 end;
@@ -1352,10 +1379,8 @@ begin
   // Update UI controls ...
   // paint cell icons into grid.
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
-
-  // Update noodles
   if Assigned(NoodleFrame) then
-    PostMessage(NoodleFrame.Handle, SCM_UPDATE_NOODLES, 0, 0);
+    PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
 end;
 
 procedure TMain.btnPrevEventClick(Sender: TObject);
@@ -1394,6 +1419,8 @@ begin
     end;
     // A scroll event in qryHeat may occur and message is posted twice.
     PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+    if Assigned(NoodleFrame) then
+      PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
 end;
 
 
@@ -1732,19 +1759,11 @@ procedure TMain.MSG_UpdateUINOODLES(var Msg: TMessage);
 begin
   if Assigned(frameNoodles) then
   begin
-    frameNoodles.ClearNoodles;
-    //  frameNoodles.pbNoodles.Invalidate;
     if Assigned(TDS) and TDS.DataIsActive then
-    begin
-      // tblmHeat has scrolled and noodles need to be re-draw
-      if not (TDS.tblmNoodle.IsEmpty) then
-      begin
         frameNoodles.LoadNoodleData();
-      end;
-    end;
   end;
-  frameNoodles.Invalidate;
-  frameNoodles.pbNoodles.Invalidate;
+//  frameNoodles.Invalidate;
+//  frameNoodles.pbNoodles.Invalidate;
 end;
 
 procedure TMain.MSG_UpdateUISCM(var Msg: TMessage);
@@ -2175,6 +2194,14 @@ begin
       tdsGrid.EndUpdate;
     end;
   end;
+end;
+
+procedure TMain.sbtnAutoSyncClick(Sender: TObject);
+begin
+  if TSpeedButton(Sender).Down then
+    TSpeedButton(Sender).ImageIndex := 19
+  else
+    TSpeedButton(Sender).ImageIndex := 21;
 end;
 
 procedure TMain.scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var
