@@ -82,7 +82,7 @@ type
     pnlTool1: TPanel;
     pnlTool2: TPanel;
     rpnlBody: TRelativePanel;
-    spbtnAutoPatch: TSpeedButton;
+    spbtnActivatePatches: TSpeedButton;
     sbtnDirWatcher: TSpeedButton;
     sbtnRefreshSCM: TSpeedButton;
     sbtnSyncDTtoSCM: TSpeedButton;
@@ -103,12 +103,15 @@ type
     pnlSCMGrid: TPanel;
     pnlTDSGrid: TPanel;
     frameNoodles: TNoodleFrame;
-    actEnablePatches: TAction;
+    actActivatePatches: TAction;
     sbtnAutoSync: TSpeedButton;
+    actAutoSync: TAction;
     procedure actBuildTDTablesExecute(Sender: TObject);
     procedure actBuildTDTablesUpdate(Sender: TObject);
-    procedure actEnablePatchesExecute(Sender: TObject);
-    procedure actEnablePatchesUpdate(Sender: TObject);
+    procedure actActivatePatchesExecute(Sender: TObject);
+    procedure actActivatePatchesUpdate(Sender: TObject);
+    procedure actAutoSyncExecute(Sender: TObject);
+    procedure actAutoSyncUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);
     procedure actnClearAndScanUpdate(Sender: TObject);
     procedure actnClearGridExecute(Sender: TObject);
@@ -157,7 +160,6 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure sbtnAutoSyncClick(Sender: TObject);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
         string);
     procedure tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
@@ -173,6 +175,8 @@ type
     fDoClearAndScanOnBoot: boolean;
     { User preference: Connect to the SCM DB Server on boot. Default: FALSE }
     fDoLoginOnBoot: boolean;
+    FSyncSCMVerbose: Boolean;
+    FSyncTDSVerbose: Boolean;
 
     procedure LoadSettings; // JSON Program Settings
     procedure OnFileChanged(Sender: TObject; const FileName: string; Action: DWORD);
@@ -236,20 +240,25 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
-procedure TMain.actEnablePatchesExecute(Sender: TObject);
+procedure TMain.actActivatePatchesExecute(Sender: TObject);
 begin
-  // toggle - enable/disable patching.
   TAction(Sender).Checked := not(TAction(Sender).Checked);
-
   if TAction(Sender).Checked then
-    spbtnAutoPatch.ImageIndex := 14
+  begin
+    spbtnActivatePatches.ImageIndex := 14;
+    frameNoodles.pbNoodles.Enabled := true;
+  end
   else
-    spbtnAutoPatch.ImageIndex := 20;
+  begin
+    spbtnActivatePatches.ImageIndex := 20;
+    frameNoodles.pbNoodles.Enabled := false;
+  end;
 end;
 
-procedure TMain.actEnablePatchesUpdate(Sender: TObject);
+procedure TMain.actActivatePatchesUpdate(Sender: TObject);
 begin
-  if Assigned(TDS) and TDS.DataIsActive then
+  if Assigned(TDS) and TDS.DataIsActive
+    and Assigned(SCM) and SCM.DataIsActive then
   begin
     if not TAction(Sender).Enabled then
       TAction(Sender).Enabled := true;
@@ -257,12 +266,36 @@ begin
   else
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
+end;
 
+procedure TMain.actAutoSyncExecute(Sender: TObject);
+begin
+  TAction(Sender).Checked := not(TAction(Sender).Checked);
   if TAction(Sender).Checked then
-    spbtnAutoPatch.ImageIndex := 14
+    sbtnAutoSync.ImageIndex := 19
   else
-    spbtnAutoPatch.ImageIndex := 20;
+    sbtnAutoSync.ImageIndex := 21;
 
+  if TAction(Sender).Checked then  // Perform SYNCRONIZATION ...
+  begin
+    FSyncSCMVerbose := false;
+    actnSyncSCM.Execute(); // Syncronize SCM grid.
+    FSyncSCMVerbose := true;
+  end;
+
+end;
+
+procedure TMain.actAutoSyncUpdate(Sender: TObject);
+begin
+  if Assigned(TDS) and TDS.DataIsActive
+    and Assigned(SCM) and SCM.DataIsActive then
+  begin
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
+  end
+  else
+    if TAction(Sender).Enabled then
+      TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnClearAndScanExecute(Sender: TObject);
@@ -929,12 +962,13 @@ var
 found: boolean;
 aTDSSessionID, aTDSEventNum, aTDSHeatNum: integer;
 begin
-  tdsGrid.BeginUpdate;
+  scmGrid.BeginUpdate;
   aTDSSessionID := TDS.tblmSession.FieldByName('SessionID').AsInteger;
   aTDSEventNum := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
   aTDSHeatNum := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
-  found := SCM.SyncSCMToDT(aTDSSessionID, aTDSEventNum, aTDSHeatNum); // data event - scroll.
-  tdsGrid.EndUpdate;
+
+  found := SCM.SyncSCMToDT(aTDSSessionID, aTDSEventNum, aTDSHeatNum, FSyncSCMVerbose ); // data event - scroll.
+  scmGrid.EndUpdate;
 
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
 
@@ -943,7 +977,7 @@ begin
     StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
     + 'Your ''Results'' folder may not contain the session files required to sync.';
     timer1.enabled := true;
-    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    if FSyncSCMVerbose then MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
   end
   else
   begin
@@ -955,7 +989,7 @@ end;
 procedure TMain.actnSyncSCMUpdate(Sender: TObject);
 begin
   if (Assigned(SCM)) and Assigned(TDS) and (SCM.DataIsActive = true)
-    and (TDS.DataIsActive = true) and (not SCM.qryHeat.IsEmpty) then
+    and (TDS.DataIsActive = true) then
   begin
       if not TAction(Sender).Enabled then
         TAction(Sender).Enabled := true;
@@ -1072,15 +1106,14 @@ var
   found: boolean;
 begin
   // OR - if any are true then exit.
-  if (not Assigned(TDS)) or (not TDS.DataIsActive) or
-  (TDS.tblmlane.IsEmpty) then
+  if (not Assigned(TDS)) or (not TDS.DataIsActive) then
   begin
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
     exit;
   end;
 
   tdsGrid.BeginUpdate;
-  // this hack find the last event ID and last heat ID in the current
+  // this hack finds the last event ID and last heat ID in the current
   // Master-Detail linked Dolphin Timing data tables.
   IDHt := TDS.tblmHeat.fieldbyName('HeatID').AsInteger;
   TDS.tblmHeat.Last;
@@ -1135,6 +1168,14 @@ begin
       TDS.dsmHeat.DataSet.next;
     end;
   end;
+
+  if sbtnAutoSync.Down then
+  begin
+    FSyncSCMVerbose := false;
+    actnSyncSCM.Execute(); // Syncronize SCM grid.
+    FSyncSCMVerbose := true;
+  end;
+
   // Update lblEventDetailsTD.
   // paint cell icons into grid
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
@@ -1149,7 +1190,7 @@ var
   id: integer;
 begin
   // OR - if any are true then exit.
-  if (not Assigned(SCM)) or (SCM.DataIsActive = false) or (SCM.qryHeat.IsEmpty) then
+  if (not Assigned(SCM)) or (SCM.DataIsActive = false) then
   begin
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
     exit;
@@ -1334,8 +1375,7 @@ var
   evNum, htNum: integer;
 begin
   // OR - if any are true then exit.
-  if ((not Assigned(TDS)) or (TDS.DataIsActive = false)) or
-  (TDS.tblmlane.IsEmpty) then
+  if ((not Assigned(TDS)) or (TDS.DataIsActive = false)) then
   begin
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
     exit;
@@ -1376,7 +1416,14 @@ begin
     else
       TDS.dsmHeat.DataSet.prior;
   end;
-  // Update UI controls ...
+
+  if sbtnAutoSync.Down then
+  begin
+    FSyncSCMVerbose := false;
+    actnSyncSCM.Execute(); // Syncronize SCM grid.
+    FSyncSCMVerbose := true;
+  end;
+
   // paint cell icons into grid.
   PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
   if Assigned(NoodleFrame) then
@@ -1386,8 +1433,7 @@ end;
 procedure TMain.btnPrevEventClick(Sender: TObject);
 begin
   // OR - if any are true then exit.
-  if ((not Assigned(SCM)) or (SCM.DataIsActive = false))
-     and (SCM.qryHeat.IsEmpty) then
+  if (not Assigned(SCM)) or (SCM.DataIsActive = false) then
   begin
     MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
     exit;
@@ -1443,6 +1489,9 @@ begin
   fDoLoginOnBoot := false; // login to DB Server.
   fDoClearAndScanOnBoot := false; // EmptyDataSets and scan 'meets' folder.
   fClearAndScan_Done := false;
+  FSyncSCMVerbose := true;
+  FSyncTDSVerbose := true;
+
 
   // A Class that uses JSON to read and write application configuration
   Settings := TPrgSetting.Create;
@@ -1603,9 +1652,10 @@ begin
   // Allow the form to receive KeyDown events
   Self.KeyPreview := True;
 
-  // if an action is assigned to a speed button - the image disappears!
+  // images disappears because assignment only in TAction.Execute?
   spbtnPost.ImageIndex := 13;
-  spbtnAutoPatch.ImageIndex := 14;
+  spbtnActivatePatches.ImageIndex := 14;
+  sbtnAutoSync.ImageIndex := 19;
 
 end;
 
@@ -2196,14 +2246,6 @@ begin
   end;
 end;
 
-procedure TMain.sbtnAutoSyncClick(Sender: TObject);
-begin
-  if TSpeedButton(Sender).Down then
-    TSpeedButton(Sender).ImageIndex := 19
-  else
-    TSpeedButton(Sender).ImageIndex := 21;
-end;
-
 procedure TMain.scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var
   Value: string);
 begin
@@ -2233,7 +2275,6 @@ begin
     if scmGrid.DataSource.DataSet.IsEmpty then Value := ' ';
   end;
 end;
-
 
 procedure TMain.tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
 var

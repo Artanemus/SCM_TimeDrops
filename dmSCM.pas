@@ -108,7 +108,8 @@ type
     function SyncCheckSession(aTDSessionID: Integer): boolean;
     // .......................................................
     function GetActive_INDVorTEAM: TDataSource;
-    function SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer): boolean;
+    function SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer; Verbose:
+        Boolean = true): boolean;
     procedure WriteConnectionDef(const ConnectionName, ParamName, ParamValue: string);
     property DataIsActive: Boolean read fDataIsActive;
     property MSG_Handle: HWND read msgHandle write msgHandle;  // Both DataModules
@@ -679,8 +680,8 @@ begin
     result := true;
 end;
 
-function TSCM.SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer):
-    boolean;
+function TSCM.SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer;
+    Verbose: Boolean = true): boolean;
 var
   found: boolean;
 begin
@@ -689,9 +690,10 @@ begin
 
   if not SyncCheckSession(aTDSessionNum) then
   begin
-    MessageDlg('The SwimClubMeet andTimeDrops sessions don''t match.'+#13+#10+
-    'Open the correct session with ''Select SCM Session'' and try  again.',
-    mtInformation, [mbOK], 0);
+    if Verbose then
+      MessageDlg('The SwimClubMeet andTimeDrops sessions don''t match.'+#13+#10+
+      'Open the correct session with ''Select SCM Session'' and try  again.',
+      mtInformation, [mbOK], 0);
     exit;
   end;
 
@@ -706,6 +708,8 @@ begin
   begin
     qryHeat.ApplyMaster;
     found := qryHeat.Locate('HeatNum', aTDHeatNum, []);
+    qryTEAM.ApplyMaster;
+    qryINDV.ApplyMaster;
   end;
   result := found;
   qrySession.EnableControls;

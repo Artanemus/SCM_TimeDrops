@@ -9,7 +9,7 @@ uses
   System.Generics.Collections, Vcl.VirtualImage, System.Math,
   dmIMG, uNoodle, System.Types, Vcl.StdCtrls, SCMDefines, Vcl.Menus,
   System.Actions, Vcl.ActnList, uNoodleData,
-  DBAdvGrid; // , dmSCM, Data.DB, dmTDS;
+  DBAdvGrid, Data.DB; // , dmSCM, Data.DB, dmTDS;
 
 type
   // State for dragging operations
@@ -280,18 +280,22 @@ begin
 
   // Draw the Bezier curve
   DrawQuadraticBezierCurve(ACanvas, a, P_Control, b, 30); // 30 segments
+  DrawNoodleHandle(ACanvas, a, AColor, FHandleRadius);
+  DrawNoodleHandle(ACanvas, b, AColor, FHandleRadius);
+
 
   // Draw DOTS for handles.
-  if ASelected then
-  begin
-    DrawNoodleHandle(ACanvas, a, FSelectedHandleColor, FHandleRadius);
-    DrawNoodleHandle(ACanvas, b, FSelectedHandleColor, FHandleRadius);
-  end
-  else
-  begin
-    DrawNoodleHandle(ACanvas, a, FHandleColor, FHandleRadius);
-    DrawNoodleHandle(ACanvas, b, FHandleColor, FHandleRadius);
-  end;
+//  if ASelected then
+//  begin
+//    DrawNoodleHandle(ACanvas, a, FSelectedHandleColor, FHandleRadius);
+//    DrawNoodleHandle(ACanvas, b, FSelectedHandleColor, FHandleRadius);
+//  end
+//  else
+//  begin
+//    DrawNoodleHandle(ACanvas, a, FHandleColor, FHandleRadius);
+//    DrawNoodleHandle(ACanvas, b, FHandleColor, FHandleRadius);
+//  end;
+
 end;
 
 procedure TNoodleFrame.DrawQuadraticBezierCurve(ACanvas: TCanvas; P0, P1, P2:
@@ -690,6 +694,10 @@ begin
       AColor := FSelectedNoodleColor
     else
       AColor := FNoodleColor;
+
+    if not pbNoodles.Enabled then  // consider PaintBox state.
+      AColor := clGray;
+
     DrawNoodleLink(Canvas, P0, P1, AColor, FRopeThickness, Noodle.IsSelected);
   end;
 
@@ -699,7 +707,7 @@ begin
     // Draw noodle rope to current mouse pos (and ending dots).
     P0 := FHotSpotAnchor.RectF.CenterPoint;
     P1 := FMousePoint;
-    DrawNoodleLink(Canvas, P0, P1, clBlack, FRopeThickness, false);
+    DrawNoodleLink(Canvas, P0, P1, FSelectedNoodleColor, FRopeThickness, false);
     // Draw the Default-BullsEye to anchour handle ...
     Spot := FHotSpotAnchor.RectF.CenterPoint;
     Spot.X := Spot.X - (IMG.vimglistDTGrid.Height DIV 2);
