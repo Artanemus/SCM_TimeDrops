@@ -83,6 +83,10 @@ type
       ARadius: Integer);
     procedure DrawNoodleLink(ACanvas: TCanvas; P0, P1: TPointF; AColor: TColor;
       AThickness: Integer; ASelected: Boolean);
+
+    procedure DrawNoodleHalfLink(ACanvas: TCanvas; P1: TPointF;
+      AColor: TColor; AThickness: Integer; ASelected: Boolean);
+
     procedure DrawQuadraticBezierCurve(ACanvas: TCanvas; P0, P1, P2: TPoint;
       NumSegments: Integer);
     function GetHotSpotRectF(Bank: integer; Lane: integer): TRectF;
@@ -250,6 +254,32 @@ begin
   ACanvas.Brush.Style := bsClear; // Reset brush
 end;
 
+procedure TNoodleFrame.DrawNoodleHalfLink(ACanvas: TCanvas; P1: TPointF;
+  AColor: TColor; AThickness: Integer; ASelected: Boolean);
+var
+  P0, A: TPoint;
+  offset1, offset2: integer;
+begin
+  // Setup pen
+  ACanvas.Pen.Color := AColor;
+  ACanvas.Pen.Width := AThickness;
+  ACanvas.Pen.Style := psSolid;
+  offset1 := -40;
+  offset2 := 12;
+  A.X := Round(P1.X);
+  A.Y := Round(P1.Y);
+  P0.X := ROUND(P1.X);
+  P0.Y := ROUND(P1.Y);
+  ACanvas.MoveTo(P0.X, P0.Y);
+  ACanvas.LineTo(P0.X+offset1, P0.Y);
+  // draw the rest of the arrow head.
+  ACanvas.LineTo(P0.X+offset1+offset2, P0.Y+offset2);
+  ACanvas.MoveTo(P0.X+offset1, P0.Y);
+  ACanvas.LineTo(P0.X+offset1+offset2, P0.Y-offset2);
+  DrawNoodleHandle(ACanvas, A, AColor, FHandleRadius);
+end;
+
+
 procedure TNoodleFrame.DrawNoodleLink(ACanvas: TCanvas; P0, P1: TPointF;
   AColor: TColor; AThickness: Integer; ASelected: Boolean);
 var
@@ -282,19 +312,6 @@ begin
   DrawQuadraticBezierCurve(ACanvas, a, P_Control, b, 30); // 30 segments
   DrawNoodleHandle(ACanvas, a, AColor, FHandleRadius);
   DrawNoodleHandle(ACanvas, b, AColor, FHandleRadius);
-
-
-  // Draw DOTS for handles.
-//  if ASelected then
-//  begin
-//    DrawNoodleHandle(ACanvas, a, FSelectedHandleColor, FHandleRadius);
-//    DrawNoodleHandle(ACanvas, b, FSelectedHandleColor, FHandleRadius);
-//  end
-//  else
-//  begin
-//    DrawNoodleHandle(ACanvas, a, FHandleColor, FHandleRadius);
-//    DrawNoodleHandle(ACanvas, b, FHandleColor, FHandleRadius);
-//  end;
 
 end;
 
@@ -694,11 +711,25 @@ begin
       AColor := FSelectedNoodleColor
     else
       AColor := FNoodleColor;
-
     if not pbNoodles.Enabled then  // consider PaintBox state.
       AColor := clGray;
 
-    DrawNoodleLink(Canvas, P0, P1, AColor, FRopeThickness, Noodle.IsSelected);
+    if (SCM.qryHeat.FieldByName('HeatID').AsInteger <>
+      TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger)
+      {and
+       (SCM.qryEvent.FieldByName('EventID').AsInteger <>
+      TDS.tblmEvent.FieldByName('EventNum').AsInteger)
+      and
+       (SCM.qrySession.FieldByName('SessionID').AsInteger <>
+      TDS.tblmSession.FieldByName('SessionID').AsInteger) }
+       then
+    begin
+      DrawNoodleHalfLink(Canvas, P1, AColor, FRopeThickness, Noodle.IsSelected);
+    end
+    else
+    begin
+      DrawNoodleLink(Canvas, P0, P1, AColor, FRopeThickness, Noodle.IsSelected);
+    end
   end;
 
   // 2. DRAWPREVIEW LINE AND START AND END ICONS.

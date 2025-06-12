@@ -493,7 +493,10 @@ begin
   if (aEventID = 0) then exit;
   LOptions := [];
   if dsEvent.DataSet.Active then
-      result := dsEvent.DataSet.Locate('EventID', aEventID, LOptions);
+  begin
+    result := dsEvent.DataSet.Locate('EventID', aEventID, LOptions);
+    if result then qryHeat.ApplyMaster; // master-detail
+  end;
 end;
 
 function TSCM.LocateHeatID(AHeatID: integer): boolean;
@@ -505,7 +508,10 @@ begin
   if (AHeatID = 0) then exit;
   LOptions := [];
   if dsHeat.DataSet.Active then
-      result := dsHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
+  begin
+    result := dsHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
+    if result then qryHeat.ApplyMaster; // master-detail
+  end;
 end;
 
 function TSCM.LocateLaneNum(AHeatID, ALaneNum: integer): boolean;
@@ -544,7 +550,10 @@ begin
     etINDV:
       found := qryINDV.Locate('Lane', ALaneNum, LOptions);
     etTEAM:
+    begin
       found := qryTEAM.Locate('Lane', ALaneNum, LOptions);
+      if found then qryTEAMEntrant.ApplyMaster;
+    end;
   end;
   result := found;
 end;
@@ -559,7 +568,10 @@ begin
   qryNearestSessionID.Prepare;
   qryNearestSessionID.Open;
   if not qryNearestSessionID.IsEmpty then
+  begin
    result := qryNearestSessionID.FieldByName('SessionID').AsInteger;
+   if (result <> 0) then qryEvent.ApplyMaster;
+  end;
 end;
 
 function TSCM.LocateSessionID(ASessionID: integer): boolean;
@@ -571,7 +583,10 @@ begin
   if (ASessionID = 0) then exit;
   LOptions := [];
   if dsSession.DataSet.Active then
-      result := dsSession.DataSet.Locate('SessionID', ASessionID, LOptions);
+  begin
+    result := dsSession.DataSet.Locate('SessionID', ASessionID, LOptions);
+    if result then qryevent.ApplyMaster; // master-detail
+  end;
 end;
 
 function TSCM.LocateSwimClubID(ASwimClubID: integer): boolean;
@@ -583,7 +598,10 @@ begin
   if (ASwimClubID = 0) then exit;
   LOptions := [];
   if dsSwimClub.DataSet.Active then
-      result := dsSwimClub.DataSet.Locate('SwimClubID', ASwimClubID, LOptions);
+  begin
+    result := dsSwimClub.DataSet.Locate('SwimClubID', ASwimClubID, LOptions);
+    if result then qrySession.ApplyMaster; // master-detail
+  end;
 end;
 
 procedure TSCM.qryHeatAfterScroll(DataSet: TDataSet);
@@ -622,32 +640,31 @@ begin
   qrySession.DisableControls;
   qrySwimClub.DisableControls;
 
-  // Store database record position(s).
+    // Store database record position(s).
   ASwimClubID := qrySwimClub.FieldByName('SwimClubID').AsInteger;
   ASessionID := qrySession.FieldByName('SessionID').AsInteger;
   AEventID := qryEvent.FieldByName('EventID').AsInteger;
   AHeatID := qryHeat.FieldByName('HeatID').AsInteger;
+
   // cue-to-record : locate.
   if qrySwimClub.Locate('SwimClubID', ASwimClubID, []) then
   begin
     qrySession.ApplyMaster;
     if LocateSessionID(ASessionID) then
     begin
-      qryEvent.ApplyMaster;
+      // qryEvent.ApplyMaster; // performed in Locate procedure.
       if LocateEventID(AEventID) then
       begin
-        qryHeat.ApplyMaster;
-        if not LocateHeatID(AHeatID) then
-          qryHeat.First;
+        // qryHeat.ApplyMaster; // performed in Locate procedure.
+        if not LocateHeatID(AHeatID) then qryHeat.First;
       end
       else
-      begin
         qryEvent.First;
-      end;
     end;
   end;
+
   // cue-to-lane 1
-  qryINDV.first;
+  qryINDV.First;
   qryTEAM.first;
 
   qrySwimClub.EnableControls;
@@ -708,8 +725,11 @@ begin
   begin
     qryHeat.ApplyMaster;
     found := qryHeat.Locate('HeatNum', aTDHeatNum, []);
-    qryTEAM.ApplyMaster;
-    qryINDV.ApplyMaster;
+    if found then
+    begin
+      qryTEAM.ApplyMaster; // ... qryTEAMEntrant will update.
+      qryINDV.ApplyMaster;
+    end;
   end;
   result := found;
   qrySession.EnableControls;

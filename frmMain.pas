@@ -513,13 +513,15 @@ procedure TMain.actnPostExecute(Sender: TObject);
 var
   dlg: TPostData;
   mr: TModalResult;
-  I, idx: integer;
+  I, idx, LaneID: integer;
   aTDSessionID, aTDEventNum, aTDHeatNum, ALaneNum: integer;
   s: string;
 begin
   if (TDS.tblMHeat.IsEmpty) or (SCM.qryHeat.IsEmpty) then
   begin
-    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound.
+    StatBar.SimpleText := 'Empty grid. Missing data.';
+    Timer1.Enabled := true;
     exit;
   end;
   // Establish if SCM AND DT are syncronized.
@@ -531,14 +533,15 @@ begin
     s := '''
       Based on the Session ID, event and heat number, SCM and DT are not synronized.
       Do you want to CONTINUE?
-      (YES will result in syncronization begin ignored and a 'lane for lane' assignment of race-times to be made.)
+      YES will result in syncronization begin ignored and a 'lane for lane' assignment
+      of race-times (including any valid noodles) will be made.
       ''';
     mr := MessageBox(0, PChar(s), PChar('POST ''RACE-TIMES'' WARNING'), MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
     if not IsPositiveResult(mr) then
     begin
-      StatBar.SimpleText := 'No POSTS were made.';
+      StatBar.SimpleText := 'POST was cancelled.';
       Timer1.Enabled := true;
-      MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound.
+//      MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound.
       exit;
     end;
   end;
@@ -551,6 +554,8 @@ begin
 
   if IsPositiveResult(mr) then
   begin
+    LaneID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
+    TDS.PatchesEnabled := actActivatePatches.Checked;
     // Post all race-times to SCM ...
     if idx = 0 then
     begin
@@ -558,6 +563,7 @@ begin
       TDS.POST_All;
       tdsGrid.ClearRowSelect;  // UI clean-up .
       tdsGrid.EndUpdate;
+      StatBar.SimpleText := 'POST of all valid race-times to SCM : completed.';
     end
     // Post only racetimes from selected lanes to SCM ...
     else if idx = 1 then
@@ -569,10 +575,11 @@ begin
         ALaneNum := StrToIntDef(tdsGrid.Cells[2, idx], 0);
         TDS.POST_Lane(ALaneNum);
       end;
-      tdsGrid.ClearRowSelect; // UI clean-up .
+      TDS.LocateTLaneID(LaneID);
+//      tdsGrid.SelectRows(LaneID, 1);
       tdsGrid.EndUpdate;
+      StatBar.SimpleText := 'POST of selected race-times to SCM : completed.';
     end;
-    StatBar.SimpleText := 'The POST race-times to SCM completed.';
     Timer1.Enabled := true;
   end
   else
@@ -966,11 +973,10 @@ begin
   aTDSSessionID := TDS.tblmSession.FieldByName('SessionID').AsInteger;
   aTDSEventNum := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
   aTDSHeatNum := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
-
   found := SCM.SyncSCMToDT(aTDSSessionID, aTDSEventNum, aTDSHeatNum, FSyncSCMVerbose ); // data event - scroll.
   scmGrid.EndUpdate;
 
-  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+//  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
 
   if not found then
   begin
@@ -981,7 +987,7 @@ begin
   end
   else
   begin
-    StatBar.SimpleText := 'Syncronization done.';
+    StatBar.SimpleText := 'Auto-Synced.';
     timer1.enabled := true;
   end;
 end;
@@ -1006,13 +1012,6 @@ var
 found: boolean;
 aSCMSessionID, aSCMEventNum, aSCMHeatNum: integer;
 begin
-
-  if TDS.tblmLane.IsEmpty then
-  begin
-    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
-    exit;
-  end;
-
   tdsGrid.BeginUpdate;
   aSCMSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
   aSCMEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
@@ -1021,18 +1020,18 @@ begin
   tdsGrid.EndUpdate;
 
   {TODO -oBSA -cGeneral : CHECK: Usage of UpdateEventDetails}
-  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0);
+//  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0);
 
   if not found then
   begin
     StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
-    + 'Your ''Results'' folder may not contain the session files required to sync.';
+      + 'Your ''Results'' folder may not contain the session files required to sync.';
     timer1.enabled := true;
-    MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+    if FSyncTDSVerbose then MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
   end
   else
   begin
-    StatBar.SimpleText := 'Syncronization done.';
+    StatBar.SimpleText := 'Auto-Synced.';
     timer1.enabled := true;
   end;
 end;
@@ -1220,6 +1219,14 @@ begin
       SCM.dsHeat.DataSet.next;
     end;
   end;
+
+  if sbtnAutoSync.Down then
+  begin
+    FSyncTDSVerbose := false;
+    actnSyncTD.Execute(); // Syncronize TDS grid.
+    FSyncTDSVerbose := true;
+  end;
+
   PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
   if Assigned(NoodleFrame) then
     PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
@@ -1441,32 +1448,37 @@ begin
 
   if (GetKeyState(VK_CONTROL) < 0) then
   begin
-      SCM.dsEvent.DataSet.prior;
-      SCM.dsHeat.DataSet.first;
+    SCM.dsEvent.DataSet.prior;
+    SCM.dsHeat.DataSet.First;
   end
   else
   begin
     if (SCM.dsEvent.DataSet.FieldByName('EventNum').AsInteger = 1) and
-      (SCM.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = 1) then
-    exit;
-
+    (SCM.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = 1) then
+      exit;
     { After reaching the first record a second click of btnPrevEvent is needed to
-      recieve a Bof. Checking for heatnum = 1 removes this UI nonsence.}
+      recieve a Bof. Checking for heatnum = 1 removes this UI nonsence. }
     if SCM.dsHeat.DataSet.BOF or
-      (SCM.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = 1) then
+    (SCM.dsHeat.DataSet.FieldByName('HeatNum').AsInteger = 1) then
     begin
-        SCM.dsEvent.DataSet.prior;
-        SCM.dsHeat.DataSet.Last;
-      end
-      else
-      begin
-        SCM.dsHeat.DataSet.prior;
-      end;
-    end;
-    // A scroll event in qryHeat may occur and message is posted twice.
-    PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
-    if Assigned(NoodleFrame) then
-      PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
+      SCM.dsEvent.DataSet.prior;
+      SCM.dsHeat.DataSet.Last;
+    end
+    else
+      SCM.dsHeat.DataSet.prior;
+  end;
+
+  if sbtnAutoSync.Down then
+  begin
+    FSyncTDSVerbose := false;
+    actnSyncTD.Execute(); // Syncronize SCM grid.
+    FSyncTDSVerbose := true;
+  end;
+
+  // A scroll event in qryHeat may occur and message is posted twice.
+  PostMessage(self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+  if Assigned(NoodleFrame) then
+    PostMessage(self.Handle, SCM_UPDATE_NOODLES, 0, 0);
 end;
 
 
@@ -1491,7 +1503,6 @@ begin
   fClearAndScan_Done := false;
   FSyncSCMVerbose := true;
   FSyncTDSVerbose := true;
-
 
   // A Class that uses JSON to read and write application configuration
   Settings := TPrgSetting.Create;
@@ -1759,6 +1770,10 @@ begin
   else
     // Assert UI display is up-to-date.
     PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0 );
+
+  StatBar.SimpleText := 'Check here for information, messages and warnings.';
+  Timer1.Enabled := true;
+
 end;
 
 procedure TMain.LoadSettings;
@@ -1860,7 +1875,6 @@ begin
   lblSwimClubName.Caption := '';
   lblSessionStart.Caption := '';
   ASessionID := 0;
-  StatBar.SimpleText := '';
 
   if not Assigned(SCM) then
   begin

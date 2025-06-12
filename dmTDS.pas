@@ -37,7 +37,8 @@ type
     FConnection: TFDConnection;  //---
     fDataIsActive: Boolean;
     fMasterDetailActive: Boolean;
-    msgHandle: HWND;  // TForm.dtfrmExec ...   // Both DataModules
+    msgHandle: HWND;
+    FPatchesEnabled: Boolean;  // TForm.dtfrmExec ...   // Both DataModules
 
   public
     procedure ActivateDataTDS();  //---
@@ -106,6 +107,7 @@ type
     property MSG_Handle: HWND read msgHandle write msgHandle;  // Both DataModules
     property DataIsActive: Boolean read fDataIsActive;
     property MasterDetailActive: Boolean read fMasterDetailActive;
+    property PatchesEnabled: boolean read FPatchesEnabled write FPatchesEnabled;
   end;
 
 const
@@ -476,6 +478,7 @@ begin
   FConnection := nil;
   fDataIsActive := false; // activated later once FConnection is assigned.
   msgHandle := 0;
+  FPatchesEnabled := true;
 end;
 
 procedure TTDS.DataModuleDestroy(Sender: TObject);
@@ -586,8 +589,7 @@ begin
   if (AEventID = 0) then exit;
   LOptions := [];
   result := dsmEvent.DataSet.Locate('EventID', AEventID, LOptions);
-  if result then
-    dsmHeat.DataSet.Refresh;
+  if result then tblmHeat.ApplyMaster;
 end;
 
 function TTDS.LocateTEventNum(ASessionID, AEventNum: integer): boolean;
@@ -608,6 +610,7 @@ begin
   result := tblmEvent.Locate('SessionID;EventNum', VarArrayOf([ASessionID, AEventNum]), LOptions);
   // Restore the original index field names
   tblmEvent.IndexFieldNames := indexStr;
+  if result then tblmHeat.ApplyMaster;
 end;
 
 function TTDS.LocateTHeatID(AHeatID: integer): boolean;
@@ -619,6 +622,7 @@ begin
   if (AHeatID = 0) then exit;
   LOptions := [];
   result := dsmHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
+  if result then begin tblmLane.ApplyMaster; tblmNoodle.ApplyMaster; end;
 end;
 
 function TTDS.LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
@@ -639,6 +643,7 @@ begin
   result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([AEventID, AHeatNum]), LOptions);
   // Restore the original index field names
   tblmHeat.IndexFieldNames := indexStr;
+  if result then begin tblmLane.ApplyMaster; tblmNoodle.ApplyMaster; end;
 end;
 
 function TTDS.LocateTLaneID(ALaneID: integer): boolean;
@@ -697,7 +702,7 @@ begin
   if not tblmHeat.Active then exit;
   if (aRaceNum = 0) then exit;
   result := tblmHeat.Locate('RaceNum', aRaceNum, []);
-  if result then dsmLane.DataSet.Refresh;
+  if result then begin tblmLane.ApplyMaster; tblmNoodle.ApplyMaster; end;
 end;
 
 function TTDS.LocateTSessionID(ASessionID: integer): boolean;
@@ -709,11 +714,7 @@ begin
   if (ASessionID = 0) then exit;
   LOptions := [];
   result := tblmSession.Locate('SessionID', ASessionID, LOptions);
-  if result then
-  begin
-    dsmEvent.DataSet.Refresh;
-    dsmHeat.DataSet.Refresh;
-  end;
+  if result then tblmEvent.ApplyMaster; // required.
 end;
 
 function TTDS.LocateTSessionNum(ASessionNum: integer): boolean;
@@ -734,6 +735,7 @@ begin
   result := tblmSession.Locate('SessionNum', ASessionNum, LOptions);
   // Restore the original index field names
   tblmSession.IndexFieldNames := indexStr;
+  if result then tblmEvent.ApplyMaster; // required.
 end;
 
 function TTDS.MaxID_Lane: integer;
@@ -827,8 +829,6 @@ var
   ALaneNum: integer;
 //  , NoodleLaneNum, SCMid, TDSid: integer;
 begin
-  SCM.qryINDV.DisableControls;
-  SCM.qryTEAM.DisableControls;
   tblmLane.DisableControls;
   // ONE TO ONE SYNC....
   tblmLane.First;
@@ -836,61 +836,10 @@ begin
   begin
     ALaneNum := tblmLane.FieldByName('Lane').AsInteger;
     POST_Lane(ALaneNum);
-(*
-    // Noodle pre-ceeds one to one sync. Requires Master/Detail in action.
-    if LocateTNoodleByTDSLaneNum(ALaneNum) then
-    begin
-      NoodleLaneNum := tblmNoodle.FieldByName('SCMLane').AsInteger;
-      SCMid := tblmNoodle.FieldByName('SCMID').AsInteger;
-      TDSid := tblmNoodle.FieldByName('TDSID').AsInteger;
-      // full test of all values before allowing assignment.
-      if (NoodleLaneNum <> 0) then
-      begin
-        if (SCM.qryHeat.FieldByName('HeatID').AsInteger = SCMid) and
-         (tblmHeat.FieldByName('HeatID').AsInteger = TDSid) then
-          // Switch to Noodle data..
-          ALaneNum := NoodleLaneNum;
-      end;
-    end;
-
-    AEventType := SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
-    if SCM.LocateLaneNum(ALaneNum, AEventType) then
-    begin
-      if AEventType = etINDV then
-      begin
-        // can't post a time to a lane with no swimmer!
-        if not SCM.qryINDV.FieldByName('MemberID').IsNull then
-        begin
-          SCM.qryINDV.Edit;
-          SCM.qryINDV.FieldByName('RaceTime').AsDateTime :=
-          tblmLane.FieldByName('RaceTime').AsDateTime;
-          SCM.qryINDV.Post;
-        end;
-      end
-      else if AEventType = etTEAM then
-      begin
-        // can't post a time to a lane that doesn't have a relay team.
-        if not SCM.qryINDV.FieldByName('TeamNameID').IsNull then
-        begin
-          SCM.qryTEAM.Edit;
-          SCM.qryTEAM.FieldByName('RaceTime').AsDateTime :=
-          tblmLane.FieldByName('RaceTime').AsDateTime;
-          SCM.qryTEAM.Post;
-        end;
-      end;
-    end;
-*)
     tblmLane.Next;
   end;
-
-//  if AEventType = etINDV then
-//    SCM.qryINDV.First
-//  else if AEventType = etTEAM then
-//    SCM.qryTEAM.First;
   tblmLane.First;
   tblmLane.EnableControls;
-//  SCM.qryTEAM.EnableControls;
-//  SCM.qryINDV.EnableControls;
 end;
 
 procedure TTDS.POST_Lane(ALaneNum: Integer);
@@ -912,19 +861,22 @@ begin
 
   if b1 then
   begin
-    // Noodle pre-ceeds one to one sync. Requires Master/Detail in action.
-    if LocateTNoodleByTDSLaneNum(ALaneNum) then
+    if FPatchesEnabled then
     begin
-      NoodleLaneNum := tblmNoodle.FieldByName('SCMLane').AsInteger;
-      SCMid := tblmNoodle.FieldByName('SCMID').AsInteger;
-      TDSid := tblmNoodle.FieldByName('TDSID').AsInteger;
-      // full test of all values before allowing assignment.
-      if (NoodleLaneNum <> 0) then
+      // Noodle pre-ceeds one to one sync. Requires Master/Detail in action.
+      if LocateTNoodleByTDSLaneNum(ALaneNum) then
       begin
-        if (SCM.qryHeat.FieldByName('HeatID').AsInteger = SCMid) and
-         (tblmHeat.FieldByName('HeatID').AsInteger = TDSid) then
-          // Switch to Noodle data..
-          ALaneNum := NoodleLaneNum;
+        NoodleLaneNum := tblmNoodle.FieldByName('SCMLane').AsInteger;
+        SCMid := tblmNoodle.FieldByName('SCMID').AsInteger;
+        TDSid := tblmNoodle.FieldByName('TDSID').AsInteger;
+        // full test of all values before allowing assignment.
+        if (NoodleLaneNum <> 0) then
+        begin
+          if (SCM.qryHeat.FieldByName('HeatID').AsInteger = SCMid) and
+           (tblmHeat.FieldByName('HeatID').AsInteger = TDSid) then
+            // Switch to Noodle data..
+            ALaneNum := NoodleLaneNum;
+        end;
       end;
     end;
   end;
@@ -1196,20 +1148,21 @@ begin
   tblmHeat.DisableControls;
   tblmLane.DisableControls;
   tblmSession.DisableControls;
-  // NOTE : SCM Sesssion ID = DT SessionNum.
+
   found := LocateTSessionID(SessionID);
   if found then
   begin
     tblmEvent.ApplyMaster;
-//    found := appData.LocateTEventNum(qrySession.FieldByName('SessionID').AsInteger, qryEvent.FieldByName('EventNum').AsInteger);
     found := tblmEvent.Locate('EventNum', EventNum, LOptions);
     if found then
     begin
       tblmHeat.ApplyMaster;
       found := tblmHeat.Locate('HeatNum', HeatNum, LOptions);
-      tblmLane.ApplyMaster;
-      if found then
+      if found then begin
+        tblmLane.ApplyMaster;
+        tblmNoodle.ApplyMaster;
         result := true;
+      end;
     end;
   end;
   tblmSession.EnableControls;
