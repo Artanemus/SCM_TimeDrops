@@ -29,7 +29,8 @@ uses
   Vcl.ExtDlgs, FireDAC.Stan.Param, Vcl.ComCtrls, Vcl.DBCtrls, tdReConstruct,
   Vcl.PlatformVclStylesActnCtrls, Vcl.WinXPanels, Vcl.WinXCtrls,
   System.Types, System.IOUtils, System.Math, DirectoryWatcher,
-  tdReConstructDlg, dmIMG, uNoodleFrame;
+  tdReConstructDlg, dmIMG, uNoodleFrame,
+  System.Generics.Collections, System.Generics.Defaults;
 
 type
   TMain = class(TForm)
@@ -220,6 +221,61 @@ const
   CAPTION_RECONSTRUCT = '%s files ...';
 
 
+
+function ExtractSessionEventHeat(const FileName: string; out SessionID,
+  EventNum, HeatNum: Integer): Boolean;
+var
+  fn: string;
+  Fields: TArray<string>;
+begin
+  // Example: parse FileName to extract SessionID, EventNum, HeatNum
+  // You must implement this based on your filename format
+  // Return True if successful, False otherwise
+  result := false;
+  // remove path from filename
+  fn := ExtractFileName(FileName);
+  Fields := System.StrUtils.SplitString(fn, '_');
+  if Length(Fields) > 1 then
+  begin
+    // Strip non-numeric characters from Fields[1]
+    Fields[0] := StripNonNumeric(Fields[0]);
+    SessionID := StrToIntDef(Fields[0], 0);
+    if (SessionID <> 0) then
+    begin
+      // Filename syntax used by Time Drops: SessionSSSS_Event_EEEE_HeatHHHH_RaceRRRR_XXX.json
+      if Length(Fields) > 2 then
+      begin
+        EventNum := StrToIntDef(StripNonNumeric(Fields[1]), 0);
+        if Length(Fields) > 3 then
+        begin
+          HeatNum := StrToIntDef(StripNonNumeric(Fields[2]), 0);
+          //      if Length(Fields) > 4 then
+          //        RaceNum := StrToIntDef(StripNonNumeric(Fields[3]), 0);
+          result := true;
+        end;
+      end;
+    end;
+  end;
+end;
+
+function FileNameComparer(const Left, Right: string): Integer;
+var
+  S1, S2, E1, E2, H1, H2: Integer;
+begin
+  if not ExtractSessionEventHeat(Left, S1, E1, H1) then
+    Exit(-1);
+  if not ExtractSessionEventHeat(Right, S2, E2, H2) then
+    Exit(1);
+
+  Result := S1 - S2;
+  if Result = 0 then
+    Result := E1 - E2;
+  if Result = 0 then
+    Result := H1 - H2;
+end;
+
+
+
 procedure TMain.actBuildTDTablesExecute(Sender: TObject);
 begin
   // Allow only in debug
@@ -270,19 +326,22 @@ end;
 
 procedure TMain.actAutoSyncExecute(Sender: TObject);
 begin
-  TAction(Sender).Checked := not(TAction(Sender).Checked);
+  TAction(Sender).Checked := not (TAction(Sender).Checked);
   if TAction(Sender).Checked then
     sbtnAutoSync.ImageIndex := 19
   else
     sbtnAutoSync.ImageIndex := 21;
 
-  if TAction(Sender).Checked then  // Perform SYNCRONIZATION ...
+  if TAction(Sender).Checked then // Perform SYNCRONIZATION ...
   begin
-    FSyncSCMVerbose := false;
+    if SCM.qrySession.FieldByName('SessionID').AsInteger <>
+    TDS.tblmSession.FieldByName('SessionNum').AsInteger then
+      SCM.LocateSessionID(TDS.tblmSession.FieldByName('SessionNum').AsInteger);
+
+    FSyncSCMVerbose := false; // Silent Mode.
     actnSyncSCM.Execute(); // Syncronize SCM grid.
     FSyncSCMVerbose := true;
   end;
-
 end;
 
 procedure TMain.actAutoSyncUpdate(Sender: TObject);
@@ -819,6 +878,7 @@ begin
   LSearchOption := TSearchOption.soTopDirectoryOnly;
   WildCardStr := '';
 
+
   if (not fClearAndScan_Done) or (fDoClearAndScanOnBoot) then
   begin
     mr := mrOK;
@@ -848,6 +908,9 @@ begin
         except
           // Catch the possible exceptions
         end;
+
+        // ... SORT before processing files:
+        TArray.Sort<string>(LList, TComparer<string>.Construct(FileNameComparer));
 
         if Length(LList) > 0 then
         begin
@@ -887,27 +950,20 @@ procedure TMain.actnSCMSessionExecute(Sender: TObject);
 var
   dlg: TSessionPicker;
   mr: TModalResult;
+  SessionID: integer;
 begin
   dlg := TSessionPicker.Create(Self);
   dlg.rtnSessionID := 0;
   // the picker will locate to the given session id.
   if SCM.qrySession.Active and not SCM.qrySession.IsEmpty then
-  begin
     dlg.rtnSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
-  end;
 
-  // Prompt to pick session
-  mr := dlg.ShowModal;
-  if IsPositiveResult(mr) and (dlg.rtnSessionID > 0) then
-  begin
-    SCM.MSG_Handle := 0;
-    SCM.LocateSessionID(dlg.rtnSessionID);
-    SCM.MSG_Handle := Self.Handle;
-  end;
+  mr := dlg.ShowModal; // Pick session
+  SessionID := dlg.rtnSessionID;
   dlg.Free;
 
-  UpdateCaption;
-  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+  if IsPositiveResult(mr) and (SessionID > 0) then
+    SCM.LocateSessionID(SessionID); // onchange event called.
 end;
 
 procedure TMain.actnSCMSessionUpdate(Sender: TObject);
@@ -1666,7 +1722,10 @@ begin
   // images disappears because assignment only in TAction.Execute?
   spbtnPost.ImageIndex := 13;
   spbtnActivatePatches.ImageIndex := 14;
-  sbtnAutoSync.ImageIndex := 19;
+
+  // tidy up of auto-sync
+  actAutoSync.Checked := false;
+  sbtnAutoSync.ImageIndex := 21;
 
 end;
 
