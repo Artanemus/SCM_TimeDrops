@@ -8981,7 +8981,6 @@ object Main: TMain
     Top = 0
     Width = 1460
     Height = 27
-    UseSystemFont = False
     ActionManager = actnManager
     Caption = 'actnMenuBar'
     Color = clMenuBar
@@ -8990,7 +8989,7 @@ object Main: TMain
     ColorMap.BtnSelectedFont = clBlack
     ColorMap.UnusedColor = clWhite
     Font.Charset = DEFAULT_CHARSET
-    Font.Color = clBlack
+    Font.Color = clWindowText
     Font.Height = -13
     Font.Name = 'Segoe UI'
     Font.Style = []
@@ -9241,7 +9240,7 @@ object Main: TMain
         Top = 683
         Width = 147
         Height = 41
-        Action = actAutoSync
+        Action = actnAutoSync
         AllowAllUp = True
         GroupIndex = 21
         Down = True
@@ -9356,7 +9355,7 @@ object Main: TMain
           Top = 155
           Width = 128
           Height = 41
-          Action = actActivatePatches
+          Action = actnActivatePatches
           AllowAllUp = True
           GroupIndex = 20
           Down = True
@@ -10790,13 +10789,13 @@ object Main: TMain
           item
             Items = <
               item
-                Action = act_FireDACExplorer
+                Action = actnFireDACExplorer
                 Caption = '&FireDAC Explorer ...'
                 ImageIndex = 9
                 ImageName = 'build'
               end
               item
-                Action = actTDTableViewer
+                Action = actnTDTableViewer
                 Caption = '&Inspect Time-Drops Tables ...'
                 ImageIndex = 12
                 ImageName = 'file_report'
@@ -10805,7 +10804,7 @@ object Main: TMain
                 Caption = '-'
               end
               item
-                Action = actBuildTDTables
+                Action = actnBuildTDTables
                 Caption = '&Re-Build TimeDrops Tables ... '
                 ImageIndex = 3
                 ImageName = 'Settings'
@@ -10975,28 +10974,28 @@ object Main: TMain
       ImageName = 'Settings'
       OnExecute = actnPreferencesExecute
     end
-    object act_FireDACExplorer: TAction
+    object actnFireDACExplorer: TAction
       Category = 'Tools'
       Caption = 'FireDAC Explorer ...'
       ImageIndex = 9
       ImageName = 'build'
-      OnExecute = act_FireDACExplorerExecute
+      OnExecute = actnFireDACExplorerExecute
     end
-    object actBuildTDTables: TAction
+    object actnBuildTDTables: TAction
       Category = 'Tools'
       Caption = 'Re-Build TimeDrops Tables ... '
       Enabled = False
       ImageIndex = 3
       ImageName = 'Settings'
-      OnExecute = actBuildTDTablesExecute
-      OnUpdate = actBuildTDTablesUpdate
+      OnExecute = actnBuildTDTablesExecute
+      OnUpdate = actnBuildTDTablesUpdate
     end
-    object actTDTableViewer: TAction
+    object actnTDTableViewer: TAction
       Category = 'Tools'
       Caption = 'Inspect Time-Drops Tables ...'
       ImageIndex = 12
       ImageName = 'file_report'
-      OnExecute = actTDTableViewerExecute
+      OnExecute = actnTDTableViewerExecute
     end
     object actnClearAndScan: TAction
       Category = 'TimeDrops'
@@ -11014,25 +11013,25 @@ object Main: TMain
       OnExecute = actnRestartDirectoryWatcherExecute
       OnUpdate = actnRestartDirectoryWatcherUpdate
     end
-    object actActivatePatches: TAction
+    object actnActivatePatches: TAction
       Category = 'TimeDrops'
       Caption = 'PATCH'
       Checked = True
       GroupIndex = 20
       ImageIndex = 14
       ImageName = 'AutoPatch'
-      OnExecute = actActivatePatchesExecute
-      OnUpdate = actActivatePatchesUpdate
+      OnExecute = actnActivatePatchesExecute
+      OnUpdate = actnActivatePatchesUpdate
     end
-    object actAutoSync: TAction
+    object actnAutoSync: TAction
       Category = 'TimeDrops'
       Caption = 'AUTO SYNC'
       Checked = True
       GroupIndex = 21
       ImageIndex = 19
       ImageName = 'AutoSyncGrids'
-      OnExecute = actAutoSyncExecute
-      OnUpdate = actAutoSyncUpdate
+      OnExecute = actnAutoSyncExecute
+      OnUpdate = actnAutoSyncUpdate
     end
   end
   object FileSaveDlg: TFileSaveDialog

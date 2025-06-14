@@ -108,8 +108,7 @@ type
     function SyncCheckSession(aTDSessionID: Integer): boolean;
     // .......................................................
     function GetActive_INDVorTEAM: TDataSource;
-    function SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer; Verbose:
-        Boolean = true): boolean;
+    function SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer): boolean;
     procedure WriteConnectionDef(const ConnectionName, ParamName, ParamValue: string);
     property DataIsActive: Boolean read fDataIsActive;
     property MSG_Handle: HWND read msgHandle write msgHandle;  // Both DataModules
@@ -697,41 +696,35 @@ begin
     result := true;
 end;
 
-function TSCM.SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer;
-    Verbose: Boolean = true): boolean;
+function TSCM.SyncSCMtoDT(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer):
+		boolean;
 var
   found: boolean;
 begin
   result := false;
-  found := false;
-
-  if not SyncCheckSession(aTDSessionNum) then
-  begin
-    if Verbose then
-      MessageDlg('The SwimClubMeet andTimeDrops sessions don''t match.'+#13+#10+
-      'Open the correct session with ''Select SCM Session'' and try  again.',
-      mtInformation, [mbOK], 0);
-    exit;
-  end;
+	found := false;
 
   qryTEAM.DisableControls;
   qryINDV.DisableControls;
   qryHeat.DisableControls;
   qryEvent.DisableControls;
-  qrySession.DisableControls;
-  qryEvent.ApplyMaster;
-  if qryEvent.Locate('EventNum', aTDEventNum, [])
-  then
-  begin
-    qryHeat.ApplyMaster;
-    found := qryHeat.Locate('HeatNum', aTDHeatNum, []);
-    if found then
-    begin
-      qryTEAM.ApplyMaster; // ... qryTEAMEntrant will update.
-      qryINDV.ApplyMaster;
-    end;
-  end;
-  result := found;
+	qrySession.DisableControls;
+	if qrySession.FieldByName('SessionID').AsInteger = aTDSessionNum  then
+	begin
+		qryEvent.ApplyMaster;
+		if qryEvent.Locate('EventNum', aTDEventNum, [])
+		then
+		begin
+			qryHeat.ApplyMaster;
+			found := qryHeat.Locate('HeatNum', aTDHeatNum, []);
+			if found then
+			begin
+				qryTEAM.ApplyMaster; // ... qryTEAMEntrant will update.
+				qryINDV.ApplyMaster;
+			end;
+		end;
+		result := found;
+	end;
   qrySession.EnableControls;
   qryEvent.EnableControls;
   qryHeat.EnableControls;

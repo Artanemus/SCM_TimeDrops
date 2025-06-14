@@ -34,7 +34,7 @@ uses
 
 type
   TMain = class(TForm)
-    actBuildTDTables: TAction;
+    actnBuildTDTables: TAction;
     actnAbout: TAction;
     actnClearAndScan: TAction;
     actnClearGrid: TAction;
@@ -58,8 +58,8 @@ type
     actnSelectSwimClub: TAction;
     actnSyncSCM: TAction;
     actnSyncTD: TAction;
-    actTDTableViewer: TAction;
-    act_FireDACExplorer: TAction;
+    actnTDTableViewer: TAction;
+    actnFireDACExplorer: TAction;
     btnNextDTFile: TButton;
     btnNextEvent: TButton;
     btnPickDTTreeView: TButton;
@@ -104,15 +104,15 @@ type
     pnlSCMGrid: TPanel;
     pnlTDSGrid: TPanel;
     frameNoodles: TNoodleFrame;
-    actActivatePatches: TAction;
+    actnActivatePatches: TAction;
     sbtnAutoSync: TSpeedButton;
-    actAutoSync: TAction;
-    procedure actBuildTDTablesExecute(Sender: TObject);
-    procedure actBuildTDTablesUpdate(Sender: TObject);
-    procedure actActivatePatchesExecute(Sender: TObject);
-    procedure actActivatePatchesUpdate(Sender: TObject);
-    procedure actAutoSyncExecute(Sender: TObject);
-    procedure actAutoSyncUpdate(Sender: TObject);
+    actnAutoSync: TAction;
+    procedure actnBuildTDTablesExecute(Sender: TObject);
+    procedure actnBuildTDTablesUpdate(Sender: TObject);
+    procedure actnActivatePatchesExecute(Sender: TObject);
+    procedure actnActivatePatchesUpdate(Sender: TObject);
+    procedure actnAutoSyncExecute(Sender: TObject);
+    procedure actnAutoSyncUpdate(Sender: TObject);
     procedure actnClearAndScanExecute(Sender: TObject);
     procedure actnClearAndScanUpdate(Sender: TObject);
     procedure actnClearGridExecute(Sender: TObject);
@@ -147,8 +147,8 @@ type
     procedure actnSyncSCMUpdate(Sender: TObject);
     procedure actnSyncTDExecute(Sender: TObject);
     procedure actnSyncTDUpdate(Sender: TObject);
-    procedure actTDTableViewerExecute(Sender: TObject);
-    procedure act_FireDACExplorerExecute(Sender: TObject);
+    procedure actnTDTableViewerExecute(Sender: TObject);
+    procedure actnFireDACExplorerExecute(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
     procedure btnNextEventClick(Sender: TObject);
     procedure btnPickDTTreeViewClick(Sender: TObject);
@@ -276,7 +276,7 @@ end;
 
 
 
-procedure TMain.actBuildTDTablesExecute(Sender: TObject);
+procedure TMain.actnBuildTDTablesExecute(Sender: TObject);
 begin
   // Allow only in debug
 {$IFDEF DEBUG}
@@ -284,7 +284,7 @@ begin
 {$ENDIF};
 end;
 
-procedure TMain.actBuildTDTablesUpdate(Sender: TObject);
+procedure TMain.actnBuildTDTablesUpdate(Sender: TObject);
 begin
   if Assigned(TDS) then
   begin
@@ -296,7 +296,7 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
-procedure TMain.actActivatePatchesExecute(Sender: TObject);
+procedure TMain.actnActivatePatchesExecute(Sender: TObject);
 begin
   TAction(Sender).Checked := not(TAction(Sender).Checked);
   if TAction(Sender).Checked then
@@ -311,7 +311,7 @@ begin
   end;
 end;
 
-procedure TMain.actActivatePatchesUpdate(Sender: TObject);
+procedure TMain.actnActivatePatchesUpdate(Sender: TObject);
 begin
   if Assigned(TDS) and TDS.DataIsActive
     and Assigned(SCM) and SCM.DataIsActive then
@@ -324,7 +324,7 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
-procedure TMain.actAutoSyncExecute(Sender: TObject);
+procedure TMain.actnAutoSyncExecute(Sender: TObject);
 begin
   TAction(Sender).Checked := not (TAction(Sender).Checked);
   if TAction(Sender).Checked then
@@ -344,7 +344,7 @@ begin
   end;
 end;
 
-procedure TMain.actAutoSyncUpdate(Sender: TObject);
+procedure TMain.actnAutoSyncUpdate(Sender: TObject);
 begin
   if Assigned(TDS) and TDS.DataIsActive
     and Assigned(SCM) and SCM.DataIsActive then
@@ -614,7 +614,7 @@ begin
   if IsPositiveResult(mr) then
   begin
     LaneID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
-    TDS.PatchesEnabled := actActivatePatches.Checked;
+    TDS.PatchesEnabled := actnActivatePatches.Checked;
     // Post all race-times to SCM ...
     if idx = 0 then
     begin
@@ -951,6 +951,7 @@ var
   dlg: TSessionPicker;
   mr: TModalResult;
   SessionID: integer;
+  found: boolean;
 begin
   dlg := TSessionPicker.Create(Self);
   dlg.rtnSessionID := 0;
@@ -963,7 +964,11 @@ begin
   dlg.Free;
 
   if IsPositiveResult(mr) and (SessionID > 0) then
-    SCM.LocateSessionID(SessionID); // onchange event called.
+  begin
+    found := SCM.LocateSessionID(SessionID); // onchange event called.
+		if found and actnAutoSync.Checked then
+				actnAutoSync.Execute; // disable AutoSync.
+	end;
 end;
 
 procedure TMain.actnSCMSessionUpdate(Sender: TObject);
@@ -1022,39 +1027,59 @@ end;
 
 procedure TMain.actnSyncSCMExecute(Sender: TObject);
 var
-found: boolean;
-aTDSSessionID, aTDSEventNum, aTDSHeatNum: integer;
+  found: boolean;
+  aTDSSessionNum, aTDSEventNum, aTDSHeatNum: integer;
 begin
   scmGrid.BeginUpdate;
-  aTDSSessionID := TDS.tblmSession.FieldByName('SessionID').AsInteger;
+  aTDSSessionNum := TDS.tblmSession.FieldByName('SessionID').AsInteger;
   aTDSEventNum := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
-  aTDSHeatNum := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
-  found := SCM.SyncSCMToDT(aTDSSessionID, aTDSEventNum, aTDSHeatNum, FSyncSCMVerbose ); // data event - scroll.
-  scmGrid.EndUpdate;
+	aTDSHeatNum := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
+	
+	// PART 1 : ensure we are using the correct session.
+  if actnAutoSync.Checked then
+	begin // Does the current SCM session match the TD session? 
+		if SCM.qrySession.FieldByName('SessionID').AsInteger <> aTDSSessionNum then
+      found :=
+				SCM.LocateSessionID(TDS.tblmSession.FieldByName('SessionNum').AsInteger)
+		else found := true;
+    if not found then
+		begin // Error finding the SCM sessionID.
+			StatBar.SimpleText := 'Syncronization of SCM to TD failed. '
+			+ 'Auto-Sync was unable to find the SCM Session.';
+      timer1.enabled := true;
+      if FSyncSCMVerbose then
+				MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound 
+			scmGrid.EndUpdate;
+			Exit;
+		end;
+	end;
 
-//  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+	// PART 2 : try to syncronize with TimeDrops.
+	found := SCM.SyncSCMToDT(aTDSSessionNum, aTDSEventNum, aTDSHeatNum);
+	scmGrid.EndUpdate;
 
-  if not found then
-  begin
-    StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
-    + 'Your ''Results'' folder may not contain the session files required to sync.';
-    timer1.enabled := true;
-    if FSyncSCMVerbose then MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
-  end
+	if not found then
+	begin	
+		StatBar.SimpleText := 'Syncronization of SCM to TD failed. '
+		+ 'Enable Auto-Sync or manually ''Select SCM Session''.';
+		timer1.enabled := true;
+		if FSyncSCMVerbose then
+			MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
+	end
   else
   begin
-    StatBar.SimpleText := 'Auto-Synced.';
+		StatBar.SimpleText := 'Synced.';
     timer1.enabled := true;
   end;
 end;
 
 procedure TMain.actnSyncSCMUpdate(Sender: TObject);
 begin
-  if (Assigned(SCM)) and Assigned(TDS) and (SCM.DataIsActive = true)
-    and (TDS.DataIsActive = true) then
+  if (Assigned(SCM)) and Assigned(TDS) and (SCM.DataIsActive = true) and
+  (TDS.DataIsActive = true) then
   begin
-      if not TAction(Sender).Enabled then
-        TAction(Sender).Enabled := true;
+    if not TAction(Sender).Enabled then
+      TAction(Sender).Enabled := true;
   end
   else
   begin
@@ -1072,22 +1097,23 @@ begin
   aSCMSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
   aSCMEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
   aSCMHeatNum := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
-  found := TDS.SyncDTtoSCM(aSCMSessionID, aSCMEventNum, aSCMHeatNum); // data event - scroll.
+  found := TDS.SyncDTtoSCM(aSCMSessionID, aSCMEventNum, aSCMHeatNum);
+  // data event - scroll.
   tdsGrid.EndUpdate;
-
+  
   {TODO -oBSA -cGeneral : CHECK: Usage of UpdateEventDetails}
 //  PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0);
 
   if not found then
   begin
-    StatBar.SimpleText := 'Syncronization of Time-Drop to SwimClubMeet failed. '
+		StatBar.SimpleText := 'Syncronization of TD to SCM failed. '
       + 'Your ''Results'' folder may not contain the session files required to sync.';
     timer1.enabled := true;
     if FSyncTDSVerbose then MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound
   end
   else
   begin
-    StatBar.SimpleText := 'Auto-Synced.';
+		StatBar.SimpleText := 'Synced.';
     timer1.enabled := true;
   end;
 end;
@@ -1105,7 +1131,7 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
-procedure TMain.actTDTableViewerExecute(Sender: TObject);
+procedure TMain.actnTDTableViewerExecute(Sender: TObject);
 var
 dlg: TDataDebug;
 begin
@@ -1114,7 +1140,7 @@ begin
   dlg.Free;
 end;
 
-procedure TMain.act_FireDACExplorerExecute(Sender: TObject);
+procedure TMain.actnFireDACExplorerExecute(Sender: TObject);
 var
   ExplorerPath: string;
   IniFilePath: string;
@@ -1724,7 +1750,7 @@ begin
   spbtnActivatePatches.ImageIndex := 14;
 
   // tidy up of auto-sync
-  actAutoSync.Checked := false;
+  actnAutoSync.Checked := false;
   sbtnAutoSync.ImageIndex := 21;
 
 end;

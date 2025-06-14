@@ -9031,7 +9031,7 @@ object Options: TOptions
       Top = 0
       Width = 661
       Height = 397
-      ActivePage = tabSettings
+      ActivePage = TabSheet1
       Align = alClient
       TabOrder = 0
       object tabSettings: TTabSheet
