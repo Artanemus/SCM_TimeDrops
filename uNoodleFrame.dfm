@@ -26,15 +26,44 @@ object NoodleFrame: TNoodleFrame
     object DeleteNoodle: TMenuItem
       Action = actDeleteNoodle
     end
+    object DisableNoodle1: TMenuItem
+      Action = actDisableNoodle
+    end
+    object DisableALLNoodles1: TMenuItem
+      Action = actDisablePatches
+      AutoCheck = True
+    end
+    object N1: TMenuItem
+      Caption = '-'
+    end
+    object Noodledetails1: TMenuItem
+      Action = actNoodleInfo
+    end
   end
   object actnList: TActionList
     Left = 64
     Top = 440
     object actDeleteNoodle: TAction
-      Caption = 'Delete Noodle ...'
+      Category = 'Noodles'
+      Caption = 'Delete Noodle'
       Enabled = False
       OnExecute = actDeleteNoodleExecute
       OnUpdate = actDeleteNoodleUpdate
+    end
+    object actDisableNoodle: TAction
+      Category = 'Noodles'
+      Caption = 'Disable Noodle'
+      Enabled = False
+    end
+    object actDisablePatches: TAction
+      Category = 'Noodles'
+      AutoCheck = True
+      Caption = 'Disable ALL Noodles'
+      Enabled = False
+    end
+    object actNoodleInfo: TAction
+      Category = 'Noodles'
+      Caption = 'Noodle details ...'
     end
   end
 end

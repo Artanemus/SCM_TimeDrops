@@ -133,18 +133,18 @@ var
   SQL: string;
 begin
   result := etUnknown;
-    if not SCM.qryEvent.IsEmpty then
-    begin
-      SQL := 'SELECT [EventTypeID] FROM [SwimClubMeet].[dbo].[Event] ' +
-        'INNER JOIN Distance ON [Event].DistanceID = Distance.DistanceID ' +
-        'WHERE EventID = :ID';
-      v := SCM.scmConnection.ExecSQLScalar(SQL, [aEventID]);
-      if VarIsNull(v) or VarIsEmpty(v) or (v = 0) then exit;
-    end;
-    case v of
-      1: result := etINDV;
-      2: result := etTEAM;
-    end;
+  if not SCM.qryEvent.IsEmpty then
+  begin
+    SQL := 'SELECT [EventTypeID] FROM [SwimClubMeet].[dbo].[Event] ' +
+    'INNER JOIN Distance ON [Event].DistanceID = Distance.DistanceID ' +
+    'WHERE EventID = :ID';
+    v := SCM.scmConnection.ExecSQLScalar(SQL, [aEventID]);
+    if VarIsNull(v) or VarIsEmpty(v) or (v = 0) then exit;
+  end;
+  case v of
+    1: result := etINDV;
+    2: result := etTEAM;
+  end;
 end;
 
 procedure TSCM.ActivateDataSCM;

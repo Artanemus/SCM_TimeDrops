@@ -326,11 +326,11 @@ end;
 
 procedure TMain.actnAutoSyncExecute(Sender: TObject);
 begin
-  TAction(Sender).Checked := not (TAction(Sender).Checked);
-  if TAction(Sender).Checked then
-    sbtnAutoSync.ImageIndex := 19
-  else
-    sbtnAutoSync.ImageIndex := 21;
+	TAction(Sender).Checked := not (TAction(Sender).Checked);
+	if TAction(Sender).Checked then
+		sbtnAutoSync.ImageIndex := 19
+	else
+		sbtnAutoSync.ImageIndex := 21;
 
   if TAction(Sender).Checked then // Perform SYNCRONIZATION ...
   begin
@@ -612,7 +612,11 @@ begin
   dlg.free;
 
   if IsPositiveResult(mr) then
-  begin
+	begin
+		// disable AUTO-SYNC ....
+		actnAutoSync.Checked := false;
+		sbtnAutoSync.ImageIndex := 21;		
+		
     LaneID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
     TDS.PatchesEnabled := actnActivatePatches.Checked;
     // Post all race-times to SCM ...

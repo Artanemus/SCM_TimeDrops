@@ -40,6 +40,13 @@ type
     DeleteNoodle: TMenuItem;
     pbNoodles: TPaintBox;
     pumenuNoodle: TPopupMenu;
+    actDisableNoodle: TAction;
+    actDisablePatches: TAction;
+    DisableNoodle1: TMenuItem;
+    DisableALLNoodles1: TMenuItem;
+    actNoodleInfo: TAction;
+    Noodledetails1: TMenuItem;
+    N1: TMenuItem;
     procedure actDeleteNoodleExecute(Sender: TObject);
     procedure actDeleteNoodleUpdate(Sender: TObject);
     procedure pbNoodlesMouseDown(Sender: TObject; Button: TMouseButton; Shift:
