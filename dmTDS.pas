@@ -67,7 +67,6 @@ type
 		function LocateTLaneID(ALaneID: integer): boolean;
 		function LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
 		function LocateTNoodle(ANoodleID: integer): boolean;
-		function LocateTNoodleByTDSLaneNum(ALaneNum: integer): boolean;
 		function LocateTRaceNum(aRaceNum: integer): boolean;
 		function LocateTSessionID(ASessionID: integer): boolean;
 		function LocateTSessionNum(ASessionNum: integer): boolean;
@@ -684,17 +683,6 @@ begin
 	result := tblmNoodle.Locate('NoodleID', ANoodleID, LOptions);
 end;
 
-function TTDS.LocateTNoodleByTDSLaneNum(ALaneNum: integer): boolean;
-var
-	LOptions: TLocateOptions;
-begin
-	result := false;
-	if not tblmNoodle.Active then exit;
-	if (ALaneNum = 0) then exit;
-	LOptions := [];
-	result := tblmNoodle.Locate('TDSLane', ALaneNum, LOptions);
-end;
-
 function TTDS.LocateTRaceNum(aRaceNum: integer): boolean;
 begin
 	result := false;
@@ -824,74 +812,94 @@ end;
 
 procedure TTDS.POST_All;
 var
-ALaneNum: integer;
+  ALaneNum: integer;
 begin
+	// TEST data integrity.
+	if not (TDS.DataIsActive) then exit;
+	if TDS.tblmLane.IsEmpty then exit;
 	tblmLane.DisableControls;
-	// ONE TO ONE SYNC....
-	tblmLane.First;
-	while not (tblmLane.eof) do
-	begin
-		ALaneNum := tblmLane.FieldByName('LaneNum').AsInteger;
-		POST_Lane(ALaneNum);
-		tblmLane.Next;
+	try
+		tblmLane.First;
+		while not (tblmLane.eof) do // iterate over TimeDrop's lane data.
+		begin
+			ALaneNum := tblmLane.FieldByName('LaneNum').AsInteger;
+			POST_Lane(ALaneNum);  
+			tblmLane.Next;
+		end;
+		tblmLane.First;
+	finally
+		tblmLane.EnableControls;
 	end;
-	tblmLane.First;
-	tblmLane.EnableControls;
 end;
 
 procedure TTDS.POST_Lane(TDLaneNum: Integer);
 var
-	recCount,NoodleID: integer;
+	NoodleB0, NoodleB1: integer;
 begin
+  // TEST data integrity.
+  if not (TDS.DataIsActive) then exit;
+  if TDS.tblmLane.IsEmpty then exit;
 
-	if not FPatchesEnabled then
-	begin
-		POST_LaneToLane(TDLaneNum);
-		exit;
-	end;
-	
-	// Find the noodles that may interfere with a lane-to-lane operation.
-	// Up to 10 lanes - each lane may have a noodle. Each lane has Bank0, Bank1.
-	// Noodles can span from bank0 to bank1.
-	// Noodles can span across different lanes. From lane 4 bank1 to lane 5 bank0.
-	// Hence this will return multi noodles. 
-	tblmNoodle.Filter := Format('SCMLane = %d OR TDSLane = %d', [TDLaneNum, TDLaneNum]);	
-	tblmNoodle.Filtered := true;
-	recCount:= tblmNoodle.RecordCount; 
-	tblmNoodle.Filtered := false; // disable filtering.
-	tblmNoodle.Filter := '';
+  if not FPatchesEnabled then
+		// Noodles have been disabled. Perform a lane-to-Lane assignment.
+    POST_LaneToLane(TDLaneNum)
+  else if (FPatchesEnabled) and tblmNoodle.IsEmpty() then
+    // Noodles ARE enabled but no noodles to patch.
+    POST_LaneToLane(TDLaneNum)
+  else
+	begin // We have noodles...
+		NoodleB0 := 0;
+    NoodleB1 := 0;
+    // Find any noodles that may interfere with a lane-to-lane operation.
+    tblmNoodle.Filter := Format('SCMLane = %d OR TDSLane = %d', [TDLaneNum,
+        TDLaneNum]);
+    tblmNoodle.Filtered := true;
+		if (tblmNoodle.RecordCount <> 0) then 
+		begin // Only 2 banks per lane. Max noodle handles per lane = 2.
+      tblmNoodle.First;
+      while not tblmNoodle.Eof do
+      begin
+        if tblmNoodle.FieldByName('SCMLane').AsInteger = TDLaneNum then
+          NoodleB0 := tblmNoodle.FieldByName('NoodleID').AsInteger;
+        if tblmNoodle.FieldByName('TDSLane').AsInteger = TDLaneNum then
+          NoodleB1 := tblmNoodle.FieldByName('NoodleID').AsInteger;
+        tblmNoodle.next;
+      end;
+    end;
+    tblmNoodle.Filtered := false; // disable filtering.
+    tblmNoodle.Filter := '';
 
-	if recCount = 0  then 
-		// No noodles found touching bank0 or bank1 on this lane. Safe to POST 
-		// a basic lane-to-lane.
-		POST_LaneToLane(TDLaneNum) 
-	// found multi-noodles.
-	// focus only on the lane given. Other lanes will be processed later.
-	else if LocateTNoodleByTDSLaneNum(TDLaneNum) then
-	begin	
-		NoodleID := tblmNoodle.FieldByName('NoodleID').AsInteger;	
-		POST_Noodle(NoodleID);
-	end;
+    if (NoodleB0 = 0) and (NoodleB1 = 0) then
+      // No noodles found touching bank0 or bank1 on this lane.
+			POST_LaneToLane(TDLaneNum) // Perform a lane-to-lane assignment.
+		else // Draw ONLY the noodle originating from BANK 1. (TDSGrid).
+      POST_Noodle(NoodleB1);
+  end;
 end;
 
 procedure TTDS.POST_LaneToLane(TDLaneNum: Integer);
 var
-  AEventType: scmEventType;
+	found: boolean;
 begin
-  // TEST data integrity.
-  if (not SCM.DataIsActive) or (not TDS.DataIsActive) then exit;
-  if SCM.qryEvent.IsEmpty or SCM.qryHeat.IsEmpty then exit;
-  if TDS.tblmLane.IsEmpty then exit;
+	// TEST data integrity.
+	if (not SCM.DataIsActive) or (not TDS.DataIsActive) then exit;
+	if SCM.qryEvent.IsEmpty or SCM.qryHeat.IsEmpty then exit;
+	if TDS.tblmLane.IsEmpty then exit;
 
-  SCM.qryINDV.DisableControls;
-  SCM.qryTEAM.DisableControls;
-  tblmLane.DisableControls;
-try
-		POST_Record;
+	SCM.qryINDV.DisableControls;
+	SCM.qryTEAMEntrant.DisableControls;	
+	SCM.qryTEAM.DisableControls;
+	tblmLane.DisableControls;
+	found := true;
+	try
+		if TDS.tblmLane.FieldByName('LaneNum').AsInteger <> TDLaneNum then
+			found  := TDS.LocateTLaneNum(TDS.tblmHeat.FieldByName('HeatID').AsInteger, TDLaneNum);
+		if found then POST_Record;
 	finally
 		tblmLane.EnableControls;
-		SCM.qryTEAM.EnableControls;
 		SCM.qryINDV.EnableControls;
+		SCM.qryTEAM.EnableControls;
+		SCM.qryTEAMEntrant.EnableControls;
 	end;
 end;
 
@@ -904,6 +912,7 @@ begin
 	// TEST data integrity.
 	if (not SCM.DataIsActive) or (not TDS.DataIsActive) then exit;
 	if SCM.qryEvent.IsEmpty or TDS.tblmLane.IsEmpty then exit;
+	
 	// take data controls offline
 	SCM.qryINDV.DisableControls;
 	SCM.qryTEAM.DisableControls;
@@ -912,13 +921,11 @@ begin
 	SCM.qryHeat.DisableControls;
 	// store the current SwimClubMeet heat.
 	storeSCMHeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger;
-	 
 	try
 		found := true;
 		// locate the correct Noodle to process.
-		if NoodleID <> tblmNoodle.FieldByName('NoodleID').AsInteger then 
+		if tblmNoodle.FieldByName('NoodleID').AsInteger <> NoodleID then 
 			found := LocateTNoodle(NoodleID); 
-		
 		if found then
 		begin
 			// extract params.
@@ -926,43 +933,34 @@ begin
 			Bank1HeatID := tblmNoodle.FieldByName('TDSHeatID').AsInteger;
 			Bank0Lane := tblmNoodle.FieldByName('SCMLane').AsInteger;
 			Bank0HeatID := tblmNoodle.FieldByName('SCMHeatID').AsInteger;
-
 			if TDS.tblmLane.FieldByName('HeatID').AsInteger <> Bank1HeatID then
 				exit;  // unexpected error
-
 			if TDS.tblmLane.FieldByName('LaneNum').AsInteger <> Bank1Lane then
+				found  := TDS.LocateTLaneNum(TDS.tblmHeat.FieldByName('HeatID').AsInteger, Bank1Lane);
+			if found then
 			begin
-				// if we re-locate to correct record then is will upset calling procedures
-				exit;   // unexpected error
-//				if not TDS.LocateTLaneNum(Bank1HeatID,Bank1Lane) then 
-//				begin 
-//					 unable to locate lane number.
-//					exit;
-//				end;
+				if SCM.qryHeat.FieldByName('HeatID').AsInteger <> Bank0HeatID then
+				begin
+					found := SCM.LocateHeatID(Bank0HeatID);
+					if found then begin
+						SCM.qryINDV.ApplyMaster;
+						SCM.qryTEAM.ApplyMaster;
+						SCM.qryTEAMEntrant.ApplyMaster;	
+					end;
+				end;
+				if found then 
+				begin
+					found := SCM.LocateLaneNum(Bank0HeatID, Bank0Lane);	
+					if found then POST_Record;
+				end;
 			end;
-
-      if SCM.qryHeat.FieldByName('HeatID').AsInteger <> Bank1HeatID then
-      begin // Noodles can be patched across different heats.
-        if not SCM.LocateLaneNum(Bank0Lane, Bank0Lane) then
-        begin
-          // unable to locate Heat!
-          exit;
-        end
-        else
-        begin
-          SCM.qryINDV.ApplyMaster;
-          SCM.qryTEAM.ApplyMaster;
-          SCM.qryTEAMEntrant.ApplyMaster;
-        end;
-      end;
-			POST_Record;
 		end;
 
 	finally
 		// re-locate to last SwimClubMeet heat - if required..
 		if SCM.qryHeat.FieldByName('HeatID').AsInteger <> storeSCMHeatID then
 		begin
-			SCM.LocateLaneNum(Bank0Lane, Bank0Lane);
+			SCM.LocateHeatID(storeSCMHeatID);
 			SCM.qryTEAM.ApplyMaster;
 			SCM.qryINDV.ApplyMaster;
 			SCM.qryTEAMEntrant.ApplyMaster;	
