@@ -39,10 +39,10 @@ type
 		fMasterDetailActive: Boolean;
 		FPatchesEnabled: Boolean;  // TForm.dtfrmExec ...   // Both DataModules
 		msgHandle: HWND;
-		procedure POST_LaneToLane(TDLaneNum: Integer);
+		procedure POST_LaneToLane(LaneNum: Integer);
 		procedure POST_Noodle(NoodleID: Integer);
-		procedure POST_Record();
-		
+		procedure POST_Record(EventType: scmEventType = etUnknown);
+
 	public
 		procedure ActivateDataTDS();  //---
 		procedure BuildAppData;
@@ -55,6 +55,12 @@ type
 		procedure EnableAllTDControls;
 		procedure EnableTDMasterDetail();
 		// .......................................................
+		// Simplified : Call here if table relationships are active.
+		// ApplyMaster isn't called for these locate record routines.
+		function Locate_LaneID(ALaneID: integer): boolean;
+		function Locate_LaneNum(ALaneNum: integer): boolean;
+		function Locate_NoodleID(ANoodleID: integer): boolean;
+		// .......................................................
 		// L O C A T E S   F O R   D T   D A T A.
 		// WARNING : Master-Detail is enabled and locating to an ID isn't garenteed.
 		// Use DisableDTMasterDetail() before locating to ID's?
@@ -64,14 +70,13 @@ type
 		function LocateTEventNum(ASessionID, AEventNum: integer): boolean;
 		function LocateTHeatID(AHeatID: integer): boolean;
 		function LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
-		function LocateTLaneID(ALaneID: integer): boolean;
-		function LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
-		function LocateTNoodle(ANoodleID: integer): boolean;
+		function LocateTLaneNum(AHeatID, ALaneNum: integer): boolean; overload;
 		function LocateTRaceNum(aRaceNum: integer): boolean;
 		function LocateTSessionID(ASessionID: integer): boolean;
 		function LocateTSessionNum(ASessionNum: integer): boolean;
 		function MaxID_Event(): integer;
 		function MaxID_Heat(): integer;
+
 		// .......................................................
 		// FIND MAXIMUM IDENTIFIER VALUE IN TIME-DROPS TABLES.
 		// These routines are needed as there is no AutoInc on Primary Key.
@@ -81,7 +86,8 @@ type
 		function MaxID_Noodle(): integer;
 		function MaxID_Session(): integer;
 		procedure POST_All;
-		procedure POST_Lane(TDLaneNum: Integer);
+		procedure POST_Lane;
+		
 		// Read/Write Application Data State to file
 		procedure ReadFromBinary(AFileName: string);
 		// SET dtActiveRT : artAutomatic, artManual, artUser, artSplit, artNone
@@ -634,22 +640,47 @@ begin
 	// Exit if the table is not active or if AHeatNum is 0
 	if not tblmHeat.Active then exit;
 	if AHeatNum = 0 then exit;
-	// Store the original index field names
-	indexStr := tblmHeat.IndexFieldNames;
+	indexStr := tblmHeat.IndexFieldNames; // Store the original index field names
 	LOptions := [];
 	tblmHeat.IndexFieldNames := 'EventID;HeatNum';
 	result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([AEventID, AHeatNum]), LOptions);
-	// Restore the original index field names
-	tblmHeat.IndexFieldNames := indexStr;
+	tblmHeat.IndexFieldNames := indexStr; // Restore the original index field names
 	if result then begin tblmLane.ApplyMaster; tblmNoodle.ApplyMaster; end;
 end;
 
-function TTDS.LocateTLaneID(ALaneID: integer): boolean;
+function TTDS.Locate_LaneID(ALaneID: integer): boolean;
+var
+	LOptions: TLocateOptions;
+		indexStr: string;
 begin
 	result := false;
 	if not tblmLane.Active then exit;
 	if (ALaneID = 0) then exit;
-	result := tblmLane.Locate('LaneID', ALaneID, []);
+	indexStr := tblmLane.IndexFieldNames; // Store the original index field names
+	LOptions := [];
+	tblmLane.IndexFieldNames := 'LaneID';
+	result := tblmLane.Locate('LaneID', ALaneID, LOptions);
+	tblmLane.IndexFieldNames := indexStr; // Restore the original index field names
+end;
+
+function TTDS.Locate_LaneNum(ALaneNum: integer): boolean;
+var
+	HeatID: integer;
+begin
+	// NOTE: this is a special case. Ensure that the correct heat is selected 
+	// before calling. May require 'ApplyMaster' before calling.
+	// For code readability.
+	result := false;
+	if not tblmLane.Active then exit;
+	if ALaneNum = 0 then exit;
+	if tblmLane.FieldByName('LaneNum').AsInteger = ALaneNum then result := true
+	else
+	begin  // uses current TDS heat.
+		if not tblmHeat.Active then exit;
+		if tblmHeat.IsEmpty then exit;
+		HeatID := tblmHeat.FieldByName('HeatID').AsInteger;
+		result := LocateTLaneNum(HeatID, ALaneNum);
+	end;
 end;
 
 function TTDS.LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
@@ -672,7 +703,7 @@ begin
 	tblmLane.IndexFieldNames := indexStr;
 end;
 
-function TTDS.LocateTNoodle(ANoodleID: integer): boolean;
+function TTDS.Locate_NoodleID(ANoodleID: integer): boolean;
 var
 	LOptions: TLocateOptions;
 begin
@@ -811,96 +842,104 @@ begin
 end;
 
 procedure TTDS.POST_All;
-var
-  ALaneNum: integer;
 begin
-	// TEST data integrity.
-	if not (TDS.DataIsActive) then exit;
-	if TDS.tblmLane.IsEmpty then exit;
+	// TEST data integrity before iterating over lane table.
+	if not (FDataIsActive) then exit;
+	if tblmLane.IsEmpty then exit;
 	tblmLane.DisableControls;
 	try
 		tblmLane.First;
 		while not (tblmLane.eof) do // iterate over TimeDrop's lane data.
 		begin
-			ALaneNum := tblmLane.FieldByName('LaneNum').AsInteger;
-			POST_Lane(ALaneNum);  
+			POST_Lane();  
 			tblmLane.Next;
 		end;
-		tblmLane.First;
 	finally
 		tblmLane.EnableControls;
 	end;
 end;
 
-procedure TTDS.POST_Lane(TDLaneNum: Integer);
+procedure TTDS.POST_Lane();
 var
-	NoodleB0, NoodleB1: integer;
+	NoodleB0, NoodleB1, ALaneNum: integer;
 begin
-  // TEST data integrity.
-  if not (TDS.DataIsActive) then exit;
-  if TDS.tblmLane.IsEmpty then exit;
+	// MAIN ENTRY POINT: ALL data integrity TESTS are performed here.
+	if (not SCM.DataIsActive) or (not FDataIsActive) then exit;
+	if SCM.qryEvent.IsEmpty or SCM.qryHeat.IsEmpty then exit;
+	if tblmLane.IsEmpty then exit;
 
-  if not FPatchesEnabled then
+	// ASSUMPTION: TDS.tblmLane cued to correct record.
+	ALaneNum := TDS.tblmLane.FieldByName('LaneNum').AsInteger;
+
+	if not FPatchesEnabled then
 		// Noodles have been disabled. Perform a lane-to-Lane assignment.
-    POST_LaneToLane(TDLaneNum)
-  else if (FPatchesEnabled) and tblmNoodle.IsEmpty() then
-    // Noodles ARE enabled but no noodles to patch.
-    POST_LaneToLane(TDLaneNum)
-  else
+		POST_LaneToLane(ALaneNum)
+	else if (FPatchesEnabled) and tblmNoodle.IsEmpty() then
+		// Noodles ARE enabled but no noodles to patch.
+		POST_LaneToLane(ALaneNum)
+	else
 	begin // We have noodles...
 		NoodleB0 := 0;
-    NoodleB1 := 0;
-    // Find any noodles that may interfere with a lane-to-lane operation.
-    tblmNoodle.Filter := Format('SCMLane = %d OR TDSLane = %d', [TDLaneNum,
-        TDLaneNum]);
-    tblmNoodle.Filtered := true;
+		NoodleB1 := 0;
+		// Find any noodles that may interfere with a lane-to-lane operation.
+		tblmNoodle.Filter := Format('SCMLane = %d OR TDSLane = %d', [ALaneNum,
+				ALaneNum]);
+		tblmNoodle.Filtered := true;
 		if (tblmNoodle.RecordCount <> 0) then 
 		begin // Only 2 banks per lane. Max noodle handles per lane = 2.
-      tblmNoodle.First;
-      while not tblmNoodle.Eof do
-      begin
-        if tblmNoodle.FieldByName('SCMLane').AsInteger = TDLaneNum then
-          NoodleB0 := tblmNoodle.FieldByName('NoodleID').AsInteger;
-        if tblmNoodle.FieldByName('TDSLane').AsInteger = TDLaneNum then
-          NoodleB1 := tblmNoodle.FieldByName('NoodleID').AsInteger;
-        tblmNoodle.next;
-      end;
-    end;
-    tblmNoodle.Filtered := false; // disable filtering.
-    tblmNoodle.Filter := '';
+			tblmNoodle.First;
+			while not tblmNoodle.Eof do
+			begin
+				if tblmNoodle.FieldByName('SCMLane').AsInteger = ALaneNum then
+					NoodleB0 := tblmNoodle.FieldByName('NoodleID').AsInteger;
+				if tblmNoodle.FieldByName('TDSLane').AsInteger = ALaneNum then
+					NoodleB1 := tblmNoodle.FieldByName('NoodleID').AsInteger;
+				tblmNoodle.next;
+			end;
+		end;
+		tblmNoodle.Filtered := false; // disable filtering.
+		tblmNoodle.Filter := '';
 
-    if (NoodleB0 = 0) and (NoodleB1 = 0) then
-      // No noodles found touching bank0 or bank1 on this lane.
-			POST_LaneToLane(TDLaneNum) // Perform a lane-to-lane assignment.
-		else // Draw ONLY the noodle originating from BANK 1. (TDSGrid).
-      POST_Noodle(NoodleB1);
-  end;
+		if (NoodleB0 = 0) and (NoodleB1 = 0) then
+			// No noodles found touching bank0 or bank1 on this lane.
+			POST_LaneToLane(ALaneNum) // Perform a lane-to-lane assignment.
+		else // Process ONLY noodle found at BANK 1.
+			POST_Noodle(NoodleB1);
+	end;
 end;
 
-procedure TTDS.POST_LaneToLane(TDLaneNum: Integer);
+procedure TTDS.POST_LaneToLane(LaneNum: integer);
 var
-	found: boolean;
+  EventType: scmEventType;
+  found: boolean;
 begin
-	// TEST data integrity.
-	if (not SCM.DataIsActive) or (not TDS.DataIsActive) then exit;
-	if SCM.qryEvent.IsEmpty or SCM.qryHeat.IsEmpty then exit;
-	if TDS.tblmLane.IsEmpty then exit;
-
-	SCM.qryINDV.DisableControls;
-	SCM.qryTEAMEntrant.DisableControls;	
-	SCM.qryTEAM.DisableControls;
-	tblmLane.DisableControls;
-	found := true;
-	try
-		if TDS.tblmLane.FieldByName('LaneNum').AsInteger <> TDLaneNum then
-			found  := TDS.LocateTLaneNum(TDS.tblmHeat.FieldByName('HeatID').AsInteger, TDLaneNum);
-		if found then POST_Record;
-	finally
-		tblmLane.EnableControls;
-		SCM.qryINDV.EnableControls;
-		SCM.qryTEAM.EnableControls;
-		SCM.qryTEAMEntrant.EnableControls;
-	end;
+  SCM.qryINDV.DisableControls;
+  SCM.qryTEAMEntrant.DisableControls;
+  SCM.qryTEAM.DisableControls;
+  tblmLane.DisableControls;
+  try
+    found := false;
+    EventType := SCM.GetEventType(SCM.qryHeat.FieldByName('EventID').AsInteger);
+    case EventType of
+      etUnknown: exit;
+      etINDV:
+        begin
+          if SCM.qryINDV.FieldByName('lane').AsInteger <> LaneNum then
+            found := SCM.LocateLaneNum(LaneNum, EventType);
+        end;
+      etTEAM:
+        begin
+          if SCM.qryTEAM.FieldByName('lane').AsInteger <> LaneNum then
+            found := SCM.LocateLaneNum(LaneNum, EventType);
+        end;
+    end;
+    if found then POST_Record(EventType);
+  finally
+    tblmLane.EnableControls;
+    SCM.qryINDV.EnableControls;
+    SCM.qryTEAM.EnableControls;
+    SCM.qryTEAMEntrant.EnableControls;
+  end;
 end;
 
 procedure TTDS.POST_Noodle(NoodleID: Integer);
@@ -908,11 +947,8 @@ var
 	Bank0Lane, Bank0HeatID, Bank1Lane, Bank1HeatID: Integer;
 	found: boolean;
 	storeSCMHeatID: integer;
+	AEventType: scmEventType;
 begin
-	// TEST data integrity.
-	if (not SCM.DataIsActive) or (not TDS.DataIsActive) then exit;
-	if SCM.qryEvent.IsEmpty or TDS.tblmLane.IsEmpty then exit;
-	
 	// take data controls offline
 	SCM.qryINDV.DisableControls;
 	SCM.qryTEAM.DisableControls;
@@ -924,8 +960,8 @@ begin
 	try
 		found := true;
 		// locate the correct Noodle to process.
-		if tblmNoodle.FieldByName('NoodleID').AsInteger <> NoodleID then 
-			found := LocateTNoodle(NoodleID); 
+		if tblmNoodle.FieldByName('NoodleID').AsInteger <> NoodleID then
+			found := Locate_NoodleID(NoodleID);
 		if found then
 		begin
 			// extract params.
@@ -933,25 +969,21 @@ begin
 			Bank1HeatID := tblmNoodle.FieldByName('TDSHeatID').AsInteger;
 			Bank0Lane := tblmNoodle.FieldByName('SCMLane').AsInteger;
 			Bank0HeatID := tblmNoodle.FieldByName('SCMHeatID').AsInteger;
+			
 			if TDS.tblmLane.FieldByName('HeatID').AsInteger <> Bank1HeatID then
 				exit;  // unexpected error
+				
 			if TDS.tblmLane.FieldByName('LaneNum').AsInteger <> Bank1Lane then
-				found  := TDS.LocateTLaneNum(TDS.tblmHeat.FieldByName('HeatID').AsInteger, Bank1Lane);
+				found  := LocateTLaneNum(TDS.tblmLane.FieldByName('HeatID').AsInteger,Bank1Lane);
 			if found then
 			begin
 				if SCM.qryHeat.FieldByName('HeatID').AsInteger <> Bank0HeatID then
-				begin
-					found := SCM.LocateHeatID(Bank0HeatID);
-					if found then begin
-						SCM.qryINDV.ApplyMaster;
-						SCM.qryTEAM.ApplyMaster;
-						SCM.qryTEAMEntrant.ApplyMaster;	
-					end;
-				end;
+					found := SCM.LocateHeatID(Bank0HeatID); // ApplyMaster...
 				if found then 
 				begin
-					found := SCM.LocateLaneNum(Bank0HeatID, Bank0Lane);	
-					if found then POST_Record;
+					AEventType := SCM.GetEventType(SCM.qryHeat.FieldByName('EventID').AsInteger);
+					found := SCM.LocateLaneNum(Bank0Lane, AEventType);	
+					if found then POST_Record(AEventType);
 				end;
 			end;
 		end;
@@ -974,15 +1006,10 @@ begin
 	end;
 end;
 
-procedure TTDS.POST_Record;
-var
-	AEventType: scmEventType;
+procedure TTDS.POST_Record(EventType: scmEventType = etUnknown);
 begin
-	// on error AEventType = setUnknown.
-	AEventType :=
-		SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
 
-	if AEventType = etINDV then
+	if EventType = etINDV then
 	begin
 		// can't post a time to a lane with no swimmer!
 		if not SCM.qryINDV.FieldByName('MemberID').IsNull then
@@ -996,7 +1023,7 @@ begin
 			end;
 		end;
 	end
-	else if AEventType = etTEAM then
+	else if EventType = etTEAM then
 	begin
 		// can't post a time to a lane that doesn't have a relay team.
 		if not SCM.qryTEAM.FieldByName('TeamNameID').IsNull then

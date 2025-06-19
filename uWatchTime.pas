@@ -305,7 +305,7 @@ found: boolean;
 begin
 
   if TDS.tblmLane.FieldByName('LaneID').AsInteger <> aLaneID then
-    found := TDS.LocateTLaneID(aLaneID)
+    found := TDS.Locate_LaneID(aLaneID)
   else
     found := true;
 

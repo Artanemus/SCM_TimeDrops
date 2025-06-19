@@ -470,8 +470,22 @@ object TDS: TTDS
         Name = 'SplitDist10'
         DataType = ftTime
       end>
-    IndexDefs = <>
-    IndexFieldNames = 'HeatID'
+    IndexDefs = <
+      item
+        Name = 'idxHeatID'
+        Fields = 'HeatID'
+        Options = [ixNonMaintained]
+      end
+      item
+        Name = 'idxLaneID'
+        Fields = 'LaneID'
+        Options = [ixNonMaintained]
+      end
+      item
+        Name = 'idxHeatIDLaneNum'
+        Fields = 'HeatID;LaneNum'
+        Options = [ixNonMaintained]
+      end>
     MasterSource = dsmHeat
     MasterFields = 'HeatID'
     DetailFields = 'HeatID'

@@ -219,9 +219,6 @@ begin
       begin
         EventType :=
         SCM.GetEventType(SCM.qryEvent.FieldByName('EventID').AsInteger);
-        // ALTERNATIVE...
-        // HeatID :=  SCM.qryHeat.FieldByName('HeatID').AsInteger;
-        // if SCM.LocateLaneNum(HeatID, Lane) then
         if SCM.LocateLaneNum(Lane, EventType) then
           result := true;
       end;
@@ -231,7 +228,7 @@ begin
         if TDS.LocateTLaneNum(HeatID, Lane) then
           result := true;
       end;
-  end;
+	end;
 end;
 
 procedure TNoodleData.UpdateNData(Noodle: TNoodle);
@@ -245,7 +242,7 @@ begin
   found := true;
 
   if (TDS.tblmNoodle.FieldByName('NoodleID').AsInteger <> Noodle.NDataID) then
-    found := TDS.LocateTNoodle(Noodle.NDataID);
+		found := TDS.Locate_NoodleID(Noodle.NDataID);
 
   if found then
   begin
@@ -276,7 +273,7 @@ begin
   if Noodle.NDataID = 0 then exit;
   found := true;
   if (TDS.tblmNoodle.FieldByName('NoodleID').AsInteger <> Noodle.NDataID) then
-    found := TDS.LocateTNoodle(Noodle.NDataID);
+		found := TDS.Locate_NoodleID(Noodle.NDataID);
   if found then
   begin
     TDS.tblmNoodle.Delete;

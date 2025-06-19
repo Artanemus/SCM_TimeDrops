@@ -94,9 +94,9 @@ type
     // .......................................................
     function LocateEventID(AEventID: integer): boolean;
     function LocateHeatID(AHeatID: integer): boolean;
-    function LocateLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean; overload;
-    function LocateLaneNum(AHeatID: integer; ALaneNum: integer): boolean; overload;
-    // Uses SessionStart TDateTime...
+		function LocateLaneNum(ALaneNum: integer; aEventType: scmEventType): boolean;
+//    function LocateLaneNum(AHeatID: integer; ALaneNum: integer): boolean; overload;
+		// Uses SessionStart TDateTime...
     function LocateNearestSessionID(aDate: TDateTime): integer;
     function LocateSessionID(ASessionID: integer): boolean;
     function LocateSwimClubID(ASwimClubID: integer): boolean;
@@ -509,29 +509,36 @@ begin
   if dsHeat.DataSet.Active then
   begin
     result := dsHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
-    if result then qryHeat.ApplyMaster; // master-detail
-  end;
+		if result then 
+		begin
+			qryINDV.ApplyMaster; // master-detail
+			qryTEAM.ApplyMaster; // master-detail
+			qryTEAMEntrant.ApplyMaster; // master-detail
+		end;
+	end;
 end;
 
-function TSCM.LocateLaneNum(AHeatID, ALaneNum: integer): boolean;
-var
-  found: boolean;
-  LOptions: TLocateOptions;
-  EventType: scmEventType;
-begin
-  result := false;
-  found := true;
-  if not fDataIsActive then exit;
-  LOptions := [];
-  if SCM.qryHeat.FieldByName('HeatID').AsInteger <> AHeatID then
-    found := SCM.LocateHeatID(AHeatID);
-  if found then
+(*
+  function TSCM.LocateLaneNum(AHeatID, ALaneNum: integer): boolean;
+  var
+    found: boolean;
+    LOptions: TLocateOptions;
+    EventType: scmEventType;
   begin
-    EventType := GetEventType(SCM.qryHeat.FieldByName('EventID').AsInteger);
-    found := LocateLaneNum(ALaneNum, EventType);
-  end;
-  result := found;
-end;
+    result := false;
+    found := true;
+    if not fDataIsActive then exit;
+    LOptions := [];
+    if SCM.qryHeat.FieldByName('HeatID').AsInteger <> AHeatID then
+      found := SCM.LocateHeatID(AHeatID);
+    if found then
+    begin
+      EventType := GetEventType(SCM.qryHeat.FieldByName('EventID').AsInteger);
+      found := LocateLaneNum(ALaneNum, EventType);
+    end;
+    result := found;
+  end;  
+*)
 
 function TSCM.LocateLaneNum(ALaneNum: integer; aEventType: scmEventType):
     boolean;

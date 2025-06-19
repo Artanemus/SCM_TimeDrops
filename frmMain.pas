@@ -86,8 +86,6 @@ type
     spbtnActivatePatches: TSpeedButton;
     sbtnDirWatcher: TSpeedButton;
     sbtnRefreshSCM: TSpeedButton;
-    sbtnSyncDTtoSCM: TSpeedButton;
-    sbtnSyncSCMtoDT: TSpeedButton;
     scmGrid: TDBAdvGrid;
     ShapeSpaceerSCM: TShape;
     ShapeSpacer: TShape;
@@ -149,6 +147,7 @@ type
     procedure actnSyncTDUpdate(Sender: TObject);
     procedure actnTDTableViewerExecute(Sender: TObject);
     procedure actnFireDACExplorerExecute(Sender: TObject);
+		procedure actnRefreshUpdate(Sender: TObject);
     procedure btnNextDTFileClick(Sender: TObject);
     procedure btnNextEventClick(Sender: TObject);
     procedure btnPickDTTreeViewClick(Sender: TObject);
@@ -179,6 +178,7 @@ type
     FSyncSCMVerbose: Boolean;
     FSyncTDSVerbose: Boolean;
 
+		procedure GridSelectCurrentTDSLane;
     procedure LoadSettings; // JSON Program Settings
     procedure OnFileChanged(Sender: TObject; const FileName: string; Action: DWORD);
     procedure UpdateCaption();
@@ -572,7 +572,7 @@ procedure TMain.actnPostExecute(Sender: TObject);
 var
   dlg: TPostData;
   mr: TModalResult;
-  I, idx, LaneID: integer;
+	I, idx, LaneID, HeatID, LaneNum: integer;
   aTDSessionID, aTDEventNum, aTDHeatNum, ALaneNum: integer;
   s: string;
 begin
@@ -590,17 +590,18 @@ begin
   if not TDS.SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum) then
   begin
     s := '''
-      Based on the Session ID, event and heat number, SCM and DT are not synronized.
-      Do you want to CONTINUE?
-      YES will result in syncronization begin ignored and a 'lane for lane' assignment
-      of race-times (including any valid noodles) will be made.
-      ''';
-    mr := MessageBox(0, PChar(s), PChar('POST ''RACE-TIMES'' WARNING'), MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
+			Based on the Session ID, event and heat number, SCM and DT are not synronized.
+			Do you want to CONTINUE?
+			YES will result in syncronization begin ignored and a "lane for lane" assignment
+			of race-times (including any valid noodles) will be made.
+			''';
+    mr := MessageBox(0, PChar(s), PChar('POST ''RACE-TIMES'' WARNING'),
+      MB_ICONEXCLAMATION or MB_YESNO or MB_DEFBUTTON2);
     if not IsPositiveResult(mr) then
     begin
       StatBar.SimpleText := 'POST was cancelled.';
       Timer1.Enabled := true;
-//      MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound.
+      //      MessageBeep(MB_ICONERROR); // Plays the system-defined warning sound.
       exit;
     end;
   end;
@@ -612,35 +613,47 @@ begin
   dlg.free;
 
   if IsPositiveResult(mr) then
-	begin
-		// disable AUTO-SYNC ....
-		actnAutoSync.Checked := false;
-		sbtnAutoSync.ImageIndex := 21;		
-		
-    LaneID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
-    TDS.PatchesEnabled := actnActivatePatches.Checked;
-    // Post all race-times to SCM ...
+  begin
+    // disable AUTO-SYNC ....
+    actnAutoSync.Checked := false;
+    sbtnAutoSync.ImageIndex := 21;
+
+		LaneID := TDS.tblmLane.FieldByName('LaneID').AsInteger;
+		LaneNum:= TDS.tblmLane.FieldByName('LaneNum').AsInteger;
+		TDS.PatchesEnabled := actnActivatePatches.Checked;
+		// Post all race-times to SCM ...
     if idx = 0 then
     begin
       tdsGrid.BeginUpdate;
       TDS.POST_All;
-      tdsGrid.ClearRowSelect;  // UI clean-up .
-      tdsGrid.EndUpdate;
-      StatBar.SimpleText := 'POST of all valid race-times to SCM : completed.';
-    end
-    // Post only racetimes from selected lanes to SCM ...
-    else if idx = 1 then
-    begin
-      tdsGrid.BeginUpdate;
-      for i := 0 to tdsGrid.SelectedRowCount - 1 do
-      begin
-        idx := tdsGrid.SelectedRow[i];
-        ALaneNum := StrToIntDef(tdsGrid.Cells[2, idx], 0);
-        TDS.POST_Lane(ALaneNum);
-      end;
-      TDS.LocateTLaneID(LaneID);
-//      tdsGrid.SelectRows(LaneID, 1);
-      tdsGrid.EndUpdate;
+			tdsGrid.ClearRowSelect; // UI clean-up .
+			if TDS.Locate_LaneID(LaneID) then
+			begin
+				idx := tdsGrid.GetRealRow;
+				tdsGrid.SelectRows(idx, 1);
+			end;
+			tdsGrid.EndUpdate;
+			StatBar.SimpleText := 'POST of all valid race-times to SCM : completed.';
+		end
+			// Post only racetimes from selected lanes to SCM ...
+		else if idx = 1 then
+		begin
+			tdsGrid.BeginUpdate;
+			HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+			GridSelectCurrentTDSLane;	// only works when is nothing selected.
+			for i := 0 to tdsGrid.SelectedRowCount - 1 do
+			begin
+				idx := tdsGrid.SelectedRow[i];
+				ALaneNum := StrToIntDef(tdsGrid.Cells[1, idx], 0);
+				if TDS.LocateTLaneNum(HeatID, ALaneNum) then // ASSERT record cued.
+					TDS.POST_Lane(); // found record.
+			end;
+			tdsGrid.ClearRowSelect; // UI clean-up.
+			TDS.tblmLane.CheckBrowseMode;
+			if TDS.LocateTLaneNum(HeatID, LaneNum) then
+				GridSelectCurrentTDSLane; // only works when nothing is selected.
+				
+			tdsGrid.EndUpdate;
       StatBar.SimpleText := 'POST of selected race-times to SCM : completed.';
     end;
     Timer1.Enabled := true;
@@ -790,7 +803,7 @@ end;
 
 procedure TMain.actnRefreshExecute(Sender: TObject);
 begin
-  SCMGrid.BeginUpdate;
+	SCMGrid.BeginUpdate;
   SCM.RefreshSCM;
   SCMGrid.EndUpdate;
   StatBar.SimpleText := 'Refresh done.'; // not painting text?
@@ -1124,15 +1137,15 @@ end;
 
 procedure TMain.actnSyncTDUpdate(Sender: TObject);
 begin
-  if (Assigned(SCM)) and (Assigned(TDS)) and (SCM.DataIsActive = true)
-    and (TDS.DataIsActive = true)  then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-    if TAction(Sender).Enabled then
-      TAction(Sender).Enabled := false;
+	if (Assigned(SCM)) and (Assigned(TDS)) and (SCM.DataIsActive = true)
+		and (TDS.DataIsActive = true)  then
+	begin
+		if not TAction(Sender).Enabled then
+			TAction(Sender).Enabled := true;
+	end
+	else
+		if TAction(Sender).Enabled then
+			TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnTDTableViewerExecute(Sender: TObject);
@@ -1183,6 +1196,18 @@ begin
       dlg.free;
   end;
 
+end;
+
+procedure TMain.actnRefreshUpdate(Sender: TObject);
+begin
+	if (Assigned(SCM)) and (SCM.DataIsActive = true)  then
+	begin
+		if not TAction(Sender).Enabled then
+			TAction(Sender).Enabled := true;
+	end
+	else
+		if TAction(Sender).Enabled then
+			TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.btnNextDTFileClick(Sender: TObject);
@@ -1752,7 +1777,8 @@ begin
   // images disappears because assignment only in TAction.Execute?
   spbtnPost.ImageIndex := 13;
   spbtnActivatePatches.ImageIndex := 14;
-
+	sbtnRefreshSCM.ImageIndex := 4;
+	
   // tidy up of auto-sync
   actnAutoSync.Checked := false;
   sbtnAutoSync.ImageIndex := 21;
@@ -1831,7 +1857,7 @@ begin
       if not TDS.MasterDetailActive then
         TDS.EnableTDMasterDetail;
       // Assert tables are open ...
-      if not TDS.DataIsActive then
+			if not TDS.DataIsActive then
         TDS.ActivateDataTDS;
   end;
 
@@ -1861,8 +1887,22 @@ begin
     PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0 , 0 );
 
   StatBar.SimpleText := 'Check here for information, messages and warnings.';
-  Timer1.Enabled := true;
+	Timer1.Enabled := true;
 
+end;
+
+procedure TMain.GridSelectCurrentTDSLane;
+var
+	idx: integer;
+begin
+  if tdsGrid.SelectedRowCount = 0 then
+  begin
+    if Assigned(TDS) and TDS.DataIsActive and (not (TDS.tblmLane.IsEmpty)) then
+		begin
+			idx := (tdsGrid.FixedRows - 1) + TDS.tblmLane.FieldByName('LaneNum').AsInteger;
+			tdsGrid.SelectRows(idx, 1);
+		end;
+  end;
 end;
 
 procedure TMain.LoadSettings;
@@ -2426,20 +2466,10 @@ begin
             ADataSet.Cancel;
           end;
         end;
-        dlg.Free;
-        // if routine 'POST selected' is immediately called after the
-        // above change in user's racetime - the grid reports
-        // SelectedRowCount = 0. Solution :: re-select the row.
-
-//        grid.SelectRows(ARow,1); // REQUIRED.
-        grid.EndUpdate;
-
-        {TODO -oBSA -cGeneral : Row still needs a repaint!
-        grid.repaintRow(ARow);  NOT WORKING...
-        grid.ClearRowSelect;
-        grid.invalidate;  }
-
-      end;
+				dlg.Free;
+				GridSelectCurrentTDSLane; // only works if nothing is selected.
+				grid.EndUpdate;
+			end;
     end;
 
     if ACol = tdsGrid.ColumnByName['ActiveRT'].Index then

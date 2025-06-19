@@ -9188,33 +9188,16 @@ object Main: TMain
         Transparent = True
         WordWrap = True
       end
-      object sbtnSyncSCMtoDT: TSpeedButton
-        Left = 16
+      object sbtnRefreshSCM: TSpeedButton
+        Left = 13
         Top = 266
         Width = 128
         Height = 41
-        Hint = 'Syncronize SwimClubMeet to TD.'
-        Caption = 'SYNC TO TD'
+        Action = actnRefresh
         Images = IMG.vimglistMenu
         Layout = blGlyphRight
         ParentShowHint = False
         ShowHint = True
-        OnClick = actnSyncSCMExecute
-      end
-      object sbtnRefreshSCM: TSpeedButton
-        Left = 16
-        Top = 313
-        Width = 128
-        Height = 41
-        Hint = 
-          'If changes have occurred (new events, heats, etc)'#13#10'pressing this' +
-          ' button will update data.'
-        Caption = 'REFRESH'
-        Images = IMG.vimglistMenu
-        Layout = blGlyphRight
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = actnRefreshExecute
       end
       object ShapeSpaceerSCM: TShape
         AlignWithMargins = True
@@ -9290,10 +9273,6 @@ object Main: TMain
             Control = ShapeSpacer
           end
           item
-            Control = sbtnSyncDTtoSCM
-            HorizontalPositioning = sphpLeft
-          end
-          item
             Control = spbtnPost
             HorizontalPositioning = sphpLeft
           end
@@ -9329,21 +9308,9 @@ object Main: TMain
           Margins.Bottom = 6
           Brush.Color = clTomato
         end
-        object sbtnSyncDTtoSCM: TSpeedButton
-          Left = 0
-          Top = 65
-          Width = 128
-          Height = 41
-          Hint = 'Syncronize Time Drops to SCM.'
-          Caption = 'SYNC TO SCM'
-          Images = IMG.vimglistMenu
-          ParentShowHint = False
-          ShowHint = True
-          OnClick = actnSyncTDExecute
-        end
         object spbtnPost: TSpeedButton
           Left = 0
-          Top = 110
+          Top = 65
           Width = 128
           Height = 41
           Action = actnPost
@@ -9353,7 +9320,7 @@ object Main: TMain
         end
         object spbtnActivatePatches: TSpeedButton
           Left = 0
-          Top = 155
+          Top = 110
           Width = 128
           Height = 41
           Action = actnActivatePatches
@@ -10834,6 +10801,7 @@ object Main: TMain
       ImageIndex = 4
       ImageName = 'Sync'
       OnExecute = actnRefreshExecute
+      OnUpdate = actnRefreshUpdate
     end
     object actnConnectToSCM: TAction
       Category = 'SCM'
