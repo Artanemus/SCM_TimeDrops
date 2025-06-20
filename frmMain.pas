@@ -30,7 +30,9 @@ uses
   Vcl.PlatformVclStylesActnCtrls, Vcl.WinXPanels, Vcl.WinXCtrls,
   System.Types, System.IOUtils, System.Math, DirectoryWatcher,
   tdReConstructDlg, dmIMG, uNoodleFrame,
-  System.Generics.Collections, System.Generics.Defaults;
+	System.Generics.Collections, System.Generics.Defaults;
+//	System.Diagnostics, System.IO;
+
 
 type
   TMain = class(TForm)
@@ -105,6 +107,8 @@ type
     actnActivatePatches: TAction;
     sbtnAutoSync: TSpeedButton;
     actnAutoSync: TAction;
+    actnExploreMeetsFolder: TAction;
+		procedure actnExploreMeetsFolderUpdate(Sender: TObject);
     procedure actnBuildTDTablesExecute(Sender: TObject);
     procedure actnBuildTDTablesUpdate(Sender: TObject);
     procedure actnActivatePatchesExecute(Sender: TObject);
@@ -117,6 +121,7 @@ type
     procedure actnClearGridUpdate(Sender: TObject);
     procedure actnConnectToSCMExecute(Sender: TObject);
     procedure actnConnectToSCMUpdate(Sender: TObject);
+		procedure actnExploreMeetsFolderExecute(Sender: TObject);
     procedure actnExportMeetProgramExecute(Sender: TObject);
     procedure actnExportMeetProgramUpdate(Sender: TObject);
     procedure actnLoadSessionExecute(Sender: TObject);
@@ -276,6 +281,18 @@ end;
 
 
 
+procedure TMain.actnExploreMeetsFolderUpdate(Sender: TObject);
+begin
+	if Assigned(Settings) then
+	begin
+		if not TAction(Sender).Enabled then
+			TAction(Sender).Enabled := true;
+	end
+	else
+		if TAction(Sender).Enabled then
+			TAction(Sender).Enabled := false;
+end;
+
 procedure TMain.actnBuildTDTablesExecute(Sender: TObject);
 begin
   // Allow only in debug
@@ -286,14 +303,14 @@ end;
 
 procedure TMain.actnBuildTDTablesUpdate(Sender: TObject);
 begin
-  if Assigned(TDS) then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-    if TAction(Sender).Enabled then
-      TAction(Sender).Enabled := false;
+	if Assigned(TDS) then
+	begin
+		if not TAction(Sender).Enabled then
+			TAction(Sender).Enabled := true;
+	end
+	else
+		if TAction(Sender).Enabled then
+			TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnActivatePatchesExecute(Sender: TObject);
@@ -346,15 +363,15 @@ end;
 
 procedure TMain.actnAutoSyncUpdate(Sender: TObject);
 begin
-  if Assigned(TDS) and TDS.DataIsActive
-    and Assigned(SCM) and SCM.DataIsActive then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-    if TAction(Sender).Enabled then
-      TAction(Sender).Enabled := false;
+	if Assigned(TDS) and TDS.DataIsActive
+		and Assigned(SCM) and SCM.DataIsActive then
+	begin
+		if not TAction(Sender).Enabled then
+			TAction(Sender).Enabled := true;
+	end
+	else
+		if TAction(Sender).Enabled then
+			TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnClearAndScanExecute(Sender: TObject);
@@ -474,6 +491,18 @@ begin
       TAction(Sender).Enabled := false;
 end;
 
+procedure TMain.actnExploreMeetsFolderExecute(Sender: TObject);
+var
+  FolderPath: string;
+begin
+  FolderPath := Settings.MeetsFolder;
+  if DirectoryExists(FolderPath) then
+    ShellExecute(0, 'open', PChar(FolderPath), nil, nil, SW_SHOWNORMAL)
+  else
+    MessageDlg('The folder does not exist: ' + FolderPath, mtError, [mbOK], 0);
+end;
+
+
 procedure TMain.actnExportMeetProgramExecute(Sender: TObject);
 var
   fn: TFileName;
@@ -500,11 +529,11 @@ begin
     // The meet program folder may have changed.
     Settings.LoadFromFile();
     // The default filename required by TimeDrops
-    fn := IncludeTrailingPathDelimiter(Settings.ProgramFolder)  + 'meet_program.json';
+		fn := IncludeTrailingPathDelimiter(Settings.ProgramFolder)  + 'meet_program.json';
     SCMGrid.BeginUpdate;
     if Settings.MeetProgramType = 1 then
       BuildAndSaveMeetProgramDetailed(fn) // Detailed meet program.
-    else if Settings.MeetProgramType = 0 then
+		else if Settings.MeetProgramType = 0 then
       BuildAndSaveMeetProgramBasic(fn); // Basic meet program.
     // re-set to head of session.
     SCM.dsEvent.DataSet.First;
@@ -1159,42 +1188,42 @@ end;
 
 procedure TMain.actnFireDACExplorerExecute(Sender: TObject);
 var
-  ExplorerPath: string;
-  IniFilePath: string;
-  BDSBinPath: string;
-  dlg: TFDExplorer;
+	ExplorerPath: string;
+	IniFilePath: string;
+	BDSBinPath: string;
+	dlg: TFDExplorer;
 begin
 
 {$IFDEF DEBUG}
-  // Retrieve the value of the BDSBIN environment variable
-  SetLength(BDSBinPath, 256); // Allocate enough space
-  SetLength(BDSBinPath, GetEnvironmentVariable('BDSBIN', PChar(BDSBinPath), Length(BDSBinPath)));
-  if BDSBinPath <> '' then
-  // Path to the FireDAC Explorer executable
-    ExplorerPath := IncludeTrailingPathDelimiter(BDSBinPath) + 'FDExplorer.exe'
-  else
-    raise Exception.Create('Environment variable BDSBIN is not set.');
+	// Retrieve the value of the BDSBIN environment variable
+	SetLength(BDSBinPath, 256); // Allocate enough space
+	SetLength(BDSBinPath, GetEnvironmentVariable('BDSBIN', PChar(BDSBinPath), Length(BDSBinPath)));
+	if BDSBinPath <> '' then
+	// Path to the FireDAC Explorer executable
+		ExplorerPath := IncludeTrailingPathDelimiter(BDSBinPath) + 'FDExplorer.exe'
+	else
+		raise Exception.Create('Environment variable BDSBIN is not set.');
 {$ELSE}
-  ExplorerPath := ExtractFilePath(Application.ExeName);
-  ExplorerPath := ExplorerPath + 'FDExplorer.exe';
+	ExplorerPath := ExtractFilePath(Application.ExeName);
+	ExplorerPath := ExplorerPath + 'FDExplorer.exe';
 {$ENDIF}
 
-  dlg := TFDExplorer.Create(self);
-  try
-  begin
-    if IsPositiveResult(dlg.ShowModal) then
-    begin
-      // Path to your FDConnectionDefs.ini file
-      IniFilePath := SCM.scmFDManager.ActualDriverDefFileName;
-      if FileExists(ExplorerPath) then
-        ShellExecute(0, 'open', PChar(ExplorerPath), PChar(IniFilePath), nil, SW_SHOWNORMAL)
-      else
-        ShowMessage('FireDAC Explorer executable not found.');
-    end;
-  end;
-  finally
-      dlg.free;
-  end;
+	dlg := TFDExplorer.Create(self);
+	try
+	begin
+		if IsPositiveResult(dlg.ShowModal) then
+		begin
+			// Path to your FDConnectionDefs.ini file
+			IniFilePath := SCM.scmFDManager.ActualDriverDefFileName;
+			if FileExists(ExplorerPath) then
+				ShellExecute(0, 'open', PChar(ExplorerPath), PChar(IniFilePath), nil, SW_SHOWNORMAL)
+			else
+				ShowMessage('FireDAC Explorer executable not found.');
+		end;
+	end;
+	finally
+			dlg.free;
+	end;
 
 end;
 

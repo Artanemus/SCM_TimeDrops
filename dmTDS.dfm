@@ -486,6 +486,19 @@ object TDS: TTDS
         Fields = 'HeatID;LaneNum'
         Options = [ixNonMaintained]
       end>
+    Indexes = <
+      item
+        Name = 'idxHeatID'
+        Fields = 'HeatID'
+      end
+      item
+        Name = 'idxLaneID'
+        Fields = 'LaneID'
+      end
+      item
+        Name = 'idxHeatIDLaneNum'
+        Fields = 'HeatID;LaneNum'
+      end>
     MasterSource = dsmHeat
     MasterFields = 'HeatID'
     DetailFields = 'HeatID'

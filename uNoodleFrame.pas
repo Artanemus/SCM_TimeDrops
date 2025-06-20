@@ -262,7 +262,7 @@ begin
 end;
 
 procedure TNoodleFrame.DrawNoodleHalfLink(ACanvas: TCanvas; P1: TPointF;
-  AColor: TColor; AThickness: Integer; ASelected: Boolean);
+	AColor: TColor; AThickness: Integer; ASelected: Boolean);
 var
   P0, A: TPoint;
   offset1, offset2: integer;
@@ -644,7 +644,7 @@ end;
 
 procedure TNoodleFrame.pbNoodlesPaint(Sender: TObject);
 var
-  Noodle: TNoodle;
+	Noodle: TNoodle;
   P0, P1: TPointF;
   Spot: TPoint;
   HotSpot: THotSpot;
@@ -652,7 +652,9 @@ var
   Canvas: TCanvas;
   AColor: TColor;
   deflate: Integer;
-  HandlePtr: TNoodleHandleP;
+	HandlePtr: TNoodleHandleP;
+	txt: string;
+	textWidth, textHeight, sessID, EvNum, HtNum, ID: Integer;
 
   procedure DrawGridIcons();
   begin
@@ -681,7 +683,38 @@ var
         // flag with Red-BullsEye
         IMG.vimglistDTGrid.Draw(Canvas, Spot.X, Spot.Y, 'ActiveRTNone', True);
     end;
-  end;
+	end;
+
+	procedure DrawNoodleText(Noodle: TNoodle; P0, P1: TPointF);
+	begin
+		textWidth := Canvas.TextWidth(txt);
+		textHeight := Canvas.TextHeight(txt);
+//		Canvas.Brush.Style := bsSolid;
+//		Canvas.Brush.Color := clWhite; // background for readability
+//		Canvas.FillRect( Rect(
+//			Round(P0.X - textWidth div 2) - 2,
+//			Round(P0.Y - 12) - 2,
+//			Round(P0.X + textWidth div 2) + 2,
+//			Round(P0.Y - 12 + textHeight) + 2));
+//		Canvas.Brush.Style := bsClear;
+//		Canvas.Font.Color := AColor;
+//		Canvas.TextOut(Round(P0.X - textWidth div 2), Round(P0.Y - 12), txt);
+
+		Canvas.Font.Color := clLime;
+		Canvas.Font.Size := 12;
+		Canvas.Font.Style := Canvas.Font.Style + [fsBold];
+    sessID:=0; EvNum:=0; HtNum:=0;
+		// obtain HeatNum, EventNum and Session from
+//		ID := TDS.tblmNoodle.FieldByName('scmHeatID').AsInteger;
+//		HtNum := SCM.scmConnection.ExecSQLScalar('SELECT HeatNum FROM SwimClubMeet.dbo.HeatIndividual where HeatID = :ID', [ID]);
+//		ID := SCM.scmConnection.ExecSQLScalar('SELECT EventID FROM SwimClubMeet.dbo.HeatIndividual where HeatID = :ID', [ID]);
+//		EvNum := SCM.scmConnection.ExecSQLScalar('SELECT EventNum FROM SwimClubMeet.dbo.Event where EventID = :ID', [ID]);
+//		sessID := SCM.scmConnection.ExecSQLScalar('SELECT SessionID FROM SwimClubMeet.dbo.Event where EventID = :ID', [ID]);
+		txt := Format('S:%d E:%d H:%d L:%d',
+			[sessID,	EvNum,	HtNum, Noodle.GetHandle(0).Lane]);
+		Canvas.TextOut(ROUND(P0.X - 4), ROUND(P1.y-textWidth), txt)
+
+	end;
 
 begin
   Canvas := (Sender as TPaintBox).Canvas;
@@ -709,12 +742,12 @@ begin
     if not Noodle.HasValidHandles then
       continue;
 
-    HandlePtr := Noodle.GetHandlePtr(0);
+		HandlePtr := Noodle.GetHandlePtr(0);
     P0 := HandlePtr.RectF.CenterPoint;
     HandlePtr := Noodle.GetHandlePtr(1);
     P1 := HandlePtr.RectF.CenterPoint;
 
-    if Noodle.IsSelected then
+		if Noodle.IsSelected then
       AColor := FSelectedNoodleColor
     else
       AColor := FNoodleColor;
@@ -722,22 +755,16 @@ begin
       AColor := clGray;
 
     if (SCM.qryHeat.FieldByName('HeatID').AsInteger <>
-      TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger)
-      {and
-       (SCM.qryEvent.FieldByName('EventID').AsInteger <>
-      TDS.tblmEvent.FieldByName('EventNum').AsInteger)
-      and
-       (SCM.qrySession.FieldByName('SessionID').AsInteger <>
-      TDS.tblmSession.FieldByName('SessionID').AsInteger) }
-       then
+      TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger) then
     begin
-      DrawNoodleHalfLink(Canvas, P1, AColor, FRopeThickness, Noodle.IsSelected);
-    end
+			DrawNoodleHalfLink(Canvas, P1, AColor, FRopeThickness, Noodle.IsSelected);
+//			DrawNoodleText(Noodle, P0, P1);
+		end
     else
     begin
       DrawNoodleLink(Canvas, P0, P1, AColor, FRopeThickness, Noodle.IsSelected);
     end
-  end;
+	end;
 
   // 2. DRAWPREVIEW LINE AND START AND END ICONS.
   if FDragState = ndsDraggingNew then

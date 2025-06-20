@@ -586,13 +586,18 @@ end;
 
 function TTDS.LocateTEventID(AEventID: integer): boolean;
 var
-	LOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
-	result := false;
-	if not tblmHeat.Active then exit;
+  result := false;
+	if (not tblmEvent.Active) or (tblmEvent.IsEmpty) then exit;
 	if (AEventID = 0) then exit;
+	if AEventID = tblmEvent.FieldByName('EventID').AsInteger then
+	begin
+		result := true;
+		exit;
+	end;
 	LOptions := [];
-	result := dsmEvent.DataSet.Locate('EventID', AEventID, LOptions);
+	result := tblmEvent.Locate('EventID', AEventID, LOptions);
 	if result then tblmHeat.ApplyMaster;
 end;
 
@@ -605,28 +610,38 @@ begin
 	// USED ONLY BY TdtUtils.ProcessEvent.
 	result := false;
 	// Exit if the table is not active or if AEventNum is 0
-	if not tblmEvent.Active then exit;
-	if AEventNum = 0 then exit;
+	if (not tblmEvent.Active) or (tblmEvent.IsEmpty) then exit;
+	if (AEventNum = 0) then exit;
 	// Store the original index field names
-	indexStr := tblmEvent.IndexFieldNames;
-	LOptions := [];
-	tblmEvent.IndexFieldNames := 'SessionID;EventNum';
-	result := tblmEvent.Locate('SessionID;EventNum', VarArrayOf([ASessionID, AEventNum]), LOptions);
-	// Restore the original index field names
-	tblmEvent.IndexFieldNames := indexStr;
-	if result then tblmHeat.ApplyMaster;
+  indexStr := tblmEvent.IndexFieldNames;
+  LOptions := [];
+  tblmEvent.IndexFieldNames := 'SessionID;EventNum';
+  result := tblmEvent.Locate('SessionID;EventNum', VarArrayOf([ASessionID,
+    AEventNum]), LOptions);
+  // Restore the original index field names
+  tblmEvent.IndexFieldNames := indexStr;
+  if result then tblmHeat.ApplyMaster;
 end;
 
 function TTDS.LocateTHeatID(AHeatID: integer): boolean;
 var
-	LOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
-	result := false;
-	if not tblmHeat.Active then exit;
+  result := false;
+	if (not tblmHeat.Active) or tblmHeat.IsEmpty then exit;
 	if (AHeatID = 0) then exit;
+	if AHeatID = tblmHeat.FieldByName('HeatID').AsInteger then
+	begin
+		result := true;
+		exit;
+	end;
 	LOptions := [];
-	result := dsmHeat.DataSet.Locate('HeatID', AHeatID, LOptions);
-	if result then begin tblmLane.ApplyMaster; tblmNoodle.ApplyMaster; end;
+	result := tblmHeat.Locate('HeatID', AHeatID, LOptions);
+	if result then
+	begin
+		tblmLane.ApplyMaster;
+		tblmNoodle.ApplyMaster;
+	end;
 end;
 
 function TTDS.LocateTHeatNum(AEventID, AHeatNum: integer): boolean;
@@ -638,24 +653,34 @@ begin
 	// USED ONLY BY TdtUtils.ProcessHeat.
 	result := false;
 	// Exit if the table is not active or if AHeatNum is 0
-	if not tblmHeat.Active then exit;
-	if AHeatNum = 0 then exit;
-	indexStr := tblmHeat.IndexFieldNames; // Store the original index field names
-	LOptions := [];
-	tblmHeat.IndexFieldNames := 'EventID;HeatNum';
-	result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([AEventID, AHeatNum]), LOptions);
-	tblmHeat.IndexFieldNames := indexStr; // Restore the original index field names
-	if result then begin tblmLane.ApplyMaster; tblmNoodle.ApplyMaster; end;
+	if (not tblmHeat.Active) or tblmHeat.IsEmpty then exit;
+	if (AHeatNum = 0) then exit;
+  indexStr := tblmHeat.IndexFieldNames; // Store the original index field names
+  LOptions := [];
+  tblmHeat.IndexFieldNames := 'EventID;HeatNum';
+  result := tblmHeat.Locate('EventID;HeatNum', VarArrayOf([AEventID, AHeatNum]),
+    LOptions);
+  tblmHeat.IndexFieldNames := indexStr; // Restore the original index field names
+  if result then
+	begin
+    tblmLane.ApplyMaster;
+    tblmNoodle.ApplyMaster;
+  end;
 end;
 
 function TTDS.Locate_LaneID(ALaneID: integer): boolean;
 var
-	LOptions: TLocateOptions;
-		indexStr: string;
+  LOptions: TLocateOptions;
+  indexStr: string;
 begin
-	result := false;
-	if not tblmLane.Active then exit;
+  result := false;
+	if (not tblmLane.Active) or (tblmLane.IsEmpty) then exit;
 	if (ALaneID = 0) then exit;
+	if ALaneID = tblmLane.FieldByName('LaneID').AsInteger then
+	begin
+		result := true;
+		exit;
+	end;
 	indexStr := tblmLane.IndexFieldNames; // Store the original index field names
 	LOptions := [];
 	tblmLane.IndexFieldNames := 'LaneID';
@@ -665,22 +690,23 @@ end;
 
 function TTDS.Locate_LaneNum(ALaneNum: integer): boolean;
 var
-	HeatID: integer;
+  HeatID: integer;
 begin
-	// NOTE: this is a special case. Ensure that the correct heat is selected 
-	// before calling. May require 'ApplyMaster' before calling.
-	// For code readability.
-	result := false;
-	if not tblmLane.Active then exit;
-	if ALaneNum = 0 then exit;
-	if tblmLane.FieldByName('LaneNum').AsInteger = ALaneNum then result := true
-	else
-	begin  // uses current TDS heat.
-		if not tblmHeat.Active then exit;
-		if tblmHeat.IsEmpty then exit;
-		HeatID := tblmHeat.FieldByName('HeatID').AsInteger;
-		result := LocateTLaneNum(HeatID, ALaneNum);
-	end;
+  // NOTE: Ensure that the correct tblmHeat record is selected before calling.
+  // Also, consider using 'ApplyMaster' before calling.
+  result := false;
+  if (not tblmLane.Active) or (tblmLane.IsEmpty) then exit;
+  if (not (tblmHeat.Active)) or (tblmHeat.IsEmpty) then exit;
+  if (ALaneNum = 0) then exit;
+  if ALaneNum = tblmLane.FieldByName('LaneNum').AsInteger then
+    result := true
+  else
+  begin // uses current TDS heat.
+    if not tblmHeat.Active then exit;
+    if tblmHeat.IsEmpty then exit;
+    HeatID := tblmHeat.FieldByName('HeatID').AsInteger;
+    result := LocateTLaneNum(HeatID, ALaneNum);
+  end;
 end;
 
 function TTDS.LocateTLaneNum(AHeatID, ALaneNum: integer): boolean;
@@ -692,7 +718,7 @@ begin
 	// USED ONLY BY TdtUtils.ProcessHeat.
 	result := false;
 	// Exit if the table is not active or if AHeatNum is 0
-	if not tblmLane.Active then exit;
+	if (not tblmLane.Active) or (tblmLane.IsEmpty) then exit;
 	if ALaneNum = 0 then exit;
 	// Store the original index field names
 	indexStr := tblmLane.IndexFieldNames;
@@ -705,31 +731,50 @@ end;
 
 function TTDS.Locate_NoodleID(ANoodleID: integer): boolean;
 var
-	LOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
-	result := false;
-	if not tblmNoodle.Active then exit;
-	if (ANoodleID = 0) then exit;
+  result := false;
+	if (not tblmNoodle.Active) or (tblmNoodle.IsEmpty) then exit;
+  if (ANoodleID = 0) then exit;
+  if ANoodleID = tblmNoodle.FieldByName('NoodleID').AsInteger then
+  begin
+    result := true;
+    exit;
+  end;
 	LOptions := [];
-	result := tblmNoodle.Locate('NoodleID', ANoodleID, LOptions);
+  result := tblmNoodle.Locate('NoodleID', ANoodleID, LOptions);
 end;
 
 function TTDS.LocateTRaceNum(aRaceNum: integer): boolean;
 begin
-	result := false;
-	if not tblmHeat.Active then exit;
-	if (aRaceNum = 0) then exit;
+  result := false;
+	if (not tblmHeat.Active) or (tblmHeat.IsEmpty) then exit;
+  if (aRaceNum = 0) then exit;
+  if aRaceNum = tblmHeat.FieldByName('RaceNum').AsInteger then
+  begin
+    result := true;
+    exit;
+  end;
 	result := tblmHeat.Locate('RaceNum', aRaceNum, []);
-	if result then begin tblmLane.ApplyMaster; tblmNoodle.ApplyMaster; end;
+  if result then
+  begin
+    tblmLane.ApplyMaster;
+    tblmNoodle.ApplyMaster;
+  end;
 end;
 
 function TTDS.LocateTSessionID(ASessionID: integer): boolean;
 var
-	LOptions: TLocateOptions;
+  LOptions: TLocateOptions;
 begin
-	result := false;
-	if not tblmSession.Active then exit;
+  result := false;
+	if (not tblmSession.Active) or (tblmSession.IsEmpty) then exit;
 	if (ASessionID = 0) then exit;
+	if ASessionID = tblmSession.FieldByName('SessionID').AsInteger then
+	begin
+		result := true;
+		exit;
+	end;
 	LOptions := [];
 	result := tblmSession.Locate('SessionID', ASessionID, LOptions);
 	if result then tblmEvent.ApplyMaster; // required.
@@ -737,23 +782,21 @@ end;
 
 function TTDS.LocateTSessionNum(ASessionNum: integer): boolean;
 var
-	indexStr: string;
-	LOptions: TLocateOptions;
+  indexStr: string;
+  LOptions: TLocateOptions;
 begin
-	// WARNING : DisableDTMasterDetail() before calling here.
-	// USED ONLY BY TdtUtils.ProcessSession
-	result := false;
-	if not tblmSession.Active then exit;
-	if ASessionNum = 0 then exit;
-	// Store the original index field names
-	indexStr := tblmSession.IndexFieldNames;
-	if (ASessionNum = 0) then exit;
-	tblmSession.IndexFieldNames := 'SessionNum';
-	LOptions := [];
-	result := tblmSession.Locate('SessionNum', ASessionNum, LOptions);
-	// Restore the original index field names
-	tblmSession.IndexFieldNames := indexStr;
-	if result then tblmEvent.ApplyMaster; // required.
+  result := false;
+  if (not tblmSession.Active) or (tblmSession.IsEmpty) then exit;
+  if ASessionNum = 0 then exit;
+
+  indexStr := tblmSession.IndexFieldNames; // Store
+  if (ASessionNum = 0) then exit;
+  tblmSession.IndexFieldNames := 'SessionNum';
+  LOptions := [];
+  result := tblmSession.Locate('SessionNum', ASessionNum, LOptions);
+
+  tblmSession.IndexFieldNames := indexStr; // Restore
+  if result then tblmEvent.ApplyMaster; // required.
 end;
 
 function TTDS.MaxID_Event: integer;

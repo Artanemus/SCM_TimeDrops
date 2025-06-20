@@ -361,40 +361,44 @@ begin
 
     // Meet Teams.
     with A['meetTeams'] do
-    begin
-      // DISTINCT list of TEAMS...
-      SCM.qryListTeams.Close;
-      SCM.qryListTeams.ParamByName('SESSIONID').AsInteger :=
-        SCM.qrySession.FieldByName('SessionID').AsInteger;
-      SCM.qryListTeams.Prepare;
-      SCM.qryListTeams.Open;
-      if SCM.qryListTeams.Active then
-      begin
+		begin
+			SCM.qryListTeams.Connection := SCM.scmConnection;
+			SCM.qryListTeams.Close;
+			SCM.qryListTeams.ParamByName('SESSIONID').AsInteger :=
+			SCM.qrySession.FieldByName('SessionID').AsInteger;
+			SCM.qryListTeams.Prepare;
+			SCM.qryListTeams.Open;  // DISTINCT list of TEAMS...
+			if SCM.qryListTeams.Active then
+			begin
         SCM.qryListTeams.First;
         while not SCM.qryListTeams.Eof do
         begin
           teamObj := SO();
-          teamObj.I['teamId'] := SCM.qryListTeams.FieldByName('teamId').AsInteger;
-          teamObj.S['teamAbbreviation'] := SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
-          teamObj.S['teamShortName'] := SCM.qryListTeams.FieldByName('teamShortName').AsString;
-          teamObj.S['teamFullName'] := SCM.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.I['teamId'] :=
+          SCM.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] :=
+          SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] :=
+          SCM.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] :=
+          SCM.qryListTeams.FieldByName('teamFullName').AsString;
           teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
           SCM.qryListTeams.Next;
         end;
       end;
-
     end;
 
-    // Meet Swimmers.
+		// Meet Swimmers.
     with A['meetSwimmers'] do
-    begin
-      // DISTINCT list of Entrants nominating to swim event(s)...
-      SCM.qryListSwimmers.Close;
-      SCM.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
-        SCM.qrySession.FieldByName('SessionID').AsInteger;
-      SCM.qryListSwimmers.Prepare;
-      SCM.qryListSwimmers.Open;
+		begin
+			// DISTINCT list of Entrants nominating to swim event(s)...
+			SCM.qryListSwimmers.Connection := SCM.scmConnection;
+			SCM.qryListSwimmers.Close;
+			SCM.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
+				SCM.qrySession.FieldByName('SessionID').AsInteger;
+			SCM.qryListSwimmers.Prepare;
+			SCM.qryListSwimmers.Open;
       if SCM.qryListSwimmers.Active then
       begin
         SCM.qryListSwimmers.First;
@@ -685,36 +689,40 @@ begin
       end;
     end;
 
-    // Meet Teams.
+		// Meet Teams.
     with A['meetTeams'] do
     begin
-      // DISTINCT list of TEAMS...
-      SCM.qryListTeams.Close;
-      SCM.qryListTeams.ParamByName('SESSIONID').AsInteger :=
-        SCM.qrySession.FieldByName('SessionID').AsInteger;
+			SCM.qryListTeams.Connection := SCM.scmConnection;
+			SCM.qryListTeams.Close;
+			SCM.qryListTeams.ParamByName('SESSIONID').AsInteger :=
+      SCM.qrySession.FieldByName('SessionID').AsInteger;
       SCM.qryListTeams.Prepare;
-      SCM.qryListTeams.Open;
-      if SCM.qryListTeams.Active then
+			SCM.qryListTeams.Open;  // DISTINCT list of TEAMS...
+			if SCM.qryListTeams.Active then
       begin
         SCM.qryListTeams.First;
         while not SCM.qryListTeams.Eof do
         begin
           teamObj := SO();
-          teamObj.I['teamId'] := SCM.qryListTeams.FieldByName('teamId').AsInteger;
-          teamObj.S['teamAbbreviation'] := SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
-          teamObj.S['teamShortName'] := SCM.qryListTeams.FieldByName('teamShortName').AsString;
-          teamObj.S['teamFullName'] := SCM.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.I['teamId'] :=
+          SCM.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] :=
+          SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] :=
+          SCM.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] :=
+          SCM.qryListTeams.FieldByName('teamFullName').AsString;
           teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
           SCM.qryListTeams.Next;
         end;
       end;
-
     end;
 
     with A['meetSwimmers'] do
     begin
-      // DISTINCT list of Entrants nominating to swim event(s)...
+			// DISTINCT list of Entrants nominating to swim event(s)...
+			SCM.qryListSwimmers.Connection := SCM.scmConnection;
       SCM.qryListSwimmers.Close;
       SCM.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
         SCM.qrySession.FieldByName('SessionID').AsInteger;
@@ -742,37 +750,41 @@ begin
       end;
     end;
 
-    // Meet Teams.
+		// Meet Teams.
     with A['meetTeams'] do
     begin
-      // DISTINCT list of TEAMS...
+      SCM.qryListTeams.Connection := SCM.scmConnection;
       SCM.qryListTeams.Close;
       SCM.qryListTeams.ParamByName('SESSIONID').AsInteger :=
-        SCM.qrySession.FieldByName('SessionID').AsInteger;
+      SCM.qrySession.FieldByName('SessionID').AsInteger;
       SCM.qryListTeams.Prepare;
-      SCM.qryListTeams.Open;
+      SCM.qryListTeams.Open; // DISTINCT list of TEAMS...
       if SCM.qryListTeams.Active then
       begin
         SCM.qryListTeams.First;
         while not SCM.qryListTeams.Eof do
         begin
           teamObj := SO();
-          teamObj.I['teamId'] := SCM.qryListTeams.FieldByName('teamId').AsInteger;
-          teamObj.S['teamAbbreviation'] := SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
-          teamObj.S['teamShortName'] := SCM.qryListTeams.FieldByName('teamShortName').AsString;
-          teamObj.S['teamFullName'] := SCM.qryListTeams.FieldByName('teamFullName').AsString;
+          teamObj.I['teamId'] :=
+            SCM.qryListTeams.FieldByName('teamId').AsInteger;
+          teamObj.S['teamAbbreviation'] :=
+            SCM.qryListTeams.FieldByName('teamAbbreviation').AsString;
+          teamObj.S['teamShortName'] :=
+            SCM.qryListTeams.FieldByName('teamShortName').AsString;
+          teamObj.S['teamFullName'] :=
+            SCM.qryListTeams.FieldByName('teamFullName').AsString;
           teamObj.Null['teamMascot'] := jNull;
           Add(teamObj);
-          SCM.qryListTeams.Next;
+					SCM.qryListTeams.Next;
         end;
       end;
-
     end;
 
     // Meet Swimmers.
     with A['meetSwimmers'] do
-    begin
-      // DISTINCT list of Entrants nominating to swim event(s)...
+		begin
+			// DISTINCT list of Entrants nominating to swim event(s)...
+			SCM.qryListSwimmers.Connection := SCM.scmConnection;
       SCM.qryListSwimmers.Close;
       SCM.qryListSwimmers.ParamByName('SESSIONID').AsInteger :=
         SCM.qrySession.FieldByName('SessionID').AsInteger;
@@ -783,19 +795,19 @@ begin
         SCM.qryListSwimmers.First;
         while not SCM.qryListSwimmers.Eof do
         begin
-          swimmerObj := SO();
-          swimmerObj.I['swimmerId'] := SCM.qryListSwimmers.FieldByName('swimmerId').AsInteger;
-          swimmerObj.S['swimmerName'] := SCM.qryListSwimmers.FieldByName('swimmerName').AsString;
-          swimmerObj.S['swimmerGender'] := SCM.qryListSwimmers.FieldByName('swimmerGender').AsString;
-          swimmerObj.I['swimmerAge'] := SCM.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
-          swimmerObj.I['swimmerTeamID']  := SCM.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
-          Add(swimmerObj);
-          SCM.qryListSwimmers.Next;
-        end;
-      end;
-    end;
+					swimmerObj := SO();
+					swimmerObj.I['swimmerId'] := SCM.qryListSwimmers.FieldByName('swimmerId').AsInteger;
+					swimmerObj.S['swimmerName'] := SCM.qryListSwimmers.FieldByName('swimmerName').AsString;
+					swimmerObj.S['swimmerGender'] := SCM.qryListSwimmers.FieldByName('swimmerGender').AsString;
+					swimmerObj.I['swimmerAge'] := SCM.qryListSwimmers.FieldByName('swimmerAge').AsInteger;
+					swimmerObj.I['swimmerTeamID']  := SCM.qryListSwimmers.FieldByName('swimmerTeamID').AsInteger;
+					Add(swimmerObj);
+					SCM.qryListSwimmers.Next;
+				end;
+			end;
+		end;
 
-  end;
+	end;
 
   if Assigned(Settings) then
   begin

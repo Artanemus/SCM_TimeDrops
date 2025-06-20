@@ -10710,8 +10710,13 @@ object Main: TMain
                 ImageName = 'file_open'
               end
               item
+                Action = actnExploreMeetsFolder
+                ImageIndex = 0
+                ImageName = 'file_open'
+              end
+              item
                 Action = actnScanMeetsFolder
-                Caption = '&Scan '#39'Meets'#39' folder...'
+                Caption = 'R&e-Scan '#39'Meets'#39' folder...'
                 ImageIndex = 2
                 ImageName = 'document_search'
               end
@@ -10854,7 +10859,7 @@ object Main: TMain
     end
     object actnScanMeetsFolder: TAction
       Category = 'TimeDrops'
-      Caption = 'Scan '#39'Meets'#39' folder...'
+      Caption = 'Re-Scan '#39'Meets'#39' folder...'
       ImageIndex = 2
       ImageName = 'document_search'
       OnExecute = actnScanMeetsFolderExecute
@@ -11001,6 +11006,14 @@ object Main: TMain
       ImageName = 'AutoSyncGrids'
       OnExecute = actnAutoSyncExecute
       OnUpdate = actnAutoSyncUpdate
+    end
+    object actnExploreMeetsFolder: TAction
+      Category = 'TimeDrops'
+      Caption = 'Explore '#39'Meets'#39' folder...'
+      ImageIndex = 0
+      ImageName = 'file_open'
+      OnExecute = actnExploreMeetsFolderExecute
+      OnUpdate = actnExploreMeetsFolderUpdate
     end
   end
   object FileSaveDlg: TFileSaveDialog

@@ -314,53 +314,59 @@ begin
 
 
       // --- SPLITS --- (Simplified the logic slightly)
-      With LaneObj.A['Splits'] do
+      with LaneObj.A['Splits'] do
       begin
-          SCM.qrySplit.Close;
-          SCM.qrySplit.ParamByName('EVENTTYPEID').AsInteger := Ord(aEventType);
+        SCM.qrySplit.Connection := SCM.scmConnection;
+        SCM.qrySplit.Close;
+        SCM.qrySplit.ParamByName('EVENTTYPEID').AsInteger := Ord(aEventType);
 
-          // Determine ID based on event type only if the lane is NOT empty
-          ID := 0;
-          if not laneIsEmpty then
+        // Determine ID based on event type only if the lane is NOT empty
+        ID := 0;
+        if not laneIsEmpty then
+        begin
+          if aEventType = etINDV then
           begin
-              if aEventType = etINDV then
-              begin
-                  ID := ADataSet.FieldByName('EntrantID').AsInteger;
-                  SCM.qrySplit.ParamByName('ID').AsInteger := ID;
-              end
-              else if aEventType = etTEAM then
-              begin
-                  ID := ADataSet.FieldByName('TeamID').AsInteger;
-                  SCM.qrySplit.ParamByName('ID').AsInteger := ID;
-              end;
+            ID := ADataSet.FieldByName('EntrantID').AsInteger;
+            SCM.qrySplit.ParamByName('ID').AsInteger := ID;
+          end
+          else if aEventType = etTEAM then
+          begin
+            ID := ADataSet.FieldByName('TeamID').AsInteger;
+            SCM.qrySplit.ParamByName('ID').AsInteger := ID;
+          end;
 
-              // Only query splits if we have a valid ID
-              if ID > 0 then // Or whatever condition indicates a valid ID
+          // Only query splits if we have a valid ID
+          if ID > 0 then // Or whatever condition indicates a valid ID
+          begin
+            SCM.qrySplit.Prepare; // Prepare only if needed
+            SCM.qrySplit.Open;
+            if SCM.qrySplit.Active and not SCM.qrySplit.IsEmpty then
+              // Check if query returned rows
+            begin
+              accDist := 0; // Start accumulated distance at 0
+              SCM.qrySplit.First;
+              while not SCM.qrySplit.Eof do
               begin
-                  SCM.qrySplit.Prepare; // Prepare only if needed
-                  SCM.qrySplit.Open;
-                  if SCM.qrySplit.Active and not SCM.qrySplit.IsEmpty then // Check if query returned rows
-                  begin
-                      accDist := 0; // Start accumulated distance at 0
-                      SCM.qrySplit.First;
-                      while not SCM.qrySplit.Eof do
-                      begin
-                          vtime := SCM.qrySplit.FieldByName('SplitTime').AsVariant;
-                          // Process only if SplitTime is not null/empty/zero
-                          if not (VarIsNull(vtime) or VarIsEmpty(vtime) or (VarIsType(vtime, varDate) and (TDateTime(vtime)=0))) then
-                          begin
-                              splitObj := SO();
-                              accDist := accDist + LenOfPool; // Increment distance *before* adding
-                              splitObj.I['distance'] := accDist;
-                              splitObj.I['time'] := ConverDateTimeToCentiSeconds(TDateTime(vtime)); // Use the valid vtime
-                              Add(splitObj); // Add to LaneObj.A['Splits']
-                          end;
-                          // Always move next, even if split time was invalid, to avoid infinite loop
-                          SCM.qrySplit.Next;
-                      end; // while not Eof
-                  end; // if Active and not IsEmpty
-              end; // if ID > 0
-          end; // if not laneIsEmpty
+                vtime := SCM.qrySplit.FieldByName('SplitTime').AsVariant;
+                // Process only if SplitTime is not null/empty/zero
+                if not (VarIsNull(vtime) or VarIsEmpty(vtime) or
+                  (VarIsType(vtime, varDate) and (TDateTime(vtime) = 0))) then
+                begin
+                  splitObj := SO();
+                  accDist := accDist + LenOfPool;
+                    // Increment distance *before* adding
+                  splitObj.I['distance'] := accDist;
+                  splitObj.I['time'] :=
+                    ConverDateTimeToCentiSeconds(TDateTime(vtime));
+                    // Use the valid vtime
+                  Add(splitObj); // Add to LaneObj.A['Splits']
+                end;
+                // Always move next, even if split time was invalid, to avoid infinite loop
+                SCM.qrySplit.Next;
+							end; // while not Eof
+            end; // if Active and not IsEmpty
+          end; // if ID > 0
+        end; // if not laneIsEmpty
       end; // With LaneObj.A['Splits']
 
       ADataSet.Next;
