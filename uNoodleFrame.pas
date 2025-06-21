@@ -9,7 +9,7 @@ uses
   System.Generics.Collections, Vcl.VirtualImage, System.Math,
   dmIMG, uNoodle, System.Types, Vcl.StdCtrls, SCMDefines, Vcl.Menus,
   System.Actions, Vcl.ActnList, uNoodleData,
-  DBAdvGrid, Data.DB; // , dmSCM, Data.DB, dmTDS;
+	DBAdvGrid, Data.DB, System.UITypes; // , dmSCM, Data.DB, dmTDS;
 
 type
   // State for dragging operations
@@ -49,6 +49,8 @@ type
     N1: TMenuItem;
     procedure actDeleteNoodleExecute(Sender: TObject);
     procedure actDeleteNoodleUpdate(Sender: TObject);
+		procedure actNoodleInfoExecute(Sender: TObject);
+		procedure actNoodleInfoUpdate(Sender: TObject);
     procedure pbNoodlesMouseDown(Sender: TObject; Button: TMouseButton; Shift:
       TShiftState; X, Y: Integer);
     procedure pbNoodlesMouseMove(Sender: TObject; Shift: TShiftState;
@@ -132,7 +134,7 @@ implementation
 
 {$R *.dfm}
 
-uses dmTDS, dmSCM;
+uses dmTDS, dmSCM, uNoodleInfo;
 
 constructor TNoodleFrame.Create(AOwner: TComponent);
 begin
@@ -211,6 +213,21 @@ begin
     if TAction(Sender).Enabled then
       TAction(Sender).Enabled := false;
   end;
+end;
+
+procedure TNoodleFrame.actNoodleInfoExecute(Sender: TObject);
+var
+dlg: TNoodleInfo;
+begin
+	dlg := TNoodleInfo.Create(Self);
+	dlg.Noodle := FSelectedNoodle;
+	dlg.ShowModal;
+	dlg.Free;
+end;
+
+procedure TNoodleFrame.actNoodleInfoUpdate(Sender: TObject);
+begin
+	actDeleteNoodleUpdate(Sender);
 end;
 
 procedure TNoodleFrame.ClearNoodles;
@@ -564,15 +581,23 @@ begin
             FNoodles.Add(Noodle);
 
             // Assign both handles to their correct banks and lanes
-            HandlePtr := Noodle.GetHandlePtr(FHotSpotAnchor.Bank);
+						HandlePtr := Noodle.GetHandlePtr(FHotSpotAnchor.Bank);
             HandlePtr.Bank := FHotSpotAnchor.Bank;
-            HandlePtr.Lane := FHotSpotAnchor.Lane;
+						HandlePtr.Lane := FHotSpotAnchor.Lane;
+						if FHotSpotAnchor.Bank=0 then
+							HandlePtr.HeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger
+						else
+							HandlePtr.HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
 
-            HandlePtr := Noodle.GetHandlePtr(HotSpot.Bank);
-            HandlePtr.Bank := HotSpot.Bank;
-            HandlePtr.Lane := HotSpot.Lane;
+						HandlePtr := Noodle.GetHandlePtr(HotSpot.Bank);
+						HandlePtr.Bank := HotSpot.Bank;
+						HandlePtr.Lane := HotSpot.Lane;
 
-//            Noodle.Assert(FNumberOfLanes);  { DEBUG }
+						if HotSpot.Bank=0 then
+							HandlePtr.HeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger
+						else
+							HandlePtr.HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+
 
             // Trigger an OnNoodleCreated event here - uNoodleData.
             if Assigned(FOnNoodleCreated) then FOnNoodleCreated(Self, Noodle);
@@ -654,7 +679,7 @@ var
   deflate: Integer;
 	HandlePtr: TNoodleHandleP;
 	txt: string;
-	textWidth, textHeight, sessID, EvNum, HtNum, ID: Integer;
+	textWidth, textHeight, sessID, EvNum, HtNum: Integer;
 
   procedure DrawGridIcons();
   begin
@@ -687,33 +712,29 @@ var
 
 	procedure DrawNoodleText(Noodle: TNoodle; P0, P1: TPointF);
 	begin
-		textWidth := Canvas.TextWidth(txt);
-		textHeight := Canvas.TextHeight(txt);
-//		Canvas.Brush.Style := bsSolid;
-//		Canvas.Brush.Color := clWhite; // background for readability
-//		Canvas.FillRect( Rect(
-//			Round(P0.X - textWidth div 2) - 2,
-//			Round(P0.Y - 12) - 2,
-//			Round(P0.X + textWidth div 2) + 2,
-//			Round(P0.Y - 12 + textHeight) + 2));
-//		Canvas.Brush.Style := bsClear;
-//		Canvas.Font.Color := AColor;
-//		Canvas.TextOut(Round(P0.X - textWidth div 2), Round(P0.Y - 12), txt);
-
-		Canvas.Font.Color := clLime;
-		Canvas.Font.Size := 12;
-		Canvas.Font.Style := Canvas.Font.Style + [fsBold];
-    sessID:=0; EvNum:=0; HtNum:=0;
-		// obtain HeatNum, EventNum and Session from
-//		ID := TDS.tblmNoodle.FieldByName('scmHeatID').AsInteger;
-//		HtNum := SCM.scmConnection.ExecSQLScalar('SELECT HeatNum FROM SwimClubMeet.dbo.HeatIndividual where HeatID = :ID', [ID]);
-//		ID := SCM.scmConnection.ExecSQLScalar('SELECT EventID FROM SwimClubMeet.dbo.HeatIndividual where HeatID = :ID', [ID]);
-//		EvNum := SCM.scmConnection.ExecSQLScalar('SELECT EventNum FROM SwimClubMeet.dbo.Event where EventID = :ID', [ID]);
-//		sessID := SCM.scmConnection.ExecSQLScalar('SELECT SessionID FROM SwimClubMeet.dbo.Event where EventID = :ID', [ID]);
+		var aRect: TRect;
+		sessID:=0; EvNum:=0; HtNum:=0;
 		txt := Format('S:%d E:%d H:%d L:%d',
 			[sessID,	EvNum,	HtNum, Noodle.GetHandle(0).Lane]);
-		Canvas.TextOut(ROUND(P0.X - 4), ROUND(P1.y-textWidth), txt)
+		Canvas.Font.Size := 12;
+		Canvas.Font.Style := Canvas.Font.Style + [fsBold];
 
+		textWidth := Canvas.TextWidth(txt);
+		textHeight := Canvas.TextHeight(txt);
+
+		Canvas.Brush.Style := bsSolid;
+		Canvas.Brush.Color := clGray; // background for readability
+		aRect := TRect.Create(
+			Round(P0.X - textWidth div 2) - 2,
+			Round(P0.Y - 12) - 2,
+			Round(P0.X + textWidth div 2) + 2,
+			Round(P0.Y - 12 + textHeight) + 2);
+		Canvas.FillRect(aRect);
+
+		Canvas.Brush.Style := bsClear;
+		Canvas.Font.Color := AColor;
+		Canvas.TextOut(Round(P0.X - textWidth div 2), Round(P0.Y - 12), txt);
+//		Canvas.TextOut(ROUND(P0.X - 4), ROUND(P1.y-textWidth), txt)
 	end;
 
 begin

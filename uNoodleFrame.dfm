@@ -64,6 +64,8 @@ object NoodleFrame: TNoodleFrame
     object actNoodleInfo: TAction
       Category = 'Noodles'
       Caption = 'Noodle details ...'
+      OnExecute = actNoodleInfoExecute
+      OnUpdate = actNoodleInfoUpdate
     end
   end
 end

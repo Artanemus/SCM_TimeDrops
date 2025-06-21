@@ -224,6 +224,10 @@
             <DesignClass>TFrame</DesignClass>
         </DCCReference>
         <DCCReference Include="uNoodleData.pas"/>
+        <DCCReference Include="uNoodleInfo.pas">
+            <Form>NoodleInfo</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

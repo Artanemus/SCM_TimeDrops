@@ -38,7 +38,8 @@ uses
   uNoodle in 'uNoodle.pas',
   TransparentPanel in 'TransparentPanel.pas',
   uNoodleFrame in 'uNoodleFrame.pas' {NoodleFrame: TFrame},
-  uNoodleData in 'uNoodleData.pas';
+  uNoodleData in 'uNoodleData.pas',
+  uNoodleInfo in 'uNoodleInfo.pas' {NoodleInfo};
 
 {$R *.res}
 

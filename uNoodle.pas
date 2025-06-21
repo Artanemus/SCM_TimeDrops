@@ -9,7 +9,8 @@ uses
 type
   // Record to hold info about the connection point (or handle).
   TNoodleHandle = record
-    RectF: TRectF;
+		RectF: TRectF;
+    HeatID: integer;
     Bank: integer;  // Bank 0 = SCM : Bank 1 = TDS.
     Lane: integer;
   private

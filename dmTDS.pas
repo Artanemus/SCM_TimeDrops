@@ -173,9 +173,9 @@ begin
 	// Create TIME-DROPS DATA TABLES SCHEMA.
 	// ---------------------------------------------
 	tblmSession.FieldDefs.Clear;
-	// Primary Key.  Derived from ..... SCM dbo.Session.SessionID.
+	// Primary Key.  Unique - incremental number..
 	tblmSession.FieldDefs.Add('SessionID', ftInteger);
-	// Unique - incremental number - not implimented in SCM. (redundant).
+	// Derived from SCM dbo.Session.SessionID. LINKS TDS with SCM.
 	tblmSession.FieldDefs.Add('SessionNum', ftInteger);
 	// An approx start time for the session.
 	// the start of recording of race data from TimeDrops.
