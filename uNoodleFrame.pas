@@ -219,10 +219,14 @@ procedure TNoodleFrame.actNoodleInfoExecute(Sender: TObject);
 var
 dlg: TNoodleInfo;
 begin
-	dlg := TNoodleInfo.Create(Self);
-	dlg.Noodle := FSelectedNoodle;
-	dlg.ShowModal;
-	dlg.Free;
+	if (Assigned(SCM))  AND (Assigned(SCM.scmConnection)) then
+	begin
+		dlg := TNoodleInfo.Create(Self);
+		dlg.Noodle := FSelectedNoodle;
+		dlg.Connection := SCM.scmConnection;
+		dlg.ShowModal;
+		dlg.Free;
+	end;
 end;
 
 procedure TNoodleFrame.actNoodleInfoUpdate(Sender: TObject);
@@ -427,7 +431,7 @@ end;
 procedure TNoodleFrame.LoadNoodleData();
 var
   Noodle: TNoodle;
-  SCMRectF, TDSRectF: TRectF;
+	SCMRectF, TDSRectF: TRectF;
 begin
   if Assigned(FNoodles) then
   begin
@@ -446,13 +450,14 @@ begin
     begin
       // locate rect at bank, lane,
       SCMRectF := GetHotSpotRectF(0,
-        TDS.tblmNoodle.FieldByName('SCMLane').AsInteger);
+				TDS.tblmNoodle.FieldByName('SCMLane').AsInteger);
       TDSRectF := GetHotSpotRectF(1,
         TDS.tblmNoodle.FieldByName('TDSLane').AsInteger);
       Noodle := TNoodle.Create(SCMRectF, TDSRectF);
-        // fills in each handle's TRectF and bank.
-      NoodleData.AssignNDataToNoodle(Noodle);
-        // fills in each Handle's HeatID and lane.
+				// fills in each handle's TRectF,lane,bank,HeatID.
+			NoodleData.AssignNDataToNoodle(Noodle);
+
+				// fills in each Handle's HeatID and lane.
       FNoodles.Add(Noodle); // place noodle into list
       TDS.tblmNoodle.Next;
     end;
@@ -582,9 +587,10 @@ begin
 
             // Assign both handles to their correct banks and lanes
 						HandlePtr := Noodle.GetHandlePtr(FHotSpotAnchor.Bank);
-            HandlePtr.Bank := FHotSpotAnchor.Bank;
+						HandlePtr.Bank := FHotSpotAnchor.Bank;
 						HandlePtr.Lane := FHotSpotAnchor.Lane;
-						if FHotSpotAnchor.Bank=0 then
+
+						if HandlePtr.Bank=0 then
 							HandlePtr.HeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger
 						else
 							HandlePtr.HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
@@ -593,7 +599,7 @@ begin
 						HandlePtr.Bank := HotSpot.Bank;
 						HandlePtr.Lane := HotSpot.Lane;
 
-						if HotSpot.Bank=0 then
+						if HandlePtr.Bank=0 then
 							HandlePtr.HeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger
 						else
 							HandlePtr.HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
@@ -640,9 +646,16 @@ begin
           begin
             // Go modify the active Noodle's handle...
             FDragHandlePtr.RectF := TRectF.Create(HotSpot.RectF);
-            FDragHandlePtr.Bank := HotSpot.Bank;
+						FDragHandlePtr.Bank := HotSpot.Bank;
             // Note: Bank doesn't need an update.
-            FDragHandlePtr.Lane := HotSpot.Lane;
+						FDragHandlePtr.Lane := HotSpot.Lane;
+
+						if FDragHandlePtr.Bank=0 then
+							FDragHandlePtr.HeatID := SCM.qryHeat.FieldByName('HeatID').AsInteger
+						else
+							FDragHandlePtr.HeatID := TDS.tblmHeat.FieldByName('HeatID').AsInteger;
+
+
             // Trigger an OnNoodleCreated event here - uNoodleData.
             if Assigned(FOnNoodleUpdated) then FOnNoodleUpdated(Self, fDragNoodle);
 //            fDragNoodle.Assert(FNumberOfLanes);   { DEBUG }

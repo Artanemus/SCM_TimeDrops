@@ -95,11 +95,14 @@ begin
   Noodle.NDataID := TDS.tblmNoodle.FieldByName('NoodleID').AsInteger;
   HandlePtr := Noodle.GetHandlePtr(0);
   HandlePtr.Lane := TDS.tblmNoodle.FieldByName('SCMLane').AsInteger;
-  HandlePtr.Bank := 0;
-  HandlePtr := Noodle.GetHandlePtr(1);
-  HandlePtr.Lane := TDS.tblmNoodle.FieldByName('TDSLane').AsInteger;
-  HandlePtr.Bank := 1;
-  result := true;
+	HandlePtr.Bank := 0;
+	// ID's used to display NoodleInfo. (AND query other table data)
+	HandlePtr.HeatID := TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger;
+	HandlePtr := Noodle.GetHandlePtr(1);
+	HandlePtr.Lane := TDS.tblmNoodle.FieldByName('TDSLane').AsInteger;
+	HandlePtr.Bank := 1;
+	HandlePtr.HeatID := TDS.tblmNoodle.FieldByName('TDSHeatID').AsInteger;
+	result := true;
 
 end;
 

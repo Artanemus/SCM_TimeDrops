@@ -6,7 +6,10 @@ uses
   Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
     System.Classes, Vcl.Graphics,
   Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, dmSCM,
-  dmTDS, uNoodle, Vcl.WinXCtrls;
+  dmTDS, uNoodle, Vcl.WinXCtrls, FireDAC.Stan.Intf, FireDAC.Stan.Option,
+  FireDAC.Stan.Param, FireDAC.Stan.Error, FireDAC.DatS, FireDAC.Phys.Intf,
+  FireDAC.DApt.Intf, FireDAC.Stan.Async, FireDAC.DApt, Data.DB,
+  FireDAC.Comp.DataSet, FireDAC.Comp.Client;
 type
   TNoodleInfo = class(TForm)
     pnlFooter: TPanel;
@@ -33,25 +36,29 @@ type
     pnlHeader: TPanel;
     lblH1: TLabel;
     lblH2: TLabel;
+		qryNDetail: TFDQuery;
 		procedure FormCreate(Sender: TObject);
     procedure btnOkClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
 		procedure FormShow(Sender: TObject);
   private
+		FConnection: TFDConnection;
 		fNoodle: TNoodle;
 
-		FSCM_SessID, FSCM_HtID: integer;
+		FSCM_SessID: integer;
 		FSCM_EvNum, FSCM_HtNum, FSCM_LNum: integer;
 		FSCM_HeatID: Integer;
-		FTDS_SessID: integer;
 		FTDS_SessNum, FTDS_EvNum, FTDS_HtNum, FTDS_LNum: integer;
 
+		procedure SetConnection(const Value: TFDConnection);
 		procedure SetNoodle(const Value: TNoodle);
 
 	public
 		myNoodle: TNoodle;
 
+		property Connection: TFDConnection read FConnection write SetConnection;
 		property Noodle: Tnoodle read FNoodle write SetNoodle;
+
 	end;
 
 var
@@ -64,6 +71,8 @@ implementation
 procedure TNoodleInfo.FormCreate(Sender: TObject);
 begin
 	FNoodle := nil;
+	FConnection := nil;
+	qryNDetail.Connection := nil;
 end;
 
 procedure TNoodleInfo.btnOkClick(Sender: TObject);
@@ -83,82 +92,80 @@ end;
 
 procedure TNoodleInfo.FormShow(Sender: TObject);
 var
-	id: integer;
-	nh: TNoodlehandle;
-	sql: string;
-	v: variant;
+  id: integer;
+  nh: TNoodlehandle;
+found: boolean;
 begin
-		lbl1.Caption := '';
-		lbl2.Caption := '';
-		lbl3.Caption := '';
-		lbl4.Caption := '';
-		lbl5.Caption := '';
-		lbl6.Caption := '';
-		lbl7.Caption := '';
-		lbl8.Caption := '';
+  lbl1.Caption := '';
+  lbl2.Caption := '';
+  lbl3.Caption := '';
+  lbl4.Caption := '';
+  lbl5.Caption := '';
+  lbl6.Caption := '';
+  lbl7.Caption := '';
+  lbl8.Caption := '';
 
-	if FNoodle <> nil then
-	begin
-		FTDS_LNum := 0;
-		FTDS_HtNum := 0;
-		FTDS_EvNum := 0;
-		FTDS_SessNum := 0;
+  if not assigned(FNoodle) or not assigned(FConnection) then exit;
 
-		FSCM_LNum := 0;
-		FSCM_HtNum := 0;
-		FSCM_EvNum := 0;
-		FSCM_SessID := 0;
+	id := FNoodle.NDataID;
+	found := true;
+  if TDS.tblmNoodle.FieldByName('NoodleID').AsInteger <> id then
+    found := TDS.Locate_NoodleID(id);
+  if found then
+  begin
+    FTDS_LNum := 0;
+    FTDS_HtNum := 0;
+    FTDS_EvNum := 0;
+    FTDS_SessNum := 0;
 
-		id := FNoodle.NDataID;
-		if TDS.Locate_NoodleID(id) then
-		begin
-			FTDS_HtNum := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
-			FTDS_EvNum := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
-			FTDS_SessNum := TDS.tblmSession.FieldByName('SessionNum').AsInteger;
-			nh := FNoodle.Gethandle(0);
-			FSCM_LNum := nh.Lane;
-			FSCM_HeatID := nh.HeatID;
-			sql := '''
-				SELECT Event.EventNum FROM SwimClubMeet.dbo.heatindividual
-				LEFT JOIN Event ON heatindividual.EventID = Event.EventID
-				WHERE heatindividual.HeatID = :HEATID
-				''';
-			v := SCM.scmConnection.ExecSQLScalar(sql, [FSCM_HeatID]);
-			if (not VarIsNull(v)) and (not VarIsEmpty(v)) then
-			begin
-				FSCM_EvNum := v;
-				sql := '''
-					SELECT HeatNum FROM SwimClubMeet.dbo.heatindividual
-					WHERE heatindividual.HeatID = :ID
-					''';
-				v := SCM.scmConnection.ExecSQLScalar(sql, [FSCM_HeatID]);
-				if (not VarIsNull(v)) and (not VarIsEmpty(v)) then
-					FSCM_HtNum := v;
-				sql := '''
-					SELECT Event.SessionID FROM SwimClubMeet.dbo.heatindividual
-					LEFT JOIN Event ON heatindividual.EventID = Event.EventID
-					WHERE heatindividual.HeatID = :ID
-					''';
-				v := SCM.scmConnection.ExecSQLScalar(sql, [FSCM_HtID]);
-				if (not VarIsNull(v)) and (not VarIsEmpty(v)) then
-					FSCM_SessID := v;
+    FSCM_LNum := 0;
+    FSCM_HtNum := 0;
+    FSCM_EvNum := 0;
+    FSCM_SessID := 0;
 
-				nh := FNoodle.Gethandle(1);
-				FTDS_LNum := nh.Lane;
-			end;
+    nh := FNoodle.Gethandle(0);
+    FSCM_LNum := nh.Lane;
+    FSCM_HeatID := nh.HeatID;
 
-		end;
+    qryNDetail.Connection := FConnection;
+    qryNDetail.Close;
+    FSCM_HeatID := nh.HeatID;
+    qryNDetail.ParamByName('HEATID').AsInteger := FSCM_HeatID;
+    qryNDetail.Prepare;
+    qryNDetail.Open;
+    if qryNDetail.Active then
+    begin
+      if not qryNDetail.IsEmpty then
+      begin
+        FSCM_SessID := qryNDetail.FieldByName('SessionID').AsInteger;
+        FSCM_EvNum := qryNDetail.FieldByName('EventNum').AsInteger;
+        FSCM_HtNum := qryNDetail.FieldByName('HeatNum').AsInteger;
+      end;
+    end;
 
-		lbl1.Caption := IntToStr(FTDS_SessNum);
-		lbl2.Caption := IntToStr(FSCM_EvNum);
-		lbl3.Caption := IntToStr(FSCM_HtNum);
-		lbl4.Caption := IntToStr(FSCM_LNum);
-		lbl5.Caption := IntToStr(FTDS_SessNum);
-		lbl6.Caption := IntToStr(FTDS_EvNum);
-		lbl7.Caption := IntToStr(FTDS_HtNum);
-		lbl8.Caption := IntToStr(FTDS_LNum);
+    nh := FNoodle.Gethandle(1);
+    FTDS_LNum := nh.Lane;
+    FTDS_HtNum := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
+    FTDS_EvNum := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
+    FTDS_SessNum := TDS.tblmSession.FieldByName('SessionNum').AsInteger;
 
   end;
+
+  lbl1.Caption := IntToStr(FTDS_SessNum);
+  lbl2.Caption := IntToStr(FSCM_EvNum);
+  lbl3.Caption := IntToStr(FSCM_HtNum);
+  lbl4.Caption := IntToStr(FSCM_LNum);
+  lbl5.Caption := IntToStr(FTDS_SessNum);
+  lbl6.Caption := IntToStr(FTDS_EvNum);
+  lbl7.Caption := IntToStr(FTDS_HtNum);
+  lbl8.Caption := IntToStr(FTDS_LNum);
+
+end;
+
+procedure TNoodleInfo.SetConnection(const Value: TFDConnection);
+begin
+	if Value <> nil then
+		FConnection := Value;
 end;
 
 procedure TNoodleInfo.SetNoodle(const Value: TNoodle);

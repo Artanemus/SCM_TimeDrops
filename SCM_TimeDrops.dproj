@@ -127,13 +127,11 @@
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_MajorVer>0</VerInfo_MajorVer>
-        <VerInfo_MinorVer>1</VerInfo_MinorVer>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <VerInfo_Keys>CompanyName=Artanemus;FileDescription=$(MSBuildProjectName);FileVersion=0.1.0.3;InternalName=SCM_TD;LegalCopyright=Copyright (C) 2019-2025 Artanemus.  All rights reserved.;LegalTrademarks=SwimClubMeet;OriginalFilename=SCM_TimeDrops.exe;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=0.1;Comments=A utility to capture TimeDrops data and import into SwimClubMeet.</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=Artanemus;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.1;InternalName=SCM_TD;LegalCopyright=Copyright (C) 2019-2025 Artanemus.  All rights reserved.;LegalTrademarks=SwimClubMeet;OriginalFilename=SCM_TimeDrops.exe;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0;Comments=A utility to capture TimeDrops data and import into SwimClubMeet.</VerInfo_Keys>
         <VerInfo_PreRelease>true</VerInfo_PreRelease>
         <Icon_MainIcon>SCM_TimeDrops_Icon.ico</Icon_MainIcon>
-        <VerInfo_Build>3</VerInfo_Build>
+        <VerInfo_Build>1</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
         <AppDPIAwarenessMode>PerMonitorV2</AppDPIAwarenessMode>

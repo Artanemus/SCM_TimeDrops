@@ -25,8 +25,6 @@ object NoodleInfo: TNoodleInfo
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitTop = 125
-    ExplicitWidth = 225
     object btnOk: TButton
       Left = 67
       Top = 6
@@ -65,10 +63,6 @@ object NoodleInfo: TNoodleInfo
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
-    ExplicitLeft = 96
-    ExplicitTop = 224
-    ExplicitWidth = 185
-    ExplicitHeight = 41
     DesignSize = (
       209
       102)
@@ -218,7 +212,6 @@ object NoodleInfo: TNoodleInfo
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 2
-    ExplicitWidth = 258
     object lblH1: TLabel
       Left = 0
       Top = 12
@@ -233,5 +226,27 @@ object NoodleInfo: TNoodleInfo
       Height = 15
       Caption = 'TimeDrops'
     end
+  end
+  object qryNDetail: TFDQuery
+    Connection = SCM.TestFDConnection
+    SQL.Strings = (
+      'DECLARE @HeatID AS INTEGER;'
+      'SET @HeatID = :HEATID'
+      ''
+      
+        'SELECT Event.SessionID, Event.EventNum, HeatIndividual.HeatNum F' +
+        'ROM'
+      'HeatIndividual '
+      'LEFT JOIN Event ON HeatIndividual.EventID = Event.EventID'
+      'WHERE HeatIndividual.HeatID = @HeatID;')
+    Left = 96
+    Top = 40
+    ParamData = <
+      item
+        Name = 'HEATID'
+        DataType = ftInteger
+        ParamType = ptInput
+        Value = 0
+      end>
   end
 end
