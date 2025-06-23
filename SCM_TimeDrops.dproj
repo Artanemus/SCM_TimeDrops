@@ -4,7 +4,7 @@
         <ProjectVersion>20.3</ProjectVersion>
         <FrameworkType>VCL</FrameworkType>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <Platform Condition="'$(Platform)'==''">Win32</Platform>
         <ProjectName Condition="'$(ProjectName)'==''">SCM_TimeDrops</ProjectName>
         <TargetedPlatforms>3</TargetedPlatforms>
@@ -224,6 +224,14 @@
         <DCCReference Include="uNoodleData.pas"/>
         <DCCReference Include="uNoodleInfo.pas">
             <Form>NoodleInfo</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="dlgSwimClubPicker.pas">
+            <Form>SwimClubPicker</Form>
+            <FormType>dfm</FormType>
+        </DCCReference>
+        <DCCReference Include="dlgAbout.pas">
+            <Form>About</Form>
             <FormType>dfm</FormType>
         </DCCReference>
         <BuildConfiguration Include="Base">

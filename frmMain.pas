@@ -108,6 +108,8 @@ type
     sbtnAutoSync: TSpeedButton;
     actnAutoSync: TAction;
     actnExploreMeetsFolder: TAction;
+		procedure actnAboutExecute(Sender: TObject);
+		procedure actnAboutUpdate(Sender: TObject);
 		procedure actnExploreMeetsFolderUpdate(Sender: TObject);
     procedure actnBuildTDTablesExecute(Sender: TObject);
     procedure actnBuildTDTablesUpdate(Sender: TObject);
@@ -219,7 +221,8 @@ implementation
 uses System.UITypes, System.DateUtils ,dlgSessionPicker, dlgOptions, dlgTreeViewSCM,
   dlgDataDebug, dlgTreeViewData, dlgUserRaceTime, dlgPostData, tdMeetProgram,
   tdMeetProgramPick, tdResults, uWatchTime, uAppUtils, tdLogin,
-  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgScanOptions, rptReportsSCM;
+  Winapi.ShellAPI, dlgFDExplorer, dmSCM, dmTDS, dlgScanOptions, rptReportsSCM,
+  dlgSwimClubPicker, dlgAbout;
 
 const
 
@@ -280,6 +283,20 @@ begin
 end;
 
 
+
+procedure TMain.actnAboutExecute(Sender: TObject);
+var
+	dlg: TAbout;
+begin
+	dlg := TAbout.Create(Self);
+  dlg.ShowModal;
+	dlg.Free;
+end;
+
+procedure TMain.actnAboutUpdate(Sender: TObject);
+begin
+  TAction(Sender).Enabled := true;
+end;
 
 procedure TMain.actnExploreMeetsFolderUpdate(Sender: TObject);
 begin
@@ -1032,43 +1049,65 @@ begin
 end;
 
 procedure TMain.actnSelectSwimClubExecute(Sender: TObject);
-begin
-  (*
 var
   dlg: TSwimClubPicker;
   mr: TModalResult;
+	currSwimClubID: integer;
+	found: boolean;
 begin
-    dlg := TSwimClubPicker.Create(Self);
-    dlg.rtnSwimClubID := 0;
-    // the picker will locate to the given session id.
-    if AppData.qrySwimClub.Active and not AppData.qrySwimClub.IsEmpty then
-    begin
-      dlg.rtnSwimClubID := AppData.qrySwimClub.FieldByName('SwimClubID').AsInteger;
-    end;
+  dlg := TSwimClubPicker.Create(Self);
+  dlg.SwimClubID := 0;
 
-    mr := dlg.ShowModal;
-    if IsPositiveResult(mr) and (dlg.rtnSwimClubID > 0) then
-    begin
-      AppData.MSG_Handle := 0;
-      AppData.LocateSCMSwimClubID(dlg.rtnSwimClubID);
-      AppData.MSG_Handle := Self.Handle;
-    end;
-    dlg.Free;
-    UpdateCaption;
-    PostMessage(Self.Handle, SCM_UPDATEUI, 0, 0);
-    *)
+	// the picker will locate to the given session id.
+  if SCM.qrySwimClub.Active and not SCM.qrySwimClub.IsEmpty then
+  begin
+		try
+			currSwimClubID := SCM.qrySwimClub.FieldByName('SwimClubID').AsInteger;
+			mr := dlg.ShowModal;
+			if IsPositiveResult(mr) and (dlg.SwimClubID > 0) then
+			begin
+				if dlg.SwimClubID <> currSwimClubID then
+				begin
+					SCM.MSG_Handle := 0;
+					found := SCM.LocateSwimClubID(dlg.SwimClubID);
+					SCM.MSG_Handle := Self.Handle;
+					if found then
+					begin
+						PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+						if Assigned(NoodleFrame) then
+							PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
+					end;
+				end;
+			end;
+		finally
+			dlg.Free;
+		end;
+	end;
 end;
 
 procedure TMain.actnSelectSwimClubUpdate(Sender: TObject);
 begin
-  if (Assigned(SCM)) and (SCM.DataIsActive = true) then
-  begin
-    if not TAction(Sender).Enabled then
-      TAction(Sender).Enabled := true;
-  end
-  else
-    if TAction(Sender).Enabled then
-      TAction(Sender).Enabled := false;
+	if (Assigned(SCM)) and (SCM.DataIsActive = true) then
+	begin
+		if not TAction(Sender).Enabled then
+			TAction(Sender).Enabled := true;
+		(*
+		// multi-swimclub is available.
+		if SCM.qrySwimClub.RecordCount > 1 then
+		begin
+		if not TAction(Sender).Enabled then
+			TAction(Sender).Enabled := true;
+		end
+		else
+		begin
+			if TAction(Sender).Enabled then // option is disabled.
+				TAction(Sender).Enabled := false;
+		end;
+		*)
+	end
+	else
+		if TAction(Sender).Enabled then
+			TAction(Sender).Enabled := false;
 end;
 
 procedure TMain.actnSyncSCMExecute(Sender: TObject);
@@ -1367,9 +1406,9 @@ begin
     FSyncTDSVerbose := true;
   end;
 
-  PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
-  if Assigned(NoodleFrame) then
-    PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
+	PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+	if Assigned(NoodleFrame) then
+		PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
 end;
 
 procedure TMain.btnPickDTTreeViewClick(Sender: TObject);
@@ -1810,7 +1849,15 @@ begin
 	
   // tidy up of auto-sync
   actnAutoSync.Checked := false;
-  sbtnAutoSync.ImageIndex := 21;
+	sbtnAutoSync.ImageIndex := 21;
+
+{$IFDEF DEBUG}
+	actnBuildTDTables.Visible := true;
+	actnTDTableViewer.Visible := true;
+{$ELSE}
+	actnBuildTDTables.Visible := false;
+	actnTDTableViewer.Visible := false;
+{$ENDIF}
 
 end;
 
@@ -1962,7 +2009,7 @@ procedure TMain.MSG_Connect(var Msg: TMessage);
 begin
   if actnConnectToSCM.Enabled then
       // proc assigns fDoLoginOnBoot := false;
-      actnConnectToSCMExecute(Self);
+			actnConnectToSCMExecute(Self);
 end;
 
 procedure TMain.MSG_PushResults(var Msg: TMessage);

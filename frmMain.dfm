@@ -10704,13 +10704,8 @@ object Main: TMain
           item
             Items = <
               item
-                Action = actnPushResults
-                Caption = '&Push '#39'Results'#39' to the grid...'
-                ImageIndex = 0
-                ImageName = 'file_open'
-              end
-              item
                 Action = actnExploreMeetsFolder
+                Caption = 'E&xplore '#39'Meets'#39' folder...'
                 ImageIndex = 0
                 ImageName = 'file_open'
               end
@@ -10721,13 +10716,19 @@ object Main: TMain
                 ImageName = 'document_search'
               end
               item
+                Action = actnPushResults
+                Caption = '&Push '#39'Results'#39' to the grid...'
+                ImageIndex = 0
+                ImageName = 'file_open'
+              end
+              item
+                Caption = '-'
+              end
+              item
                 Action = actnRestartDirectoryWatcher
                 Caption = '&Restart Directory Watcher'
                 ImageIndex = 18
                 ImageName = 'VisibilityOn'
-              end
-              item
-                Caption = '-'
               end
               item
                 Action = actnClearGrid
@@ -10896,6 +10897,8 @@ object Main: TMain
       Caption = 'About SCM TimeDrops ...'
       ImageIndex = 8
       ImageName = 'Help'
+      OnExecute = actnAboutExecute
+      OnUpdate = actnAboutUpdate
     end
     object actnSyncTD: TAction
       Category = 'Edit'
@@ -10938,6 +10941,7 @@ object Main: TMain
     object actnReportTD: TAction
       Category = 'Reports'
       Caption = 'Time Drops Report...'
+      Enabled = False
       ImageIndex = 12
       ImageName = 'file_report'
     end

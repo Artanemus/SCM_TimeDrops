@@ -39,7 +39,9 @@ uses
   TransparentPanel in 'TransparentPanel.pas',
   uNoodleFrame in 'uNoodleFrame.pas' {NoodleFrame: TFrame},
   uNoodleData in 'uNoodleData.pas',
-  uNoodleInfo in 'uNoodleInfo.pas' {NoodleInfo};
+  uNoodleInfo in 'uNoodleInfo.pas' {NoodleInfo},
+  dlgSwimClubPicker in 'dlgSwimClubPicker.pas' {SwimClubPicker},
+  dlgAbout in 'dlgAbout.pas' {About};
 
 {$R *.res}
 
