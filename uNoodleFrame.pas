@@ -23,7 +23,7 @@ type
     Lane: Integer; // 1 to SwimClubMeet.dbo.SwimClub.NumOfLanes.
     class operator Equal(a, b: THotSpot): Boolean;
     class operator Assign(var a: THotSpot; const [ref] b: THotSpot);
-    function GetCnvRect(): TRect;
+		function GetCnvRect(): TRect;
     property Rect: TRect read GetCnvRect;
   end;
 
@@ -42,8 +42,6 @@ type
     pumenuNoodle: TPopupMenu;
     actDisableNoodle: TAction;
     actDisablePatches: TAction;
-    DisableNoodle1: TMenuItem;
-    DisableALLNoodles1: TMenuItem;
     actNoodleInfo: TAction;
     Noodledetails1: TMenuItem;
     N1: TMenuItem;
@@ -93,7 +91,9 @@ type
     procedure DrawNoodleLink(ACanvas: TCanvas; P0, P1: TPointF; AColor: TColor;
       AThickness: Integer; ASelected: Boolean);
 
-    procedure DrawNoodleHalfLink(ACanvas: TCanvas; P1: TPointF;
+		function IsHalfLink(ANoodle: TNoodle): boolean;
+
+		procedure DrawNoodleHalfLink(ACanvas: TCanvas; P1: TPointF;
       AColor: TColor; AThickness: Integer; ASelected: Boolean);
 
     procedure DrawQuadraticBezierCurve(ACanvas: TCanvas; P0, P1, P2: TPoint;
@@ -106,9 +106,9 @@ type
 //    procedure SetSelectGridRow(HotSpot: THotSpot); overload;
     procedure TryGetHandlePtrAtPoint(P: TPoint; out AHandlePtr: TNoodleHandleP);
     function TryHitTestHotSpot(P: TPoint; out HotSpot: THotSpot): Boolean;
-    function TryHitTestNoodleOrHandlePtr(P: TPoint; var Noodle: TNoodle; out
-      HandlePtr: TNoodleHandleP): Boolean; overload;
-    function GetSelectNoodle: TNoodle;
+		function TryHitTestNoodleOrHandlePtr(P: TPoint; var Noodle: TNoodle; out
+			HandlePtr: TNoodleHandleP): Boolean;
+		function GetSelectNoodle: TNoodle;
 //    procedure LocateToGridRow(var Bank, Lane: integer);
   public
     constructor Create(AOwner: TComponent); override;
@@ -292,7 +292,7 @@ begin
   ACanvas.Pen.Color := AColor;
   ACanvas.Pen.Width := AThickness;
   ACanvas.Pen.Style := psSolid;
-  offset1 := -40;
+	offset1 := -40;
   offset2 := 12;
   A.X := Round(P1.X);
   A.Y := Round(P1.Y);
@@ -428,6 +428,17 @@ begin
   end;
 end;
 
+function TNoodleFrame.IsHalfLink(ANoodle: TNoodle): boolean;
+begin
+	result := false;
+	if Assigned(SCM) and SCM.DataIsActive	then
+	begin
+		if (SCM.qryHeat.FieldByName('HeatID').AsInteger <>
+			ANoodle.GetHandle(0).HeatID) then
+				result := true;
+	end;
+end;
+
 procedure TNoodleFrame.LoadNoodleData();
 var
   Noodle: TNoodle;
@@ -477,25 +488,26 @@ begin
   FMousePoint := Point(X, Y);
   ClearNoodleSelection; // Deselect previous link first
   FDragHandlePtr := nil;
-  FDragNoodle := nil;
+	FDragNoodle := nil;
+	FDragState := ndsIdle;
 
   // 1. Check if clicking on an NoodleHandle
-  if TryHitTestNoodleOrHandlePtr(FMousePoint, HitNoodle, FDragHandlePtr) then
+	if TryHitTestNoodleOrHandlePtr(FMousePoint, HitNoodle, FDragHandlePtr) then
   begin
     if Assigned(FDragHandlePtr) then
     begin
+			if not IsHalfLink(HitNoodle) then
+			begin
+				FDragState := ndsDraggingExistingHandle;
+				FDragNoodle := HitNoodle; // Store the link being dragged.
 
-      FDragState := ndsDraggingExistingHandle;
-      FDragNoodle := HitNoodle; // Store the link being dragged.
-//      FDragNoodle.Assert(FNumberOfLanes);   { DEBUG }
+				if FDragHandlePtr.Bank = 0 then
+					FDragAnchor := FDragNoodle.GetHandle(1)
+				else
+					FDragAnchor := FDragNoodle.GetHandle(0);
+			end;
 
-      if FDragHandlePtr.Bank = 0 then
-        FDragAnchor := FDragNoodle.GetHandle(1)
-      else
-        FDragAnchor := FDragNoodle.GetHandle(0);
-
-//      HitNoodle.GetOtherHandle(FDragHandlePtr^, FDragAnchor);
-      // Assign Anchour Handle.
+			// Assign Anchour Handle.
       SetSelectNoodle(HitNoodle); // Select the link visually.
       pbNoodles.Invalidate;
       Exit; // Don't check for other things
@@ -544,10 +556,14 @@ var
   IsDuplicate: Boolean;
 
 begin
-  if Button <> mbLeft then
-    Exit;
+	if Button <> mbLeft then
+	begin
+		FDragState := ndsIdle;
+		pbNoodles.Invalidate; // Redraw final state
+		Exit;
+	end;
 
-  case FDragState of
+	case FDragState of
     ndsDraggingNew:
       begin
         // CHECKS ...
@@ -675,8 +691,8 @@ begin
 
   end; // end of case.
 
-  FDragState := ndsIdle;
-  pbNoodles.Invalidate; // Redraw final state
+	FDragState := ndsIdle;
+	pbNoodles.Invalidate; // Redraw final state
 
 end;
 
@@ -691,8 +707,10 @@ var
   AColor: TColor;
   deflate: Integer;
 	HandlePtr: TNoodleHandleP;
+	(*
 	txt: string;
 	textWidth, textHeight, sessID, EvNum, HtNum: Integer;
+  *)
 
   procedure DrawGridIcons();
   begin
@@ -723,6 +741,7 @@ var
     end;
 	end;
 
+	(*
 	procedure DrawNoodleText(Noodle: TNoodle; P0, P1: TPointF);
 	begin
 		var aRect: TRect;
@@ -747,8 +766,8 @@ var
 		Canvas.Brush.Style := bsClear;
 		Canvas.Font.Color := AColor;
 		Canvas.TextOut(Round(P0.X - textWidth div 2), Round(P0.Y - 12), txt);
-//		Canvas.TextOut(ROUND(P0.X - 4), ROUND(P1.y-textWidth), txt)
 	end;
+	*)
 
 begin
   Canvas := (Sender as TPaintBox).Canvas;
@@ -788,11 +807,11 @@ begin
     if not pbNoodles.Enabled then  // consider PaintBox state.
       AColor := clGray;
 
-    if (SCM.qryHeat.FieldByName('HeatID').AsInteger <>
-      TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger) then
-    begin
+		if (SCM.qryHeat.FieldByName('HeatID').AsInteger <>
+			TDS.tblmNoodle.FieldByName('SCMHeatID').AsInteger) then
+		begin
 			DrawNoodleHalfLink(Canvas, P1, AColor, FRopeThickness, Noodle.IsSelected);
-//			DrawNoodleText(Noodle, P0, P1);
+			(* DrawNoodleText(Noodle, P0, P1); *)
 		end
     else
     begin
@@ -900,32 +919,33 @@ var
   Noodle: TNoodle;
   PFloat: TPointF;
 begin
-  AHandlePtr := nil;
-  PFloat := P; // TPointF.Create(P.X, P.Y);
-  for I := 0 to FNoodles.Count - 1 do
-  begin
-    Noodle := FNoodles[I];
-    Noodle.IsPointOnHandle(PFloat, AHandlePtr); // <-- Pass as var/out
-    if AHandlePtr <> nil then
-      Exit;
-  end;
+	AHandlePtr := nil;
+	PFloat := P; // TPointF.Create(P.X, P.Y);
+	for I := 0 to FNoodles.Count - 1 do
+	begin
+		Noodle := FNoodles[I];
+		Noodle.IsPointOnHandle(PFloat, AHandlePtr); // <-- Pass as var/out
+		if AHandlePtr <> nil then
+			Exit;
+	end;
 end;
+
 
 function TNoodleFrame.TryHitTestHotSpot(P: TPoint;
   out HotSpot: THotSpot): Boolean;
 var
-  I: Integer;
+	I: Integer;
 begin
-  result := false;
-  for I := Low(FHotSpots) to High(FHotSpots) do
-  begin
-    if FHotSpots[I].RectF.Contains(P) then
-    begin
-      HotSpot := FHotSpots[I];
-      result := True;
-      Exit;
-    end;
-  end;
+	result := false;
+	for I := Low(FHotSpots) to High(FHotSpots) do
+	begin
+		if FHotSpots[I].RectF.Contains(P) then
+		begin
+			HotSpot := FHotSpots[I];
+			result := True;
+			Exit;
+		end;
+	end;
 end;
 
 function TNoodleFrame.TryHitTestNoodleOrHandlePtr(P: TPoint; var Noodle:
@@ -940,13 +960,21 @@ begin
   // Iterate through the Noodles
   for I := 0 to FNoodles.Count - 1 do
   begin
-    Noodle := FNoodles[I]; // Get the link at the current index
-    if Noodle.IsPointOnRopeOrHandle(P, HandlePtr) then
-    begin
-      result := True;
-      Exit; // Exit as soon as a match is found
-    end;
-  end;
+		Noodle := FNoodles[I]; // Get the link at the current index
+
+		if Noodle.IsPointOnRopeOrHandle(P, HandlePtr) then
+		begin
+			result := True;
+			Exit; // Exit as soon as a match is found
+		end;
+
+		if IsHalfLink(Noodle) then
+		begin
+			if Noodle.IsPointOnHalfLink(P, HandlePtr) then
+				result := True;
+		end;
+
+	end;
 end;
 
 { THotSpot }

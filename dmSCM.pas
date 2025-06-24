@@ -104,7 +104,7 @@ type
     // If events, heats, etc change within SwimClubMeet then call here to
     // reload and sync to changes.
     procedure RefreshSCM();  //---
-    function SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum: Integer): boolean;
+		function SyncCheck(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer): boolean;
     function SyncCheckSession(aTDSessionID: Integer): boolean;
     // .......................................................
     function GetActive_INDVorTEAM: TDataSource;
@@ -682,13 +682,13 @@ begin
 
 end;
 
-function TSCM.SyncCheck(aTDSessionID, aTDEventNum, aTDHeatNum: Integer):
-    boolean;
+function TSCM.SyncCheck(aTDSessionNum, aTDEventNum, aTDHeatNum: Integer):
+		boolean;
 var
   IsSynced: boolean;
 begin
   IsSynced := false;
-  if aTDSessionID =  qrySession.FieldByName('SessionID').AsInteger then
+  if aTDSessionNum =  qrySession.FieldByName('SessionID').AsInteger then
     if aTDEventNum = qryEvent.FieldByName('EventNum').AsInteger then
       if aTDHeatNum = qryHeat.FieldByName('HeatNum').AsInteger then
         IsSynced := true;

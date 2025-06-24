@@ -31,7 +31,7 @@ type
     AcceptedDeviation: double;
     CalcRTMethod: integer;
     CalcSwimmerAge: integer;
-    EnableRenameResultFiles: boolean;
+		EnableRenameResultFiles: boolean;
     RaceNumber: integer;
     lastMeetProgramDate: TDateTime;
     UseTDpadTime: boolean;
@@ -41,7 +41,8 @@ type
     DoClearAndScanOnBoot: boolean;
     HideExtendedHelp: boolean;
     ScanOption: integer;
-    ScanOptionSessionID: integer;
+		ScanOptionSessionID: integer;
+		EnableXNoodle: boolean; // draw noodles across unsynced grids.
 
     constructor Create();
     function GetDefaultSettingsFilename(): string;
@@ -88,7 +89,8 @@ begin
   DoClearAndScanOnBoot:= true;
   HideExtendedHelp := false;
   ScanOption := 0; // Scan All 'results' files in 'meets' folder.
-  ScanOptionSessionID := 0;
+	ScanOptionSessionID := 0;
+  EnableXNoodle := false;
   {
   ForceDirectories creates a new directory as specified in Dir,
   which must be a fully-qualified path name. If the directories given in

@@ -9365,12 +9365,12 @@ object Options: TOptions
           TabOrder = 1
           WordWrap = True
         end
-        object chkbHideExtendedHelp: TCheckBox
+        object chkbEnableXNoodle: TCheckBox
           Left = 16
           Top = 159
-          Width = 233
-          Height = 17
-          Caption = 'Hide extended help and info.'
+          Width = 361
+          Height = 22
+          Caption = 'Enable noodle creation across un-synced grids.'
           Enabled = False
           TabOrder = 2
         end

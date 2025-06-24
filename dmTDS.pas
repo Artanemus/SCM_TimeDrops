@@ -1287,7 +1287,7 @@ var
 	IsSynced: boolean;
 begin
 	IsSynced := false;
-	if SessionID =  tblmSession.FieldByName('SessionID').AsInteger then
+	if SessionID =  tblmSession.FieldByName('SessionNum').AsInteger then
 		if EventNum = tblmEvent.FieldByName('EventNum').AsInteger then
 			if HeatNum = tblmHeat.FieldByName('HeatNum').AsInteger then
 				IsSynced := true;

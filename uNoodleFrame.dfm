@@ -26,13 +26,6 @@ object NoodleFrame: TNoodleFrame
     object DeleteNoodle: TMenuItem
       Action = actDeleteNoodle
     end
-    object DisableNoodle1: TMenuItem
-      Action = actDisableNoodle
-    end
-    object DisableALLNoodles1: TMenuItem
-      Action = actDisablePatches
-      AutoCheck = True
-    end
     object N1: TMenuItem
       Caption = '-'
     end

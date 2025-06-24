@@ -143,7 +143,7 @@ object NoodleInfo: TNoodleInfo
       BevelOuter = bvNone
       TabOrder = 1
       object lblTDSSess: TLabel
-        Left = 0
+        Left = 6
         Top = 16
         Width = 42
         Height = 15
@@ -151,7 +151,7 @@ object NoodleInfo: TNoodleInfo
         Caption = 'Session:'
       end
       object lblTDSEv: TLabel
-        Left = 10
+        Left = 16
         Top = 37
         Width = 32
         Height = 15
@@ -159,7 +159,7 @@ object NoodleInfo: TNoodleInfo
         Caption = 'Event:'
       end
       object lblTDSHt: TLabel
-        Left = 14
+        Left = 20
         Top = 58
         Width = 28
         Height = 15
@@ -167,7 +167,7 @@ object NoodleInfo: TNoodleInfo
         Caption = 'Heat:'
       end
       object lblTDSL: TLabel
-        Left = 14
+        Left = 20
         Top = 79
         Width = 28
         Height = 15
@@ -175,28 +175,28 @@ object NoodleInfo: TNoodleInfo
         Caption = 'Lane:'
       end
       object lbl5: TLabel
-        Left = 48
+        Left = 54
         Top = 16
         Width = 34
         Height = 15
         Caption = 'Label5'
       end
       object lbl6: TLabel
-        Left = 48
+        Left = 54
         Top = 37
         Width = 34
         Height = 15
         Caption = 'Label6'
       end
       object lbl7: TLabel
-        Left = 48
+        Left = 54
         Top = 58
         Width = 34
         Height = 15
         Caption = 'Label7'
       end
       object lbl8: TLabel
-        Left = 48
+        Left = 54
         Top = 79
         Width = 34
         Height = 15
@@ -220,7 +220,7 @@ object NoodleInfo: TNoodleInfo
       Caption = 'SwimClubMeet'
     end
     object lblH2: TLabel
-      Left = 119
+      Left = 111
       Top = 12
       Width = 57
       Height = 15
@@ -239,8 +239,8 @@ object NoodleInfo: TNoodleInfo
       'HeatIndividual '
       'LEFT JOIN Event ON HeatIndividual.EventID = Event.EventID'
       'WHERE HeatIndividual.HeatID = @HeatID;')
-    Left = 96
-    Top = 40
+    Left = 32
+    Top = 24
     ParamData = <
       item
         Name = 'HEATID'

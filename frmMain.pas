@@ -167,6 +167,8 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormResize(Sender: TObject);
     procedure FormShow(Sender: TObject);
+		procedure frameNoodlespbNoodlesMouseDown(Sender: TObject; Button: TMouseButton;
+				Shift: TShiftState; X, Y: Integer);
     procedure scmGridGetDisplText(Sender: TObject; ACol, ARow: Integer; var Value:
         string);
     procedure tdsGridClickCell(Sender: TObject; ARow, ACol: Integer);
@@ -372,10 +374,10 @@ begin
     TDS.tblmSession.FieldByName('SessionNum').AsInteger then
       SCM.LocateSessionID(TDS.tblmSession.FieldByName('SessionNum').AsInteger);
 
-    FSyncSCMVerbose := false; // Silent Mode.
-    actnSyncSCM.Execute(); // Syncronize SCM grid.
-    FSyncSCMVerbose := true;
-  end;
+		FSyncSCMVerbose := false; // Silent Mode.
+		actnSyncSCM.Execute(); // Syncronize SCM grid.
+		FSyncSCMVerbose := true;
+	end;
 end;
 
 procedure TMain.actnAutoSyncUpdate(Sender: TObject);
@@ -1178,7 +1180,7 @@ var
 found: boolean;
 aSCMSessionID, aSCMEventNum, aSCMHeatNum: integer;
 begin
-  tdsGrid.BeginUpdate;
+	tdsGrid.BeginUpdate;
   aSCMSessionID := SCM.qrySession.FieldByName('SessionID').AsInteger;
   aSCMEventNum := SCM.qryEvent.FieldByName('EventNum').AsInteger;
   aSCMHeatNum := SCM.qryHeat.FieldByName('HeatNum').AsInteger;
@@ -1419,7 +1421,7 @@ mr: TModalResult;
 found: boolean;
 SearchOptions: TLocateOptions;
 begin
-  // OR - if any are true then exit.
+	// OR - if any are true then exit.
   if (not Assigned(TDS)) or (TDS.DataIsActive = false) or
     (TDS.tblmSession.IsEmpty) then
   begin
@@ -1486,13 +1488,17 @@ begin
       TDS.dsmSession.DataSet.EnableControls;
       TDS.dsmEvent.DataSet.EnableControls;
       TDS.dsmHeat.DataSet.EnableControls;
-      TDS.dsmLane.DataSet.EnableControls;
-      PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
-      if Assigned(NoodleFrame) then
-      begin
-        TDS.tblmNoodle.ApplyMaster;
-        PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
-      end;
+			TDS.dsmLane.DataSet.EnableControls;
+			if actnAutoSync.checked then
+				actnSyncSCMExecute(Self);
+      (*
+			PostMessage(Self.Handle, SCM_UPDATEUI_TDS, 0, 0);
+			if Assigned(NoodleFrame) then
+			begin
+				TDS.tblmNoodle.ApplyMaster;
+				PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
+			end;
+			*)
     end;
   end;
 
@@ -1527,7 +1533,7 @@ begin
 
   // CUE-TO selected TreeView item ...
   if IsPositiveResult(mr) then
-  begin
+	begin
     try
       SCM.dsEvent.DataSet.DisableControls;
       SCM.dsHeat.DataSet.DisableControls;
@@ -1545,15 +1551,20 @@ begin
     finally
       SCM.dsEvent.DataSet.EnableControls;
       SCM.dsHeat.DataSet.EnableControls;
-      // Update UI controls ...
-      PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
-      if Assigned(NoodleFrame) then
-      begin
-        TDS.tblmNoodle.ApplyMaster;
-        PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
-      end;
-    end;
-  end;
+			if actnAutoSync.checked then
+				actnSyncTDExecute(Self);
+
+      (*
+			// Update UI controls ...
+			PostMessage(Self.Handle, SCM_UPDATEUI_SCM, 0, 0);
+			if Assigned(NoodleFrame) then
+			begin
+				TDS.tblmNoodle.ApplyMaster;
+				PostMessage(Self.Handle, SCM_UPDATE_NOODLES, 0, 0);
+			end;
+			*)
+		end;
+	end;
 end;
 
 procedure TMain.btnPrevDTFileClick(Sender: TObject);
@@ -1965,6 +1976,25 @@ begin
   StatBar.SimpleText := 'Check here for information, messages and warnings.';
 	Timer1.Enabled := true;
 
+end;
+
+procedure TMain.frameNoodlespbNoodlesMouseDown(Sender: TObject; Button:
+  TMouseButton; Shift: TShiftState; X, Y: Integer);
+var
+  SessNum, EventNum, HeatNum: integer;
+begin
+  if actnAutoSync.Enabled then
+  begin
+    if Assigned(SCM) and Assigned(TDS) and SCM.DataIsActive and TDS.DataIsActive
+      then
+    begin
+      SessNum := TDS.tblmSession.FieldByName('SessionNum').AsInteger;
+      EventNum := TDS.tblmEvent.FieldByName('EventNum').AsInteger;
+      HeatNum := TDS.tblmHeat.FieldByName('HeatNum').AsInteger;
+      if SCM.SyncCheck(SessNum, EventNum, HeatNum) then
+        frameNoodles.pbNoodlesMouseDown(Sender, Button, Shift, X, Y);
+    end;
+  end;
 end;
 
 procedure TMain.GridSelectCurrentTDSLane;

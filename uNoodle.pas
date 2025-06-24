@@ -45,9 +45,11 @@ type
     // Checks to see if the point is near too either of the two link's handles.
     // if so then the function returns a pointer to the handle
     // else HandlePtr = nil.
-    function IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;overload;
+		function IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;overload;
     // Function to check if a point is near this link's line.
-    function IsPointOnRope(P: TPointF): Boolean;
+		function IsPointOnRope(P: TPointF): Boolean;
+
+		function IsPointOnHalfLink(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
 
     // Function to check if a point is near this link's line or handles
     function IsPointOnRopeOrHandle(P: TPointF; out Handle: TNoodleHandle): Boolean; overload;
@@ -273,6 +275,25 @@ begin
   end
 end;
 
+function TNoodle.IsPointOnHalfLink(P: TPointF;
+	var HandlePtr: TNoodleHandleP): Boolean;
+var
+	ARectF : TRectF;
+	offset1: integer;
+begin
+	offset1 := 40;
+	result := false;
+	ARectF := FNoodleHandles[1].RectF;
+	// calc rect for arrows.
+	ARectF.SetLocation(ARectF.Left - offset1, ARectF.Top);
+	ARectF.Width := ARectF.Width + Offset1;
+	if ARectF.Contains(P) then
+	begin
+		HandlePtr := @FNoodleHandles[0];
+		result := true;
+	end;
+end;
+
 function TNoodle.IsPointOnHandle(P: TPointF; var HandlePtr: TNoodleHandleP): Boolean;
 var
   P0, P1: TPointF;
@@ -280,17 +301,17 @@ var
 begin
   Result := False;
   HandlePtr := nil; // Assign an empty HitHandle...
-  HandleRadiusSq := FHandleRadius * FHandleRadius;
+	HandleRadiusSq := FHandleRadius * FHandleRadius;
 
   // Check if point is near [0] handle
-  if FNoodleHandles[0].IsValid then
+	if FNoodleHandles[0].IsValid then
   begin
     P0 := FNoodleHandles[0].RectF.CenterPoint;
     DistSq := (P.X - P0.X) * (P.X - P0.X) + (P.Y - P0.Y) * (P.Y - P0.Y);
     if DistSq <= HandleRadiusSq then
     begin
-      Result := True;
-      HandlePtr := @FNoodleHandles[0];
+			Result := True;
+			HandlePtr := @FNoodleHandles[0];
       Exit;
     end;
   end;

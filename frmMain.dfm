@@ -9243,6 +9243,7 @@ object Main: TMain
         TabOrder = 0
         ExplicitTop = 152
         inherited pbNoodles: TPaintBox
+          OnMouseDown = frameNoodlespbNoodlesMouseDown
           ExplicitWidth = 150
           ExplicitHeight = 520
         end

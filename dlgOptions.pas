@@ -51,7 +51,7 @@ type
     vimgInfo4: TVirtualImage;
     vimgInfo5: TVirtualImage;
     vimgInfo6: TVirtualImage;
-    chkbHideExtendedHelp: TCheckBox;
+    chkbEnableXNoodle: TCheckBox;
     procedure btnCloseClick(Sender: TObject);
     procedure btnedtAppDataRightButtonClick(Sender: TObject);
     procedure btnedtMeetProgramRightButtonClick(Sender: TObject);
@@ -179,7 +179,8 @@ end;
 procedure TOptions.FormCreate(Sender: TObject);
 begin
   // INIT ...
-  pgcntrl.TabIndex := 0;
+	pgcntrl.TabIndex := 0;
+	chkbEnableXNoodle.Checked;  // ASSERT.
 end;
 
 procedure TOptions.FormShow(Sender: TObject);
@@ -244,8 +245,9 @@ begin
   Settings.UseTDfinalTime := chkbxFinalTime.Checked;
   Settings.UseTDpadTime := chkbxPadTime.Checked;
   Settings.DoLoginOnBoot := chk_EnableLoginPrompt.Checked;
-  Settings.DoClearAndScanOnBoot := chk_EnableRescanPrompt.Checked;
+	Settings.DoClearAndScanOnBoot := chk_EnableRescanPrompt.Checked;
 
+	Settings.EnableXNoodle := chkbEnableXNoodle.Checked;
   Settings.SaveToFile();
 end;
 
